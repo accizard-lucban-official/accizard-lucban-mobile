@@ -18,16 +18,31 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.mapbox.geojson.Point;
 import com.mapbox.maps.CameraOptions;
-import com.mapbox.maps.MapView;
 import com.mapbox.maps.Style;
 import com.mapbox.maps.MapboxMap;
+import com.mapbox.maps.MapView;
 import com.mapbox.maps.plugin.animation.CameraAnimationsPlugin;
 import com.mapbox.maps.plugin.animation.MapAnimationOptions;
+import android.widget.FrameLayout;
+import android.view.ViewGroup;
+import android.view.Gravity;
+import android.widget.ImageView;
+import android.graphics.Color;
 import android.animation.Animator;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnSuccessListener;
+import androidx.annotation.NonNull;
 
 public class MapViewActivity extends AppCompatActivity {
 
@@ -35,6 +50,7 @@ public class MapViewActivity extends AppCompatActivity {
     private ImageView clearSearchButton;
     private FloatingActionButton emergencyFab;
     private FloatingActionButton alertFab;
+    private FloatingActionButton pinLocationFab;
     private ImageView filterButton;
     private ImageButton profile;
     private RecyclerView searchResultsRecyclerView;
@@ -67,10 +83,19 @@ public class MapViewActivity extends AppCompatActivity {
     private Map<String, Boolean> facilityFilters = new HashMap<>();
     private String selectedTimeRange = "Today";
 
+    private FusedLocationProviderClient fusedLocationClient;
+    private List<ImageView> pinnedMarkers = new ArrayList<>();
+    private FrameLayout mapContainer;
+    private List<Point> pinnedLocations = new ArrayList<>();
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
+
+        // Initialize location services
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         // Initialize MapView and MapboxMap
         mapView = findViewById(R.id.mapView);
@@ -79,6 +104,7 @@ public class MapViewActivity extends AppCompatActivity {
             mapboxMap.loadStyleUri(Style.MAPBOX_STREETS, style -> {
                 // Correct plugin key for Mapbox v10+
                 cameraAnimationsPlugin = mapView.getPlugin("com.mapbox.maps.plugin.animation.camera");
+                
                 // Set initial camera position to Lucban center
                 Point lucbanCenter = Point.fromLngLat(121.5564, 14.1136);
                 CameraOptions initialCamera = new CameraOptions.Builder()
@@ -86,7 +112,9 @@ public class MapViewActivity extends AppCompatActivity {
                         .zoom(14.0)
                         .build();
                 mapboxMap.setCamera(initialCamera);
+                
                 Toast.makeText(this, "Map loaded successfully. Search for locations to navigate.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Use the blue pin button to pin your current location!", Toast.LENGTH_LONG).show();
             });
         }
 
@@ -110,34 +138,34 @@ public class MapViewActivity extends AppCompatActivity {
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Public Market", "Lucban, Quezon", 14.1139, 121.5569));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Church (San Luis Obispo)", "Lucban, Quezon", 14.1133, 121.5561));
 
-        // Health Facilities
+        // Health Facilities - Lucban
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban District Hospital", "Lucban, Quezon", 14.1145, 121.5572));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Medical Center", "Lucban, Quezon", 14.1138, 121.5567));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Health Center", "Lucban, Quezon", 14.1140, 121.5568));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Barangay Health Station", "Lucban, Quezon", 14.1142, 121.5570));
 
-        // Emergency Services
+        // Emergency Services - Lucban
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Police Station", "Lucban, Quezon", 14.1142, 121.5565));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Fire Station", "Lucban, Quezon", 14.1140, 121.5563));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Municipal Disaster Risk Reduction Office", "Lucban, Quezon", 14.1137, 121.5566));
 
-        // Educational Institutions
+        // Educational Institutions - Lucban
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Elementary School", "Lucban, Quezon", 14.1148, 121.5575));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban National High School", "Lucban, Quezon", 14.1149, 121.5576));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Integrated School", "Lucban, Quezon", 14.1150, 121.5577));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Technical-Vocational School", "Lucban, Quezon", 14.1151, 121.5578));
 
-        // Banks and Financial Services
+        // Banks and Financial Services - Lucban
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Rural Bank", "Lucban, Quezon", 14.1137, 121.5565));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("BPI Lucban Branch", "Lucban, Quezon", 14.1134, 121.5563));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Landbank Lucban", "Lucban, Quezon", 14.1138, 121.5566));
 
-        // Tourist Spots and Landmarks
+        // Tourist Spots and Landmarks - Lucban
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Kamay ni Hesus", "Lucban, Quezon", 14.1200, 121.5600));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Museum", "Lucban, Quezon", 14.1132, 121.5560));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Pahiyas Festival Site", "Lucban, Quezon", 14.1134, 121.5562));
 
-        // Barangays (with more spread out coordinates)
+        // Barangays - Lucban
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Barangay 1 (Poblacion)", "Lucban, Quezon", 14.1136, 121.5564));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Barangay 2 (Poblacion)", "Lucban, Quezon", 14.1140, 121.5568));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Barangay 3 (Poblacion)", "Lucban, Quezon", 14.1132, 121.5560));
@@ -149,20 +177,114 @@ public class MapViewActivity extends AppCompatActivity {
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Barangay Nagcamalite", "Lucban, Quezon", 14.1180, 121.5620));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Barangay Tinamnan", "Lucban, Quezon", 14.1080, 121.5480));
 
-        // Commercial Areas
+        // Commercial Areas - Lucban
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Business District", "Lucban, Quezon", 14.1135, 121.5565));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Shopping Center", "Lucban, Quezon", 14.1141, 121.5571));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Terminal", "Lucban, Quezon", 14.1143, 121.5573));
 
-        // Utilities and Services
+        // Utilities and Services - Lucban
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Post Office", "Lucban, Quezon", 14.1134, 121.5563));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Water District", "Lucban, Quezon", 14.1139, 121.5567));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Electric Cooperative", "Lucban, Quezon", 14.1144, 121.5574));
 
-        // Parks and Recreation
+        // Parks and Recreation - Lucban
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Town Park", "Lucban, Quezon", 14.1135, 121.5562));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Sports Complex", "Lucban, Quezon", 14.1160, 121.5590));
         searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucban Basketball Court", "Lucban, Quezon", 14.1147, 121.5575));
+
+        // MAJOR CITIES AND TOWNS IN QUEZON PROVINCE
+        
+        // Tayabas City
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Tayabas City Hall", "Tayabas City, Quezon", 14.0283, 121.5854));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Tayabas Provincial Hospital", "Tayabas City, Quezon", 14.0285, 121.5856));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Tayabas Police Station", "Tayabas City, Quezon", 14.0287, 121.5858));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Tayabas Fire Station", "Tayabas City, Quezon", 14.0289, 121.5860));
+        
+        // Lucena City (Provincial Capital)
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Quezon Provincial Capitol", "Lucena City, Quezon", 13.9318, 121.6157));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucena City Hall", "Lucena City, Quezon", 13.9319, 121.6158));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Quezon Medical Center", "Lucena City, Quezon", 13.9320, 121.6159));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucena City Police Station", "Lucena City, Quezon", 13.9321, 121.6160));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucena City Fire Station", "Lucena City, Quezon", 13.9322, 121.6161));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucena City Public Market", "Lucena City, Quezon", 13.9323, 121.6162));
+        
+        // Sariaya
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Sariaya Municipal Hall", "Sariaya, Quezon", 13.9624, 121.5268));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Sariaya District Hospital", "Sariaya, Quezon", 13.9625, 121.5269));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Sariaya Police Station", "Sariaya, Quezon", 13.9626, 121.5270));
+        
+        // Candelaria
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Candelaria Municipal Hall", "Candelaria, Quezon", 13.9311, 121.4234));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Candelaria District Hospital", "Candelaria, Quezon", 13.9312, 121.4235));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Candelaria Police Station", "Candelaria, Quezon", 13.9313, 121.4236));
+        
+        // San Pablo City (Laguna, but nearby)
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("San Pablo City Hall", "San Pablo City, Laguna", 14.0697, 121.3255));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("San Pablo City Medical Center", "San Pablo City, Laguna", 14.0698, 121.3256));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("San Pablo City Police Station", "San Pablo City, Laguna", 14.0699, 121.3257));
+        
+        // Calauan (Laguna, nearby)
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Calauan Municipal Hall", "Calauan, Laguna", 14.1497, 121.3155));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Calauan District Hospital", "Calauan, Laguna", 14.1498, 121.3156));
+        
+        // MAJOR HOSPITALS AND MEDICAL FACILITIES
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Quezon Memorial Medical Center", "Lucena City, Quezon", 13.9320, 121.6159));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Tayabas Provincial Hospital", "Tayabas City, Quezon", 14.0285, 121.5856));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Sariaya District Hospital", "Sariaya, Quezon", 13.9625, 121.5269));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Candelaria District Hospital", "Candelaria, Quezon", 13.9312, 121.4235));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("San Pablo City Medical Center", "San Pablo City, Laguna", 14.0698, 121.3256));
+        
+        // MAJOR POLICE STATIONS
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Quezon Provincial Police Office", "Lucena City, Quezon", 13.9321, 121.6160));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Tayabas City Police Station", "Tayabas City, Quezon", 14.0287, 121.5858));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Sariaya Police Station", "Sariaya, Quezon", 13.9626, 121.5270));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Candelaria Police Station", "Candelaria, Quezon", 13.9313, 121.4236));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("San Pablo City Police Station", "San Pablo City, Laguna", 14.0699, 121.3257));
+        
+        // MAJOR FIRE STATIONS
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Quezon Provincial Fire Office", "Lucena City, Quezon", 13.9322, 121.6161));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Tayabas City Fire Station", "Tayabas City, Quezon", 14.0289, 121.5860));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Sariaya Fire Station", "Sariaya, Quezon", 13.9627, 121.5271));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Candelaria Fire Station", "Candelaria, Quezon", 13.9314, 121.4237));
+        
+        // MAJOR SHOPPING CENTERS AND MARKETS
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Pacific Mall Lucena", "Lucena City, Quezon", 13.9324, 121.6163));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("SM City Lucena", "Lucena City, Quezon", 13.9325, 121.6164));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucena City Public Market", "Lucena City, Quezon", 13.9323, 121.6162));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Sariaya Public Market", "Sariaya, Quezon", 13.9628, 121.5272));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Candelaria Public Market", "Candelaria, Quezon", 13.9315, 121.4238));
+        
+        // MAJOR SCHOOLS AND UNIVERSITIES
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Southern Luzon State University", "Lucban, Quezon", 14.1152, 121.5579));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Quezon National Agricultural School", "Tiaong, Quezon", 13.9556, 121.3167));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Manuel S. Enverga University", "Lucena City, Quezon", 13.9326, 121.6165));
+        
+        // MAJOR BANKS AND FINANCIAL INSTITUTIONS
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Landbank Lucena Branch", "Lucena City, Quezon", 13.9327, 121.6166));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("BPI Lucena Branch", "Lucena City, Quezon", 13.9328, 121.6167));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("BDO Lucena Branch", "Lucena City, Quezon", 13.9329, 121.6168));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Metrobank Lucena Branch", "Lucena City, Quezon", 13.9330, 121.6169));
+        
+        // MAJOR TRANSPORTATION HUBS
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Lucena Grand Terminal", "Lucena City, Quezon", 13.9331, 121.6170));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Sariaya Bus Terminal", "Sariaya, Quezon", 13.9629, 121.5273));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Candelaria Bus Terminal", "Candelaria, Quezon", 13.9316, 121.4239));
+        
+        // MAJOR TOURIST DESTINATIONS
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Kamay ni Hesus Healing Center", "Lucban, Quezon", 14.1200, 121.5600));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Villa Escudero Plantation", "Tiaong, Quezon", 13.9557, 121.3168));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Mount Banahaw", "Dolores, Quezon", 14.0733, 121.4800));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Tayabas Basilica", "Tayabas City, Quezon", 14.0290, 121.5861));
+        
+        // MAJOR GOVERNMENT OFFICES
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Department of Health Quezon", "Lucena City, Quezon", 13.9332, 121.6171));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Department of Education Quezon", "Lucena City, Quezon", 13.9333, 121.6172));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Department of Social Welfare Quezon", "Lucena City, Quezon", 13.9334, 121.6173));
+        
+        // MAJOR UTILITIES
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Quezon Electric Cooperative", "Lucena City, Quezon", 13.9335, 121.6174));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Quezon Water District", "Lucena City, Quezon", 13.9336, 121.6175));
+        searchPlaces.add(new SimpleSearchAdapter.SearchPlace("Quezon Telephone Company", "Lucena City, Quezon", 13.9337, 121.6176));
     }
 
     private void initializeFilters() {
@@ -254,10 +376,12 @@ public class MapViewActivity extends AppCompatActivity {
         clearSearchButton = findViewById(R.id.clearSearchButton);
         emergencyFab = findViewById(R.id.emergencyFab);
         alertFab = findViewById(R.id.alertFab);
+        pinLocationFab = findViewById(R.id.pinLocationFab);
         filterButton = findViewById(R.id.filterButton);
         profile = findViewById(R.id.profile);
         searchResultsRecyclerView = findViewById(R.id.searchResultsRecyclerView);
         searchResultsContainer = findViewById(R.id.searchResultsContainer);
+        mapContainer = findViewById(R.id.mapContainer);
 
         // Initialize navigation tabs
         homeTab = findViewById(R.id.homeTab);
@@ -490,6 +614,17 @@ public class MapViewActivity extends AppCompatActivity {
             Toast.makeText(this, "Alert sent", Toast.LENGTH_SHORT).show();
         });
 
+        pinLocationFab.setOnClickListener(v -> {
+            pinCurrentLocation();
+        });
+
+        // Long press on pin FAB to clear all pins
+        pinLocationFab.setOnLongClickListener(v -> {
+            clearAllPins();
+            Toast.makeText(this, "All pins cleared", Toast.LENGTH_SHORT).show();
+            return true;
+        });
+
         // Long press on emergency FAB to navigate to nearest hospital
         emergencyFab.setOnLongClickListener(v -> {
             SimpleSearchAdapter.SearchPlace nearestHospital = null;
@@ -654,6 +789,96 @@ public class MapViewActivity extends AppCompatActivity {
         // Remove any pending search callbacks
         if (searchRunnable != null) {
             searchHandler.removeCallbacks(searchRunnable);
+        }
+    }
+
+    private void pinCurrentLocation() {
+        if (checkLocationPermission()) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
+            
+            fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        if (location != null) {
+                            Point currentPoint = Point.fromLngLat(location.getLongitude(), location.getLatitude());
+                            addPinToMap(currentPoint, "Current Location");
+                            
+                            // Animate to current location
+                            animateToLocation(currentPoint, 16.0);
+                            
+                            Toast.makeText(MapViewActivity.this, 
+                                "Current location pinned at: " + 
+                                String.format("%.4f, %.4f", location.getLatitude(), location.getLongitude()), 
+                                Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(MapViewActivity.this, "Unable to get current location", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+        } else {
+            requestLocationPermission();
+        }
+    }
+
+    private void addPinToMap(Point point, String title) {
+        // Create a custom marker view
+        ImageView markerView = new ImageView(this);
+        markerView.setImageResource(R.drawable.ic_location);
+        markerView.setColorFilter(Color.RED);
+        markerView.setScaleX(1.5f);
+        markerView.setScaleY(1.5f);
+        
+        // Position the marker in the center of the map
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        params.gravity = Gravity.CENTER;
+        markerView.setLayoutParams(params);
+        
+        // Add marker to the map container
+        if (mapContainer != null) {
+            mapContainer.addView(markerView);
+            pinnedMarkers.add(markerView);
+            pinnedLocations.add(point);
+            
+            Toast.makeText(this, "Location pinned: " + title, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void clearAllPins() {
+        if (mapContainer != null) {
+            for (ImageView marker : pinnedMarkers) {
+                mapContainer.removeView(marker);
+            }
+            pinnedMarkers.clear();
+            pinnedLocations.clear();
+            Toast.makeText(this, "All pinned locations cleared", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private boolean checkLocationPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestLocationPermission() {
+        ActivityCompat.requestPermissions(this, 
+            new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 
+            LOCATION_PERMISSION_REQUEST_CODE);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Location permission granted", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 }

@@ -23,9 +23,17 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.provider.MediaStore;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import java.io.InputStream;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.OnFailureListener;
 
 public class ChatActivity extends AppCompatActivity {
 
@@ -46,6 +54,7 @@ public class ChatActivity extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_CODE = 203;
     private static final int STORAGE_PERMISSION_CODE = 204;
     private Uri photoUri;
+    private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +63,7 @@ public class ChatActivity extends AppCompatActivity {
 
         try {
             setContentView(R.layout.activity_chat);
+            mAuth = FirebaseAuth.getInstance();
             initializeViews();
             setupRecyclerView();
             setupClickListeners();
@@ -304,6 +314,54 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
+    private void addImageMessage(String content, boolean isUser, String timestamp, Bitmap imageBitmap) {
+        try {
+            if (messagesList == null || chatAdapter == null) {
+                Log.e(TAG, "messagesList or chatAdapter is null");
+                return;
+            }
+
+            ChatMessage message = new ChatMessage(content, isUser, timestamp, imageBitmap);
+            messagesList.add(message);
+            chatAdapter.notifyItemInserted(messagesList.size() - 1);
+
+            if (messagesRecyclerView != null) {
+                messagesRecyclerView.scrollToPosition(messagesList.size() - 1);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error adding image message", e);
+            Toast.makeText(this, "Error adding image message", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void uploadImageToFirebase(Bitmap imageBitmap, boolean isFromCamera) {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            Log.e(TAG, "User not signed in");
+            Toast.makeText(this, "Please sign in to upload images", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String userId = currentUser.getUid();
+        String source = isFromCamera ? "camera" : "gallery";
+        
+        StorageHelper.uploadChatImage(userId, imageBitmap,
+            new OnSuccessListener<String>() {
+                @Override
+                public void onSuccess(String downloadUrl) {
+                    Log.d(TAG, "Image uploaded successfully to Firebase Storage: " + downloadUrl);
+                    Toast.makeText(ChatActivity.this, "Image uploaded to Firebase Storage", Toast.LENGTH_SHORT).show();
+                }
+            },
+            new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception e) {
+                    Log.e(TAG, "Error uploading image to Firebase Storage", e);
+                    Toast.makeText(ChatActivity.this, "Failed to upload image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+    }
+
     private String getCurrentTime() {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("Today • h:mm a", Locale.getDefault());
@@ -387,10 +445,16 @@ public class ChatActivity extends AppCompatActivity {
         builder.setPositiveButton("OK", (dialog, which) -> {
             String ref = input.getText().toString().trim();
             if (!ref.isEmpty()) {
-                addMessage("Reference to my report " + ref, true, getCurrentTime());
+                addMessage("📋 Reference: " + ref, true, getCurrentTime());
+                // Simulate admin response
+                messagesRecyclerView.postDelayed(() -> {
+                    addMessage("I've noted your report reference " + ref + ". Let me check the details for you.", false, getCurrentTime());
+                }, 1500);
             }
         });
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+        builder.setNegativeButton("Cancel", (dialog, which) -> {
+            dialog.cancel();
+        });
         builder.show();
     }
 
@@ -415,11 +479,37 @@ public class ChatActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK) {
-            if (requestCode == CAMERA_REQUEST_CODE && data != null) {
-                addMessage("📸 Photo taken! (simulated)", true, getCurrentTime());
-            } else if (requestCode == GALLERY_REQUEST_CODE && data != null) {
-                addMessage("🖼️ Image selected from gallery! (simulated)", true, getCurrentTime());
+        if (resultCode == RESULT_OK && data != null) {
+            if (requestCode == CAMERA_REQUEST_CODE) {
+                // Handle camera photo
+                Bitmap photoBitmap = (Bitmap) data.getExtras().get("data");
+                if (photoBitmap != null) {
+                    addImageMessage("", true, getCurrentTime(), photoBitmap);
+                    uploadImageToFirebase(photoBitmap, true);
+                    // Simulate admin response
+                    messagesRecyclerView.postDelayed(() -> {
+                        addMessage("Great! I can see the photo you took. How can I help you with this?", false, getCurrentTime());
+                    }, 1500);
+                }
+            } else if (requestCode == GALLERY_REQUEST_CODE) {
+                // Handle gallery image
+                Uri selectedImageUri = data.getData();
+                if (selectedImageUri != null) {
+                    try {
+                        InputStream inputStream = getContentResolver().openInputStream(selectedImageUri);
+                        Bitmap galleryBitmap = BitmapFactory.decodeStream(inputStream);
+                        if (galleryBitmap != null) {
+                            addImageMessage("", true, getCurrentTime(), galleryBitmap);
+                            uploadImageToFirebase(galleryBitmap, false);
+                            // Simulate admin response
+                            messagesRecyclerView.postDelayed(() -> {
+                                addMessage("I can see the image you selected. What would you like me to help you with?", false, getCurrentTime());
+                            }, 1500);
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error loading image from gallery", e);
+                    }
+                }
             }
         }
     }

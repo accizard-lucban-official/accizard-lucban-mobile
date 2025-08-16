@@ -213,13 +213,17 @@
                 android:inputType="textPassword" />
 
             <ImageView
+                android:id="@+id/ivTogglePassword"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:layout_marginEnd="16dp"
                 android:src="@drawable/baseline_remove_red_eye_24"
-                android:alpha="0.5" />
+                android:alpha="0.5"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Toggle password visibility" />
 
         </RelativeLayout>
 

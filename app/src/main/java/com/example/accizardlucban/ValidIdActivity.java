@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -38,6 +39,7 @@ import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -57,12 +59,15 @@ public class ValidIdActivity extends AppCompatActivity {
     private ImageButton btnBack;
     private TextView tvValidIdList;
     private String firstName, lastName, mobileNumber, email, password, province, cityTown, barangay;
-    private Uri validIdUri;
+    private java.util.List<Uri> validIdUris;
+    private java.util.List<Bitmap> validIdBitmaps;
     private boolean hasValidId = false;
     
     // Profile picture data
     private boolean hasProfilePicture = false;
     private String profileImageUriString;
+    private byte[] profileBitmapData;
+    private Bitmap profileBitmap;
     
     // Firebase instances
     private FirebaseAuth mAuth;
@@ -79,6 +84,10 @@ public class ValidIdActivity extends AppCompatActivity {
             mAuth = FirebaseAuth.getInstance();
             storage = FirebaseStorage.getInstance();
             storageRef = storage.getReference();
+            
+            // Initialize lists for multiple images
+            validIdUris = new java.util.ArrayList<>();
+            validIdBitmaps = new java.util.ArrayList<>();
             
             initializeViews();
             getIntentData();
@@ -140,6 +149,12 @@ public class ValidIdActivity extends AppCompatActivity {
                 // Get profile picture data
                 hasProfilePicture = intent.getBooleanExtra("hasProfilePicture", false);
                 profileImageUriString = intent.getStringExtra("profileImageUri");
+                profileBitmapData = intent.getByteArrayExtra("profileBitmap");
+                
+                // Convert bitmap data back to Bitmap if available
+                if (profileBitmapData != null) {
+                    profileBitmap = BitmapFactory.decodeByteArray(profileBitmapData, 0, profileBitmapData.length);
+                }
 
                 // Debug: Check if data is received
                 if (firstName == null || lastName == null) {
@@ -231,7 +246,11 @@ public class ValidIdActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
                         try {
-                            showValidIdList();
+                            if (validIdBitmaps.isEmpty()) {
+                                showValidIdList();
+                            } else {
+                                showAllUploadedImages();
+                            }
                         } catch (Exception e) {
                             e.printStackTrace();
                             Toast.makeText(ValidIdActivity.this, "Error showing valid ID list: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -333,6 +352,90 @@ public class ValidIdActivity extends AppCompatActivity {
         }
     }
 
+    private void updateImageCounter() {
+        if (tvValidIdList != null) {
+            tvValidIdList.setText("Valid IDs (" + validIdBitmaps.size() + " uploaded) - Tap to view all");
+        }
+    }
+
+    private void showAllUploadedImages() {
+        if (validIdBitmaps.isEmpty()) {
+            Toast.makeText(this, "No images uploaded yet", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Create a dialog to show all uploaded images
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Uploaded Valid IDs (" + validIdBitmaps.size() + " images)");
+
+        // Create a scrollable view for multiple images
+        android.widget.ScrollView scrollView = new android.widget.ScrollView(this);
+        android.widget.LinearLayout linearLayout = new android.widget.LinearLayout(this);
+        linearLayout.setOrientation(android.widget.LinearLayout.VERTICAL);
+        linearLayout.setPadding(50, 50, 50, 50);
+
+        for (int i = 0; i < validIdBitmaps.size(); i++) {
+            final int imageIndex = i; // Capture the index for the lambda
+            
+            // Create container for each image
+            android.widget.LinearLayout imageContainer = new android.widget.LinearLayout(this);
+            imageContainer.setOrientation(android.widget.LinearLayout.VERTICAL);
+            imageContainer.setPadding(0, 20, 0, 20);
+
+            // Image label
+            android.widget.TextView imageLabel = new android.widget.TextView(this);
+            imageLabel.setText("Image " + (i + 1) + (validIdUris.get(i) != null ? " (Gallery)" : " (Camera)"));
+            imageLabel.setTextSize(16);
+            imageLabel.setPadding(0, 0, 0, 10);
+
+            // Image view
+            android.widget.ImageView imageView = new android.widget.ImageView(this);
+            imageView.setImageBitmap(validIdBitmaps.get(i));
+            imageView.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+            imageView.setAdjustViewBounds(true);
+            imageView.setMaxHeight(400);
+            imageView.setMaxWidth(400);
+
+            // Delete button
+            android.widget.Button deleteButton = new android.widget.Button(this);
+            deleteButton.setText("Delete Image " + (i + 1));
+            deleteButton.setOnClickListener(v -> {
+                // Remove the image
+                validIdBitmaps.remove(imageIndex);
+                validIdUris.remove(imageIndex);
+                
+                // Update UI
+                if (validIdBitmaps.isEmpty()) {
+                    hasValidId = false;
+                    ivValidId.setVisibility(View.GONE);
+                    btnNext.setEnabled(false);
+                } else {
+                    // Show the last remaining image
+                    ivValidId.setImageBitmap(validIdBitmaps.get(validIdBitmaps.size() - 1));
+                }
+                
+                updateImageCounter();
+                Toast.makeText(ValidIdActivity.this, "Image deleted", Toast.LENGTH_SHORT).show();
+                
+                // Refresh the dialog
+                showAllUploadedImages();
+            });
+
+            // Add to container
+            imageContainer.addView(imageLabel);
+            imageContainer.addView(imageView);
+            imageContainer.addView(deleteButton);
+            
+            // Add to main layout
+            linearLayout.addView(imageContainer);
+        }
+
+        scrollView.addView(linearLayout);
+        builder.setView(scrollView);
+        builder.setPositiveButton("Close", null);
+        builder.show();
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -365,21 +468,45 @@ public class ValidIdActivity extends AppCompatActivity {
             if (resultCode == RESULT_OK && data != null) {
                 if (requestCode == CAMERA_REQUEST_CODE) {
                     Bitmap bitmap = (Bitmap) data.getExtras().get("data");
-                    if (bitmap != null && ivValidId != null) {
+                    if (bitmap != null) {
+                        // Add to lists
+                        validIdBitmaps.add(bitmap);
+                        validIdUris.add(null); // Camera images don't have URIs
+                        
+                        // Display the latest image
                         ivValidId.setImageBitmap(bitmap);
                         ivValidId.setVisibility(View.VISIBLE);
+                        
                         hasValidId = true;
                         enableNextButton();
-                        Toast.makeText(this, "Valid ID captured successfully", Toast.LENGTH_SHORT).show();
+                        updateImageCounter();
+                        Toast.makeText(this, "Valid ID captured successfully (Total: " + validIdBitmaps.size() + ")", Toast.LENGTH_SHORT).show();
                     }
                 } else if (requestCode == GALLERY_REQUEST_CODE) {
-                    validIdUri = data.getData();
-                    if (validIdUri != null && ivValidId != null) {
-                        ivValidId.setImageURI(validIdUri);
-                        ivValidId.setVisibility(View.VISIBLE);
-                        hasValidId = true;
-                        enableNextButton();
-                        Toast.makeText(this, "Valid ID selected successfully", Toast.LENGTH_SHORT).show();
+                    Uri selectedUri = data.getData();
+                    if (selectedUri != null) {
+                        try {
+                            // Load bitmap from URI without cropping
+                            InputStream inputStream = getContentResolver().openInputStream(selectedUri);
+                            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+                            if (bitmap != null) {
+                                // Add to lists
+                                validIdUris.add(selectedUri);
+                                validIdBitmaps.add(bitmap);
+                                
+                                // Display the latest image
+                                ivValidId.setImageBitmap(bitmap);
+                                ivValidId.setVisibility(View.VISIBLE);
+                                
+                                hasValidId = true;
+                                enableNextButton();
+                                updateImageCounter();
+                                Toast.makeText(this, "Valid ID selected successfully (Total: " + validIdBitmaps.size() + ")", Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error loading image from gallery", e);
+                            Toast.makeText(this, "Error loading image", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 }
             } else {
@@ -454,7 +581,7 @@ public class ValidIdActivity extends AppCompatActivity {
 
     private void uploadImagesAndSaveUserData(String userId) {
         // Upload profile picture if exists
-        if (hasProfilePicture && profileImageUriString != null) {
+        if (hasProfilePicture) {
             uploadProfilePicture(userId, new OnSuccessListener<String>() {
                 @Override
                 public void onSuccess(String profilePictureUrl) {
@@ -470,24 +597,50 @@ public class ValidIdActivity extends AppCompatActivity {
 
     private void uploadProfilePicture(String userId, OnSuccessListener<String> onProfileSuccess) {
         try {
-            Uri profileImageUri = Uri.parse(profileImageUriString);
-            StorageReference profileImageRef = storageRef.child("profile_pictures/" + userId + ".jpg");
+            // Use firebaseUid for the profile picture path to ensure consistency
+            String firebaseUid = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : "";
+            if (firebaseUid.isEmpty()) {
+                Log.e(TAG, "Firebase UID not available");
+                onProfileSuccess.onSuccess(null);
+                return;
+            }
+            
+            StorageReference profileImageRef = storageRef.child("profile_pictures/" + firebaseUid + "/profile.jpg");
+            byte[] data = null;
 
-            // Convert image to bytes for upload
-            Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), profileImageUri);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
-            byte[] data = baos.toByteArray();
+            // Handle both bitmap and URI data
+            if (profileBitmap != null) {
+                // Use bitmap data directly
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                profileBitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+                data = baos.toByteArray();
+            } else if (profileImageUriString != null) {
+                // Use URI data
+                Uri profileImageUri = Uri.parse(profileImageUriString);
+                Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), profileImageUri);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+                data = baos.toByteArray();
+            }
+
+            if (data == null) {
+                onProfileSuccess.onSuccess(null);
+                return;
+            }
+
+            Log.d(TAG, "Uploading profile picture to: " + profileImageRef.getPath());
 
             // Upload the image
             UploadTask uploadTask = profileImageRef.putBytes(data);
             uploadTask.addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                 @Override
                 public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                    Log.d(TAG, "Profile picture uploaded successfully");
                     // Get the download URL
                     profileImageRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
                         @Override
                         public void onSuccess(Uri downloadUri) {
+                            Log.d(TAG, "Profile picture download URL: " + downloadUri.toString());
                             onProfileSuccess.onSuccess(downloadUri.toString());
                         }
                     }).addOnFailureListener(new OnFailureListener() {
@@ -512,49 +665,64 @@ public class ValidIdActivity extends AppCompatActivity {
     }
 
     private void uploadValidId(String userId, String profilePictureUrl) {
-        if (validIdUri == null) {
+        if (validIdBitmaps.isEmpty()) {
             saveUserDataToFirestore(userId, profilePictureUrl, null);
             return;
         }
 
-        try {
-            StorageReference validIdRef = storageRef.child("valid_ids/" + userId + ".jpg");
+        // Upload multiple valid ID images
+        uploadMultipleValidIds(userId, profilePictureUrl, 0);
+    }
 
-            // Convert image to bytes for upload
-            Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), validIdUri);
+    private void uploadMultipleValidIds(String userId, String profilePictureUrl, int currentIndex) {
+        if (currentIndex >= validIdBitmaps.size()) {
+            // All images uploaded, save user data
+            saveUserDataToFirestore(userId, profilePictureUrl, "Multiple images uploaded");
+            return;
+        }
+
+        try {
+            // Use firebaseUid for the valid ID path to ensure consistency
+            String firebaseUid = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : "";
+            if (firebaseUid.isEmpty()) {
+                Log.e(TAG, "Firebase UID not available");
+                saveUserDataToFirestore(userId, profilePictureUrl, null);
+                return;
+            }
+            
+            // Create unique filename for each image
+            String imageFileName = "id_" + (currentIndex + 1) + ".jpg";
+            StorageReference validIdRef = storageRef.child("valid_ids/" + firebaseUid + "/" + imageFileName);
+
+            // Get current image
+            Bitmap bitmap = validIdBitmaps.get(currentIndex);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
             byte[] data = baos.toByteArray();
+
+            Log.d(TAG, "Uploading valid ID image " + (currentIndex + 1) + " of " + validIdBitmaps.size());
 
             // Upload the image
             UploadTask uploadTask = validIdRef.putBytes(data);
             uploadTask.addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                 @Override
                 public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                    // Get the download URL
-                    validIdRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
-                        @Override
-                        public void onSuccess(Uri downloadUri) {
-                            saveUserDataToFirestore(userId, profilePictureUrl, downloadUri.toString());
-                        }
-                    }).addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            Log.w(TAG, "Failed to get valid ID download URL", e);
-                            saveUserDataToFirestore(userId, profilePictureUrl, null);
-                        }
-                    });
+                    Log.d(TAG, "Valid ID image " + (currentIndex + 1) + " uploaded successfully");
+                    // Continue with next image
+                    uploadMultipleValidIds(userId, profilePictureUrl, currentIndex + 1);
                 }
             }).addOnFailureListener(new OnFailureListener() {
                 @Override
                 public void onFailure(@NonNull Exception e) {
-                    Log.w(TAG, "Failed to upload valid ID", e);
-                    saveUserDataToFirestore(userId, profilePictureUrl, null);
+                    Log.w(TAG, "Failed to upload valid ID image " + (currentIndex + 1), e);
+                    // Continue with next image even if this one fails
+                    uploadMultipleValidIds(userId, profilePictureUrl, currentIndex + 1);
                 }
             });
         } catch (Exception e) {
-            Log.w(TAG, "Error processing valid ID", e);
-            saveUserDataToFirestore(userId, profilePictureUrl, null);
+            Log.w(TAG, "Error processing valid ID image " + (currentIndex + 1), e);
+            // Continue with next image
+            uploadMultipleValidIds(userId, profilePictureUrl, currentIndex + 1);
         }
     }
 
@@ -574,6 +742,7 @@ public class ValidIdActivity extends AppCompatActivity {
         userData.put("barangay", barangay);
         userData.put("profilePictureUrl", profilePictureUrl != null ? profilePictureUrl : "");
         userData.put("validIdUrl", validIdUrl != null ? validIdUrl : "");
+        userData.put("validIdCount", validIdBitmaps.size());
         String createdDate = new java.text.SimpleDateFormat("MM/dd/yyyy", java.util.Locale.getDefault()).format(new java.util.Date());
         String createdTime = new java.text.SimpleDateFormat("hh:mm:ss a", java.util.Locale.getDefault()).format(new java.util.Date());
         userData.put("createdDate", createdDate);

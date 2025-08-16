@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -27,11 +28,13 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -49,6 +52,8 @@ public class ProfilePictureActivity extends AppCompatActivity {
     private String firstName, lastName, mobileNumber, email, password, province, cityTown, barangay;
     private Uri profileImageUri;
     private boolean hasProfilePicture = false;
+    private Bitmap profileBitmap;
+    private String uploadedImageUrl;
     
     // Firebase instances
     private FirebaseAuth mAuth;
@@ -263,16 +268,34 @@ public class ProfilePictureActivity extends AppCompatActivity {
                 if (requestCode == CAMERA_REQUEST_CODE) {
                     Bitmap bitmap = (Bitmap) data.getExtras().get("data");
                     if (bitmap != null && ivProfilePicture != null) {
-                        ivProfilePicture.setImageBitmap(bitmap);
+                        // Create circular bitmap for display
+                        Bitmap circularBitmap = createCircularBitmap(bitmap);
+                        ivProfilePicture.setImageBitmap(circularBitmap);
+                        profileBitmap = bitmap; // Store original bitmap for upload
                         hasProfilePicture = true;
+                        uploadedImageUrl = null; // Clear previous URL
+                        uploadProfilePictureToFirebase(bitmap, true);
                         Toast.makeText(this, "Profile picture captured successfully", Toast.LENGTH_SHORT).show();
                     }
                 } else if (requestCode == GALLERY_REQUEST_CODE) {
                     profileImageUri = data.getData();
                     if (profileImageUri != null && ivProfilePicture != null) {
-                        ivProfilePicture.setImageURI(profileImageUri);
-                        hasProfilePicture = true;
-                        Toast.makeText(this, "Profile picture selected successfully", Toast.LENGTH_SHORT).show();
+                        try {
+                            // Load bitmap from URI and create circular version
+                            InputStream inputStream = getContentResolver().openInputStream(profileImageUri);
+                            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+                            if (bitmap != null) {
+                                Bitmap circularBitmap = createCircularBitmap(bitmap);
+                                ivProfilePicture.setImageBitmap(circularBitmap);
+                                hasProfilePicture = true;
+                                uploadedImageUrl = null; // Clear previous URL
+                                uploadProfilePictureToFirebase(profileImageUri, false);
+                                Toast.makeText(this, "Profile picture selected successfully", Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error processing gallery image", e);
+                            Toast.makeText(this, "Error processing image", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 }
             }
@@ -297,9 +320,17 @@ public class ProfilePictureActivity extends AppCompatActivity {
             intent.putExtra("barangay", barangay != null ? barangay : "");
             
             // Pass profile picture data if exists
-            if (hasProfilePicture && profileImageUri != null) {
+            if (hasProfilePicture) {
                 intent.putExtra("hasProfilePicture", true);
-                intent.putExtra("profileImageUri", profileImageUri.toString());
+                if (profileBitmap != null) {
+                    // Convert bitmap to byte array for passing
+                    java.io.ByteArrayOutputStream stream = new java.io.ByteArrayOutputStream();
+                    profileBitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
+                    byte[] byteArray = stream.toByteArray();
+                    intent.putExtra("profileBitmap", byteArray);
+                } else if (profileImageUri != null) {
+                    intent.putExtra("profileImageUri", profileImageUri.toString());
+                }
             } else {
                 intent.putExtra("hasProfilePicture", false);
             }
@@ -311,5 +342,46 @@ public class ProfilePictureActivity extends AppCompatActivity {
             e.printStackTrace();
             Toast.makeText(this, "Error proceeding to Valid ID: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void uploadProfilePictureToFirebase(Object imageData, boolean isFromCamera) {
+        // During registration, we don't have a Firebase UID yet, so we'll store the image data
+        // and upload it later when the user account is created
+        if (isFromCamera && imageData instanceof Bitmap) {
+            profileBitmap = (Bitmap) imageData;
+            uploadedImageUrl = null; // Will be set after account creation
+            Toast.makeText(ProfilePictureActivity.this, "Profile picture captured successfully", Toast.LENGTH_SHORT).show();
+        } else if (!isFromCamera && imageData instanceof Uri) {
+            profileImageUri = (Uri) imageData;
+            uploadedImageUrl = null; // Will be set after account creation
+            Toast.makeText(ProfilePictureActivity.this, "Profile picture selected successfully", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private Bitmap createCircularBitmap(Bitmap bitmap) {
+        // Resize bitmap to consistent dimensions (e.g., 300x300 pixels)
+        int targetSize = 300;
+        Bitmap resizedBitmap = Bitmap.createScaledBitmap(bitmap, targetSize, targetSize, true);
+        
+        // Create circular bitmap
+        Bitmap circularBitmap = Bitmap.createBitmap(targetSize, targetSize, Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas canvas = new android.graphics.Canvas(circularBitmap);
+        
+        android.graphics.Paint paint = new android.graphics.Paint();
+        paint.setAntiAlias(true);
+        paint.setFilterBitmap(true);
+        
+        // Create circular clipping path
+        android.graphics.Path path = new android.graphics.Path();
+        path.addCircle(targetSize / 2f, targetSize / 2f, targetSize / 2f, android.graphics.Path.Direction.CW);
+        canvas.clipPath(path);
+        
+        // Draw the resized bitmap (will be clipped to circle)
+        canvas.drawBitmap(resizedBitmap, 0, 0, paint);
+        
+        // Recycle the resized bitmap to free memory
+        resizedBitmap.recycle();
+        
+        return circularBitmap;
     }
 }

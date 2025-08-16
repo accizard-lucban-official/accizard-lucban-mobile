@@ -201,7 +201,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:orientation="vertical"
-                    android:background="@drawable/dashed_border_background"
                     android:gravity="center"
                     android:padding="24dp">
 
@@ -229,7 +228,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:background="@drawable/dashed_border_background"
-                    android:scaleType="centerCrop"
+                    android:scaleType="fitCenter"
+                    android:adjustViewBounds="true"
                     android:visibility="gone"
                     android:contentDescription="Selected Valid ID" />
 

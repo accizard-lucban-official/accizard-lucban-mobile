@@ -28,6 +28,14 @@ import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.HashMap;
 import java.util.Map;
+import android.net.Uri;
+import android.provider.MediaStore;
+import android.graphics.Bitmap;
+import android.app.AlertDialog;
+import android.view.LayoutInflater;
+import android.widget.TextView;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ReportSubmissionActivity extends AppCompatActivity {
 
@@ -38,10 +46,16 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private EditText descriptionEditText;
     private EditText locationEditText;
     private ImageView locationButton;
+    private ImageView pinningButton;
     private Button uploadImagesButton;
     private Button submitReportButton;
     private ImageButton profileButton;
     private RecyclerView reportLogRecyclerView;
+    private static final int IMAGE_PICK_REQUEST = 2001;
+    private Uri selectedImageUri;
+    private ImageView imagePreview;
+    private LinearLayout attachmentsContainer;
+    private List<Uri> selectedImageUris = new ArrayList<>();
 
     // Bottom Navigation
     private LinearLayout homeTab;
@@ -80,10 +94,13 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         descriptionEditText = findViewById(R.id.descriptionEditText);
         locationEditText = findViewById(R.id.locationEditText);
         locationButton = findViewById(R.id.locationButton);
+        pinningButton = findViewById(R.id.pinningButton);
         uploadImagesButton = findViewById(R.id.uploadImagesButton);
         submitReportButton = findViewById(R.id.submitReportButton);
         profileButton = findViewById(R.id.profile);
         reportLogRecyclerView = findViewById(R.id.reportLogRecyclerView);
+        imagePreview = findViewById(R.id.imagePreview);
+        attachmentsContainer = findViewById(R.id.attachmentsContainer);
 
         // Bottom navigation
         homeTab = findViewById(R.id.homeTab);
@@ -146,11 +163,19 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             }
         });
 
+        // Pinning button click
+        pinningButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openMapPicker();
+            }
+        });
+
         // Upload images button click
         uploadImagesButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                uploadImages();
+                pickImageFromGallery();
             }
         });
 
@@ -236,6 +261,78 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     }
 
     // Functional methods
+    // Open a map picker activity to let the user pick a location
+    private static final int MAP_PICKER_REQUEST_CODE = 1001;
+    private void openMapPicker() {
+        Intent intent = new Intent(this, MapPickerActivity.class);
+        startActivityForResult(intent, MAP_PICKER_REQUEST_CODE);
+    }
+
+    private void pickImageFromGallery() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        startActivityForResult(Intent.createChooser(intent, "Select Pictures"), IMAGE_PICK_REQUEST);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == MAP_PICKER_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
+            String pickedLocation = data.getStringExtra("pickedLocation");
+            if (pickedLocation != null) {
+                locationEditText.setText(pickedLocation);
+            }
+        }
+        if (requestCode == IMAGE_PICK_REQUEST && resultCode == RESULT_OK && data != null) {
+            selectedImageUris.clear();
+            attachmentsContainer.removeAllViews();
+            
+            Log.d(TAG, "Processing image selection result");
+            
+            if (data.getClipData() != null) {
+                int count = data.getClipData().getItemCount();
+                Log.d(TAG, "Multiple images selected: " + count);
+                for (int i = 0; i < count; i++) {
+                    Uri imageUri = data.getClipData().getItemAt(i).getUri();
+                    selectedImageUris.add(imageUri);
+                    Log.d(TAG, "Added image " + (i + 1) + ": " + imageUri.toString());
+                }
+            } else if (data.getData() != null) {
+                Uri imageUri = data.getData();
+                selectedImageUris.add(imageUri);
+                Log.d(TAG, "Single image selected: " + imageUri.toString());
+            } else {
+                Log.d(TAG, "No images found in result");
+            }
+            
+            Log.d(TAG, "Total images stored: " + selectedImageUris.size());
+            
+            // Add only one attachment link for all images
+            if (!selectedImageUris.isEmpty()) {
+                addSingleAttachmentLink();
+            }
+        }
+    }
+
+    private void addSingleAttachmentLink() {
+        TextView link = new TextView(this);
+        String text = selectedImageUris.size() == 1 ? "See Attachment" : "See Attachments (" + selectedImageUris.size() + " images)";
+        link.setText(text);
+        link.setTextColor(getResources().getColor(android.R.color.holo_blue_dark));
+        link.setTextSize(16);
+        link.setPadding(0, 8, 0, 8);
+        link.setBackgroundResource(android.R.drawable.list_selector_background);
+        link.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showImageInDialog(null);
+            }
+        });
+        attachmentsContainer.addView(link);
+        Log.d(TAG, "Added single attachment link for " + selectedImageUris.size() + " images");
+    }
+
     private void getCurrentLocation() {
         // TODO: Implement location retrieval using GPS or network
         // For now, show a toast
@@ -285,12 +382,57 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 reportType.toLowerCase()
             );
 
-            // Save to Firestore
-            FirestoreHelper.createReport(reportData,
+            // Upload images first if any, then submit report
+            if (!selectedImageUris.isEmpty()) {
+                uploadReportImagesAndSubmit(reportData);
+            } else {
+                // Submit report without images
+                submitReportToFirestore(reportData);
+            }
+        }
+    }
+
+    private void uploadReportImagesAndSubmit(Map<String, Object> reportData) {
+        // Generate a temporary report ID for organizing images
+        String tempReportId = "temp_" + System.currentTimeMillis();
+        
+        StorageHelper.uploadReportImages(tempReportId, selectedImageUris,
+                new OnSuccessListener<List<String>>() {
+                    @Override
+                    public void onSuccess(List<String> imageUrls) {
+                        // Add image URLs to report data
+                        reportData.put("imageUrls", imageUrls);
+                        reportData.put("imageCount", imageUrls.size());
+                        
+                        // Submit report with images
+                        submitReportToFirestore(reportData);
+                    }
+                },
+                new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w(TAG, "Error uploading images", e);
+                        Toast.makeText(ReportSubmissionActivity.this, 
+                            "Error uploading images: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        submitReportButton.setEnabled(true);
+                        submitReportButton.setText("Submit Report");
+                    }
+                });
+    }
+
+    private void submitReportToFirestore(Map<String, Object> reportData) {
+        FirestoreHelper.createReportWithAutoId(reportData,
                 new OnSuccessListener<DocumentReference>() {
                     @Override
                     public void onSuccess(DocumentReference documentReference) {
                         Log.d(TAG, "Report submitted successfully with ID: " + documentReference.getId());
+                        
+                        // If report has images, reorganize them with the actual report ID
+                        if (reportData.containsKey("imageUrls")) {
+                            reorganizeImagesWithReportId(documentReference.getId(), 
+                                    (List<String>) reportData.get("imageUrls"));
+                        }
+                        
                         Toast.makeText(ReportSubmissionActivity.this, 
                             "Report submitted successfully!", Toast.LENGTH_SHORT).show();
                         clearForm();
@@ -308,7 +450,12 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                         submitReportButton.setText("Submit Report");
                     }
                 });
-        }
+    }
+
+    private void reorganizeImagesWithReportId(String reportId, List<String> imageUrls) {
+        // This method can be implemented to move images from temp folder to actual report folder
+        // For now, we'll just log the reorganization
+        Log.d(TAG, "Images uploaded for report " + reportId + ": " + imageUrls.size() + " images");
     }
 
     private boolean validateForm() {
@@ -343,6 +490,45 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         locationEditText.setText("");
         descriptionEditText.clearFocus();
         locationEditText.clearFocus();
+    }
+
+    private void showImageInDialog(Uri imageUri) {
+        if (selectedImageUris.isEmpty()) return;
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_image_preview, null);
+        LinearLayout imagesContainer = dialogView.findViewById(R.id.imagesContainer);
+        
+        // Clear any existing images
+        imagesContainer.removeAllViews();
+        
+        // Debug: Log how many images we have
+        Log.d(TAG, "Showing " + selectedImageUris.size() + " images in dialog");
+        
+        // Add all selected images to the dialog
+        for (int i = 0; i < selectedImageUris.size(); i++) {
+            Uri uri = selectedImageUris.get(i);
+            Log.d(TAG, "Adding image " + (i + 1) + ": " + uri.toString());
+            
+            ImageView imageView = new ImageView(this);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            params.setMargins(0, 8, 0, 8);
+            imageView.setLayoutParams(params);
+            imageView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            imageView.setAdjustViewBounds(true);
+            imageView.setImageURI(uri);
+            imageView.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
+            
+            imagesContainer.addView(imageView);
+        }
+        
+        builder.setView(dialogView)
+                .setPositiveButton("Close", null)
+                .show();
     }
 
     @Override

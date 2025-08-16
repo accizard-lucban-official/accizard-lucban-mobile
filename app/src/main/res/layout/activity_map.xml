@@ -4,12 +4,20 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Mapbox MapView -->
-    <com.mapbox.maps.MapView
-        android:id="@+id/mapView"
+    <!-- Map Container with MapView -->
+    <FrameLayout
+        android:id="@+id/mapContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/bottomNavigationView" />
+        android:layout_above="@+id/bottomNavigationView">
+
+        <!-- Mapbox MapView -->
+        <com.mapbox.maps.MapView
+            android:id="@+id/mapView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </FrameLayout>
 
     <!-- Search Bar -->
     <LinearLayout
@@ -127,7 +135,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentEnd="true"
-        android:layout_above="@+id/emergencyFab"
+        android:layout_above="@+id/pinLocationFab"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
         android:src="@drawable/ic_alert"
@@ -135,6 +143,21 @@
         app:tint="@android:color/white"
         app:fabSize="mini"
         android:contentDescription="Alert" />
+
+    <!-- Pin Location FAB -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/pinLocationFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_above="@+id/emergencyFab"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:src="@drawable/ic_map"
+        app:backgroundTint="#2196F3"
+        app:tint="@android:color/white"
+        app:fabSize="mini"
+        android:contentDescription="Pin Location" />
 
     <!-- Emergency FAB -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton

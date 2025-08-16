@@ -112,6 +112,40 @@ public class FirestoreHelper {
                 .addOnFailureListener(failureListener);
     }
     
+    // Create report with auto-incremented reportId (RID-X)
+    public static void createReportWithAutoId(final Map<String, Object> reportData,
+                                              final OnSuccessListener<DocumentReference> successListener,
+                                              final OnFailureListener failureListener) {
+        // Query for the highest reportId
+        getInstance().collection(COLLECTION_REPORTS)
+            .orderBy("reportId", Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .addOnCompleteListener(task -> {
+                int nextId = 1;
+                if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                    String lastReportId = null;
+                    try {
+                        Object ridObj = task.getResult().getDocuments().get(0).get("reportId");
+                        if (ridObj != null) {
+                            lastReportId = ridObj.toString();
+                        }
+                    } catch (Exception ignored) {}
+                    if (lastReportId != null && lastReportId.startsWith("RID-")) {
+                        try {
+                            int lastNum = Integer.parseInt(lastReportId.replace("RID-", ""));
+                            nextId = lastNum + 1;
+                        } catch (NumberFormatException ignored) {}
+                    }
+                }
+                String newReportId = "RID-" + nextId;
+                reportData.put("reportId", newReportId);
+                // Now create the report
+                createReport(reportData, successListener, failureListener);
+            })
+            .addOnFailureListener(failureListener);
+    }
+    
     // Alert operations
     public static void createAlert(Map<String, Object> alertData,
                                   OnSuccessListener<DocumentReference> successListener,

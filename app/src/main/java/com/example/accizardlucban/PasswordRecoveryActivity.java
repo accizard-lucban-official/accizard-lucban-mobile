@@ -53,8 +53,11 @@ public class PasswordRecoveryActivity extends AppCompatActivity {
             // Check if there's a custom email to display
             String email = intent.getStringExtra("email");
             if (email != null && !email.isEmpty()) {
-                String message = "It looks like your account is not yet verified.\nWe will notify you when your account is\nverified before you can login on the app.";
-                // You can customize the message to include the email if needed
+                String message = "Password reset link has been\n" +
+                        "sent to " + email + "\n\n" +
+                        "Please check your email and\n" +
+                        "follow the instructions to\n" +
+                        "reset your password.";
                 errorMessageTextView.setText(message);
             }
         }
@@ -62,7 +65,7 @@ public class PasswordRecoveryActivity extends AppCompatActivity {
 
     private void goBackToLogin() {
         // Create intent to go back to login activity
-        Intent intent = new Intent(PasswordRecoveryActivity.this, AccountVerificationActivity.class);
+        Intent intent = new Intent(PasswordRecoveryActivity.this, MainActivity.class);
 
         // Clear the activity stack so user can't go back to this screen
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

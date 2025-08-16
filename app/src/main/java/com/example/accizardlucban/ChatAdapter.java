@@ -1,8 +1,11 @@
 package com.example.accizardlucban;
 
+import android.graphics.Bitmap;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -54,11 +57,15 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
     static class ChatViewHolder extends RecyclerView.ViewHolder {
         private TextView messageText;
         private TextView timestampText;
+        private ImageView messageImage;
+        private LinearLayout imageContainer;
 
         public ChatViewHolder(@NonNull View itemView) {
             super(itemView);
             messageText = itemView.findViewById(R.id.messageText);
             timestampText = itemView.findViewById(R.id.timestampText);
+            messageImage = itemView.findViewById(R.id.messageImage);
+            imageContainer = itemView.findViewById(R.id.imageContainer);
         }
 
         public void bind(ChatMessage message) {
@@ -67,6 +74,18 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
             }
             if (timestampText != null) {
                 timestampText.setText(message.getTimestamp());
+            }
+            
+            // Handle image display
+            if (message.hasImage() && messageImage != null && imageContainer != null) {
+                imageContainer.setVisibility(View.VISIBLE);
+                messageImage.setVisibility(View.VISIBLE);
+                
+                if (message.getImageBitmap() != null) {
+                    messageImage.setImageBitmap(message.getImageBitmap());
+                }
+            } else if (imageContainer != null) {
+                imageContainer.setVisibility(View.GONE);
             }
         }
     }

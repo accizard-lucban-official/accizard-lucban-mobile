@@ -9,6 +9,8 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.text.method.PasswordTransformationMethod;
+import android.widget.ImageView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.content.SharedPreferences;
@@ -19,6 +21,7 @@ public class RegistrationActivity extends AppCompatActivity {
     private CheckBox cbTerms;
     private Button btnCreateAccount;
     private TextView tvSignIn;
+    private ImageView ivTogglePassword;
 
     private static final String PREFS_NAME = "user_profile_prefs";
     private static final String KEY_FIRST_NAME = "first_name";
@@ -31,6 +34,7 @@ public class RegistrationActivity extends AppCompatActivity {
 
         initializeViews();
         setupClickListeners();
+        setupPasswordToggle();
     }
 
     private void initializeViews() {
@@ -42,6 +46,7 @@ public class RegistrationActivity extends AppCompatActivity {
         cbTerms = findViewById(R.id.cbTerms);
         btnCreateAccount = findViewById(R.id.btnCreateAccount);
         tvSignIn = findViewById(R.id.tvSignIn);
+        ivTogglePassword = findViewById(R.id.ivTogglePassword);
     }
 
     private void setupClickListeners() {
@@ -66,6 +71,26 @@ public class RegistrationActivity extends AppCompatActivity {
                     e.printStackTrace();
                     Toast.makeText(RegistrationActivity.this, "Error navigating to sign in", Toast.LENGTH_SHORT).show();
                 }
+            }
+        });
+    }
+
+    private void setupPasswordToggle() {
+        ivTogglePassword.setOnClickListener(new View.OnClickListener() {
+            private boolean isPasswordVisible = false;
+            @Override
+            public void onClick(View v) {
+                if (isPasswordVisible) {
+                    etPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                    ivTogglePassword.setAlpha(0.5f);
+                    ivTogglePassword.setImageResource(R.drawable.ic_eye_off); // Closed eye
+                } else {
+                    etPassword.setTransformationMethod(null);
+                    ivTogglePassword.setAlpha(1.0f);
+                    ivTogglePassword.setImageResource(R.drawable.baseline_remove_red_eye_24); // Open eye
+                }
+                isPasswordVisible = !isPasswordVisible;
+                etPassword.setSelection(etPassword.getText().length());
             }
         });
     }
@@ -114,13 +139,12 @@ public class RegistrationActivity extends AppCompatActivity {
             etPassword.requestFocus();
             return false;
         }
-
-        if (etPassword.getText().toString().trim().length() < 6) {
-            etPassword.setError("Password must be at least 6 characters");
+        String password = etPassword.getText().toString().trim();
+        if (!isStrongPassword(password)) {
+            etPassword.setError("Password must be at least 8 characters, include uppercase, lowercase, number, and symbol");
             etPassword.requestFocus();
             return false;
         }
-
         if (!cbTerms.isChecked()) {
             Toast.makeText(this, "Please agree to Terms and Conditions", Toast.LENGTH_SHORT).show();
             return false;
@@ -144,6 +168,18 @@ public class RegistrationActivity extends AppCompatActivity {
 
         // Should be 10 digits starting with 9
         return mobileNumber.length() == 10 && mobileNumber.startsWith("9") && mobileNumber.matches("\\d+");
+    }
+
+    private boolean isStrongPassword(String password) {
+        if (password.length() < 8) return false;
+        boolean hasUpper = false, hasLower = false, hasDigit = false, hasSymbol = false;
+        for (char c : password.toCharArray()) {
+            if (Character.isUpperCase(c)) hasUpper = true;
+            else if (Character.isLowerCase(c)) hasLower = true;
+            else if (Character.isDigit(c)) hasDigit = true;
+            else if ("!@#$%^&*()-_=+[{]}|;:'\",<.>/?`~".indexOf(c) >= 0) hasSymbol = true;
+        }
+        return hasUpper && hasLower && hasDigit && hasSymbol;
     }
 
     private void proceedToAddressInfo() {
