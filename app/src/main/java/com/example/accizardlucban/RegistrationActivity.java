@@ -11,17 +11,26 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.text.method.PasswordTransformationMethod;
 import android.widget.ImageView;
+import android.view.LayoutInflater;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.animation.ObjectAnimator;
+import android.view.animation.AccelerateDecelerateInterpolator;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.content.SharedPreferences;
+import androidx.cardview.widget.CardView;
 
 public class RegistrationActivity extends AppCompatActivity {
 
     private EditText etFirstName, etLastName, etMobileNumber, etEmail, etPassword;
     private CheckBox cbTerms;
     private Button btnCreateAccount;
-    private TextView tvSignIn;
+    private TextView tvSignIn, tvTermsConditions, tvPrivacyPolicy;
     private ImageView ivTogglePassword;
+    private FrameLayout popupContainer;
+    private View popupView;
+    private boolean isPopupVisible = false;
 
     private static final String PREFS_NAME = "user_profile_prefs";
     private static final String KEY_FIRST_NAME = "first_name";
@@ -47,6 +56,21 @@ public class RegistrationActivity extends AppCompatActivity {
         btnCreateAccount = findViewById(R.id.btnCreateAccount);
         tvSignIn = findViewById(R.id.tvSignIn);
         ivTogglePassword = findViewById(R.id.ivTogglePassword);
+        
+        // Find Terms and Conditions TextViews
+        tvTermsConditions = findViewById(R.id.tvTermsConditions);
+        tvPrivacyPolicy = findViewById(R.id.tvPrivacyPolicy);
+        
+        // Create popup container
+        popupContainer = new FrameLayout(this);
+        popupContainer.setLayoutParams(new ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT));
+        popupContainer.setVisibility(View.GONE);
+        
+        // Add popup container to root layout
+        ViewGroup rootLayout = findViewById(android.R.id.content);
+        rootLayout.addView(popupContainer);
     }
 
     private void setupClickListeners() {
@@ -54,7 +78,7 @@ public class RegistrationActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (validateInputs()) {
-                    proceedToAddressInfo();
+                    proceedToPersonalInfo();
                 }
             }
         });
@@ -73,6 +97,25 @@ public class RegistrationActivity extends AppCompatActivity {
                 }
             }
         });
+        
+        // Set click listeners for Terms and Conditions
+        if (tvTermsConditions != null) {
+            tvTermsConditions.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showTermsPopup();
+                }
+            });
+        }
+        
+        if (tvPrivacyPolicy != null) {
+            tvPrivacyPolicy.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showTermsPopup();
+                }
+            });
+        }
     }
 
     private void setupPasswordToggle() {
@@ -182,7 +225,7 @@ public class RegistrationActivity extends AppCompatActivity {
         return hasUpper && hasLower && hasDigit && hasSymbol;
     }
 
-    private void proceedToAddressInfo() {
+    private void proceedToPersonalInfo() {
         try {
             // Save first and last name to SharedPreferences
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -191,7 +234,7 @@ public class RegistrationActivity extends AppCompatActivity {
             editor.putString(KEY_LAST_NAME, etLastName.getText().toString().trim());
             editor.apply();
 
-            Intent intent = new Intent(RegistrationActivity.this, AddressInfoActivity.class);
+            Intent intent = new Intent(RegistrationActivity.this, PersonalInfoActivity.class);
             intent.putExtra("firstName", etFirstName.getText().toString().trim());
             intent.putExtra("lastName", etLastName.getText().toString().trim());
             intent.putExtra("mobileNumber", etMobileNumber.getText().toString().trim());
@@ -200,7 +243,169 @@ public class RegistrationActivity extends AppCompatActivity {
             startActivity(intent);
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Error proceeding to address info: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Error proceeding to personal info: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    private void showTermsPopup() {
+        if (isPopupVisible) return;
+        
+        try {
+            // Inflate the popup layout
+            LayoutInflater inflater = LayoutInflater.from(this);
+            popupView = inflater.inflate(R.layout.popup_terms_conditions, popupContainer, false);
+            
+            // Clear any existing views and add the popup
+            popupContainer.removeAllViews();
+            popupContainer.addView(popupView);
+            
+            // Set up popup controls
+            setupPopupControls();
+            
+            // Show popup with animation
+            popupContainer.setVisibility(View.VISIBLE);
+            isPopupVisible = true;
+            
+            // Animate popup appearance
+            animatePopupIn();
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error showing terms popup", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    private void setupPopupControls() {
+        if (popupView == null) return;
+        
+        // Close button
+        ImageView btnClose = popupView.findViewById(R.id.btnClosePopup);
+        if (btnClose != null) {
+            btnClose.setOnClickListener(v -> hideTermsPopup());
+        }
+        
+        // Accept button
+        Button btnAccept = popupView.findViewById(R.id.btnAcceptTerms);
+        if (btnAccept != null) {
+            btnAccept.setOnClickListener(v -> {
+                cbTerms.setChecked(true);
+                hideTermsPopup();
+                Toast.makeText(RegistrationActivity.this, "Terms and Conditions accepted", Toast.LENGTH_SHORT).show();
+            });
+        }
+        
+        // Decline button
+        Button btnDecline = popupView.findViewById(R.id.btnDeclineTerms);
+        if (btnDecline != null) {
+            btnDecline.setOnClickListener(v -> {
+                cbTerms.setChecked(false);
+                hideTermsPopup();
+                Toast.makeText(RegistrationActivity.this, "Terms and Conditions declined", Toast.LENGTH_SHORT).show();
+            });
+        }
+        
+        // Background click to close
+        popupContainer.setOnClickListener(v -> {
+            if (v == popupContainer) {
+                hideTermsPopup();
+            }
+        });
+        
+        // Prevent CardView clicks from closing popup
+        CardView cardView = popupView.findViewById(R.id.cardViewPopup);
+        if (cardView != null) {
+            cardView.setOnClickListener(v -> {
+                // Do nothing - prevent background click
+            });
+        }
+    }
+    
+    private void hideTermsPopup() {
+        if (!isPopupVisible) return;
+        
+        animatePopupOut(() -> {
+            popupContainer.setVisibility(View.GONE);
+            popupContainer.removeAllViews();
+            isPopupVisible = false;
+        });
+    }
+    
+    private void animatePopupIn() {
+        if (popupView == null) return;
+        
+        CardView cardView = popupView.findViewById(R.id.cardViewPopup);
+        if (cardView != null) {
+            // Start from scaled down
+            cardView.setScaleX(0.7f);
+            cardView.setScaleY(0.7f);
+            cardView.setAlpha(0f);
+            
+            // Animate to full size
+            ObjectAnimator scaleX = ObjectAnimator.ofFloat(cardView, "scaleX", 0.7f, 1.0f);
+            ObjectAnimator scaleY = ObjectAnimator.ofFloat(cardView, "scaleY", 0.7f, 1.0f);
+            ObjectAnimator alpha = ObjectAnimator.ofFloat(cardView, "alpha", 0f, 1.0f);
+            
+            scaleX.setDuration(300);
+            scaleY.setDuration(300);
+            alpha.setDuration(300);
+            
+            scaleX.setInterpolator(new AccelerateDecelerateInterpolator());
+            scaleY.setInterpolator(new AccelerateDecelerateInterpolator());
+            alpha.setInterpolator(new AccelerateDecelerateInterpolator());
+            
+            scaleX.start();
+            scaleY.start();
+            alpha.start();
+        }
+        
+        // Animate background fade in
+        popupContainer.setAlpha(0f);
+        ObjectAnimator backgroundAlpha = ObjectAnimator.ofFloat(popupContainer, "alpha", 0f, 1.0f);
+        backgroundAlpha.setDuration(200);
+        backgroundAlpha.start();
+    }
+    
+    private void animatePopupOut(Runnable onComplete) {
+        if (popupView == null) {
+            if (onComplete != null) onComplete.run();
+            return;
+        }
+        
+        CardView cardView = popupView.findViewById(R.id.cardViewPopup);
+        if (cardView != null) {
+            // Animate to scaled down
+            ObjectAnimator scaleX = ObjectAnimator.ofFloat(cardView, "scaleX", 1.0f, 0.7f);
+            ObjectAnimator scaleY = ObjectAnimator.ofFloat(cardView, "scaleY", 1.0f, 0.7f);
+            ObjectAnimator alpha = ObjectAnimator.ofFloat(cardView, "alpha", 1.0f, 0f);
+            
+            scaleX.setDuration(200);
+            scaleY.setDuration(200);
+            alpha.setDuration(200);
+            
+            scaleX.setInterpolator(new AccelerateDecelerateInterpolator());
+            scaleY.setInterpolator(new AccelerateDecelerateInterpolator());
+            alpha.setInterpolator(new AccelerateDecelerateInterpolator());
+            
+            alpha.addUpdateListener(animation -> {
+                if (animation.getAnimatedFraction() == 1.0f && onComplete != null) {
+                    onComplete.run();
+                }
+            });
+            
+            scaleX.start();
+            scaleY.start();
+            alpha.start();
+        } else {
+            if (onComplete != null) onComplete.run();
+        }
+    }
+    
+    @Override
+    public void onBackPressed() {
+        if (isPopupVisible) {
+            hideTermsPopup();
+        } else {
+            super.onBackPressed();
         }
     }
 }

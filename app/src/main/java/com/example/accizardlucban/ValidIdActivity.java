@@ -28,6 +28,7 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
+import android.content.SharedPreferences;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
@@ -58,6 +59,9 @@ public class ValidIdActivity extends AppCompatActivity {
     private Button btnTakePhoto, btnUploadFromGallery, btnNext;
     private ImageButton btnBack;
     private TextView tvValidIdList;
+    private TextView tvSelectedIdsLabel;
+    private android.widget.HorizontalScrollView hsThumbnails;
+    private android.widget.LinearLayout thumbnailsContainer;
     private String firstName, lastName, mobileNumber, email, password, province, cityTown, barangay;
     private java.util.List<Uri> validIdUris;
     private java.util.List<Bitmap> validIdBitmaps;
@@ -109,7 +113,6 @@ public class ValidIdActivity extends AppCompatActivity {
 
             // Check if views are found
             if (btnTakePhoto == null) {
-                Toast.makeText(this, "Error: Take Photo button not found", Toast.LENGTH_SHORT).show();
             }
             if (btnUploadFromGallery == null) {
                 Toast.makeText(this, "Error: Upload Gallery button not found", Toast.LENGTH_SHORT).show();
@@ -195,7 +198,7 @@ public class ValidIdActivity extends AppCompatActivity {
                         try {
                             Toast.makeText(ValidIdActivity.this, "Upload Gallery button clicked", Toast.LENGTH_SHORT).show();
                             if (checkStoragePermission()) {
-                                openGallery();
+                                openGalleryMulti();
                             } else {
                                 requestStoragePermission();
                             }
@@ -246,11 +249,7 @@ public class ValidIdActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
                         try {
-                            if (validIdBitmaps.isEmpty()) {
-                                showValidIdList();
-                            } else {
-                                showAllUploadedImages();
-                            }
+                            showAllUploadedImages();
                         } catch (Exception e) {
                             e.printStackTrace();
                             Toast.makeText(ValidIdActivity.this, "Error showing valid ID list: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -317,6 +316,19 @@ public class ValidIdActivity extends AppCompatActivity {
         }
     }
 
+    private void openGalleryMulti() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            startActivityForResult(Intent.createChooser(intent, "Select Valid ID(s)"), GALLERY_REQUEST_CODE);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error opening gallery: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private void showValidIdList() {
         try {
             String validIds = "Valid IDs accepted:\n\n" +
@@ -359,80 +371,189 @@ public class ValidIdActivity extends AppCompatActivity {
     }
 
     private void showAllUploadedImages() {
-        if (validIdBitmaps.isEmpty()) {
-            Toast.makeText(this, "No images uploaded yet", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // Create a dialog to show all uploaded images
         android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
-        builder.setTitle("Uploaded Valid IDs (" + validIdBitmaps.size() + " images)");
-
-        // Create a scrollable view for multiple images
+        
+        // Container
         android.widget.ScrollView scrollView = new android.widget.ScrollView(this);
-        android.widget.LinearLayout linearLayout = new android.widget.LinearLayout(this);
-        linearLayout.setOrientation(android.widget.LinearLayout.VERTICAL);
-        linearLayout.setPadding(50, 50, 50, 50);
+        android.widget.LinearLayout root = new android.widget.LinearLayout(this);
+        root.setOrientation(android.widget.LinearLayout.VERTICAL);
+        root.setPadding(50, 50, 50, 50);
 
-        for (int i = 0; i < validIdBitmaps.size(); i++) {
-            final int imageIndex = i; // Capture the index for the lambda
-            
-            // Create container for each image
-            android.widget.LinearLayout imageContainer = new android.widget.LinearLayout(this);
-            imageContainer.setOrientation(android.widget.LinearLayout.VERTICAL);
-            imageContainer.setPadding(0, 20, 0, 20);
+        // Header
+        android.widget.TextView header = new android.widget.TextView(this);
+        header.setText("Upload your Valid ID");
+        header.setTextSize(20);
+        header.setTextColor(getResources().getColor(android.R.color.black));
+        header.setPadding(0, 0, 0, 16);
+        root.addView(header);
 
-            // Image label
-            android.widget.TextView imageLabel = new android.widget.TextView(this);
-            imageLabel.setText("Image " + (i + 1) + (validIdUris.get(i) != null ? " (Gallery)" : " (Camera)"));
-            imageLabel.setTextSize(16);
-            imageLabel.setPadding(0, 0, 0, 10);
+        // Helper text
+        android.widget.TextView helper = new android.widget.TextView(this);
+        helper.setText("Make sure your ID is clear, readable, and not cropped. Avoid glare and ensure all corners are visible.");
+        helper.setTextSize(14);
+        helper.setTextColor(getResources().getColor(android.R.color.darker_gray));
+        helper.setPadding(0, 0, 0, 20);
+        root.addView(helper);
 
-            // Image view
-            android.widget.ImageView imageView = new android.widget.ImageView(this);
-            imageView.setImageBitmap(validIdBitmaps.get(i));
-            imageView.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-            imageView.setAdjustViewBounds(true);
-            imageView.setMaxHeight(400);
-            imageView.setMaxWidth(400);
+        // Large preview or placeholder
+        android.widget.ImageView largePreview = new android.widget.ImageView(this);
+        largePreview.setAdjustViewBounds(true);
+        largePreview.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        largePreview.setBackgroundColor(0xFFEFEFEF);
+        android.widget.LinearLayout.LayoutParams previewParams = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        previewParams.setMargins(0, 0, 0, 16);
+        largePreview.setLayoutParams(previewParams);
+        
+        if (!validIdBitmaps.isEmpty()) {
+            largePreview.setImageBitmap(validIdBitmaps.get(validIdBitmaps.size() - 1));
+        } else {
+            largePreview.setImageResource(android.R.drawable.ic_menu_report_image);
+        }
+        root.addView(largePreview);
 
-            // Delete button
-            android.widget.Button deleteButton = new android.widget.Button(this);
-            deleteButton.setText("Delete Image " + (i + 1));
-            deleteButton.setOnClickListener(v -> {
-                // Remove the image
-                validIdBitmaps.remove(imageIndex);
-                validIdUris.remove(imageIndex);
-                
-                // Update UI
-                if (validIdBitmaps.isEmpty()) {
-                    hasValidId = false;
-                    ivValidId.setVisibility(View.GONE);
-                    btnNext.setEnabled(false);
-                } else {
-                    // Show the last remaining image
-                    ivValidId.setImageBitmap(validIdBitmaps.get(validIdBitmaps.size() - 1));
-                }
-                
-                updateImageCounter();
-                Toast.makeText(ValidIdActivity.this, "Image deleted", Toast.LENGTH_SHORT).show();
-                
-                // Refresh the dialog
-                showAllUploadedImages();
-            });
+        // Thumbnail grid section
+        if (!validIdBitmaps.isEmpty()) {
+            android.widget.TextView thumbTitle = new android.widget.TextView(this);
+            thumbTitle.setText("Attached IDs (" + validIdBitmaps.size() + ")");
+            thumbTitle.setTextSize(16);
+            thumbTitle.setTextColor(getResources().getColor(android.R.color.black));
+            thumbTitle.setPadding(0, 0, 0, 8);
+            root.addView(thumbTitle);
 
-            // Add to container
-            imageContainer.addView(imageLabel);
-            imageContainer.addView(imageView);
-            imageContainer.addView(deleteButton);
-            
-            // Add to main layout
-            linearLayout.addView(imageContainer);
+            android.widget.GridLayout grid = new android.widget.GridLayout(this);
+            grid.setColumnCount(3);
+            grid.setRowCount((int) Math.ceil(validIdBitmaps.size() / 3.0));
+            android.widget.LinearLayout.LayoutParams gridParams = new android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            gridParams.setMargins(0, 0, 0, 16);
+            grid.setLayoutParams(gridParams);
+
+            int margin = (int) (8 * getResources().getDisplayMetrics().density);
+            int thumbSize = (int) (96 * getResources().getDisplayMetrics().density);
+
+            for (int i = 0; i < validIdBitmaps.size(); i++) {
+                final int index = i;
+
+                android.widget.FrameLayout frame = new android.widget.FrameLayout(this);
+                android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
+                lp.width = 0;
+                lp.height = thumbSize;
+                lp.columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f);
+                lp.setMargins(i % 3 == 0 ? 0 : margin, margin, 0, margin);
+                frame.setLayoutParams(lp);
+
+                android.widget.ImageView thumb = new android.widget.ImageView(this);
+                thumb.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+                thumb.setAdjustViewBounds(true);
+                android.widget.FrameLayout.LayoutParams tParams = new android.widget.FrameLayout.LayoutParams(
+                        android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+                );
+                thumb.setLayoutParams(tParams);
+                thumb.setImageBitmap(validIdBitmaps.get(i));
+                frame.addView(thumb);
+
+                android.widget.ImageView close = new android.widget.ImageView(this);
+                close.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+                android.widget.FrameLayout.LayoutParams cParams = new android.widget.FrameLayout.LayoutParams(
+                        (int) (24 * getResources().getDisplayMetrics().density),
+                        (int) (24 * getResources().getDisplayMetrics().density)
+                );
+                cParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
+                close.setLayoutParams(cParams);
+                close.setPadding(margin / 2, margin / 2, margin / 2, margin / 2);
+                close.setOnClickListener(v -> {
+                    validIdBitmaps.remove(index);
+                    validIdUris.remove(index);
+                    if (validIdBitmaps.isEmpty()) {
+                        hasValidId = false;
+                        ivValidId.setVisibility(View.GONE);
+                        btnNext.setEnabled(false);
+                    } else {
+                        ivValidId.setImageBitmap(validIdBitmaps.get(validIdBitmaps.size() - 1));
+                    }
+                    updateImageCounter();
+                    refreshThumbnails();
+                    Toast.makeText(ValidIdActivity.this, "Image deleted", Toast.LENGTH_SHORT).show();
+                    showAllUploadedImages();
+                });
+                frame.addView(close);
+
+                frame.setOnClickListener(v -> {
+                    largePreview.setImageBitmap(validIdBitmaps.get(index));
+                });
+
+                grid.addView(frame);
+            }
+            root.addView(grid);
         }
 
-        scrollView.addView(linearLayout);
+        // Accepted IDs section
+        android.widget.TextView validIdsTitle = new android.widget.TextView(this);
+        validIdsTitle.setText("Accepted Valid ID Types");
+        validIdsTitle.setTextSize(16);
+        validIdsTitle.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+        validIdsTitle.setPadding(0, 8, 0, 8);
+        root.addView(validIdsTitle);
+
+        String validIds = "• Driver's License\n" +
+                "• Passport\n" +
+                "• National ID (PhilID)\n" +
+                "• SSS ID\n" +
+                "• PhilHealth ID\n" +
+                "• TIN ID\n" +
+                "• Voter's ID\n" +
+                "• Senior Citizen ID\n" +
+                "• PWD ID\n" +
+                "• Postal ID\n" +
+                "• Barangay ID\n" +
+                "• School ID (with signature)\n" +
+                "• Company ID (with signature)";
+
+        android.widget.TextView validIdsText = new android.widget.TextView(this);
+        validIdsText.setText(validIds);
+        validIdsText.setTextSize(14);
+        validIdsText.setTextColor(getResources().getColor(android.R.color.black));
+        validIdsText.setPadding(0, 0, 0, 20);
+        root.addView(validIdsText);
+
+        // Actions row
+        android.widget.LinearLayout actions = new android.widget.LinearLayout(this);
+        actions.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        actions.setPadding(0, 8, 0, 0);
+
+        android.widget.Button addMore = new android.widget.Button(this);
+        addMore.setText("Add from Gallery");
+        addMore.setOnClickListener(v -> {
+            if (checkStoragePermission()) {
+                openGalleryMulti();
+            } else {
+                requestStoragePermission();
+            }
+        });
+        actions.addView(addMore);
+
+        android.view.View spacer = new android.view.View(this);
+        android.widget.LinearLayout.LayoutParams spacerParams = new android.widget.LinearLayout.LayoutParams(0, 0, 1f);
+        spacer.setLayoutParams(spacerParams);
+        actions.addView(spacer);
+
+        android.widget.Button close = new android.widget.Button(this);
+        close.setText("Close");
+        close.setOnClickListener(v -> {});
+        actions.addView(close);
+
+        root.addView(actions);
+
+        scrollView.addView(root);
         builder.setView(scrollView);
-        builder.setPositiveButton("Close", null);
+        builder.setCancelable(true);
+        builder.setPositiveButton(null, null);
         builder.show();
     }
 
@@ -449,7 +570,7 @@ public class ValidIdActivity extends AppCompatActivity {
                 }
             } else if (requestCode == STORAGE_PERMISSION_CODE) {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    openGallery();
+                    openGalleryMulti();
                 } else {
                     Toast.makeText(this, "Storage permission denied", Toast.LENGTH_SHORT).show();
                 }
@@ -473,7 +594,9 @@ public class ValidIdActivity extends AppCompatActivity {
                         validIdBitmaps.add(bitmap);
                         validIdUris.add(null); // Camera images don't have URIs
                         
-                        // Display the latest image
+                        // Display the latest image without stretching
+                        ivValidId.setAdjustViewBounds(true);
+                        ivValidId.setScaleType(ImageView.ScaleType.FIT_CENTER);
                         ivValidId.setImageBitmap(bitmap);
                         ivValidId.setVisibility(View.VISIBLE);
                         
@@ -483,30 +606,31 @@ public class ValidIdActivity extends AppCompatActivity {
                         Toast.makeText(this, "Valid ID captured successfully (Total: " + validIdBitmaps.size() + ")", Toast.LENGTH_SHORT).show();
                     }
                 } else if (requestCode == GALLERY_REQUEST_CODE) {
-                    Uri selectedUri = data.getData();
-                    if (selectedUri != null) {
-                        try {
-                            // Load bitmap from URI without cropping
-                            InputStream inputStream = getContentResolver().openInputStream(selectedUri);
-                            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                            if (bitmap != null) {
-                                // Add to lists
-                                validIdUris.add(selectedUri);
-                                validIdBitmaps.add(bitmap);
-                                
-                                // Display the latest image
-                                ivValidId.setImageBitmap(bitmap);
-                                ivValidId.setVisibility(View.VISIBLE);
-                                
-                                hasValidId = true;
-                                enableNextButton();
-                                updateImageCounter();
-                                Toast.makeText(this, "Valid ID selected successfully (Total: " + validIdBitmaps.size() + ")", Toast.LENGTH_SHORT).show();
+                    try {
+                        if (data.getClipData() != null) {
+                            int count = data.getClipData().getItemCount();
+                            for (int i = 0; i < count; i++) {
+                                Uri uri = data.getClipData().getItemAt(i).getUri();
+                                addImageFromUri(uri);
                             }
-                        } catch (Exception e) {
-                            Log.e(TAG, "Error loading image from gallery", e);
-                            Toast.makeText(this, "Error loading image", Toast.LENGTH_SHORT).show();
+                        } else if (data.getData() != null) {
+                            Uri uri = data.getData();
+                            addImageFromUri(uri);
                         }
+                        if (!validIdBitmaps.isEmpty()) {
+                            Bitmap last = validIdBitmaps.get(validIdBitmaps.size() - 1);
+                            ivValidId.setAdjustViewBounds(true);
+                            ivValidId.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                            ivValidId.setImageBitmap(last);
+                            ivValidId.setVisibility(View.VISIBLE);
+                            hasValidId = true;
+                            enableNextButton();
+                            updateImageCounter();
+                            refreshThumbnails();
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error loading images from gallery", e);
+                        Toast.makeText(this, "Error loading images", Toast.LENGTH_SHORT).show();
                     }
                 }
             } else {
@@ -515,6 +639,93 @@ public class ValidIdActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error processing image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void addImageFromUri(Uri selectedUri) {
+        if (selectedUri == null) return;
+        try {
+            InputStream inputStream = getContentResolver().openInputStream(selectedUri);
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+            if (bitmap != null) {
+                validIdUris.add(selectedUri);
+                validIdBitmaps.add(bitmap);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error loading image from gallery", e);
+        }
+    }
+
+    private void refreshThumbnails() {
+        if (thumbnailsContainer == null) return;
+        thumbnailsContainer.removeAllViews();
+        if (validIdBitmaps.isEmpty()) {
+            if (hsThumbnails != null) hsThumbnails.setVisibility(View.GONE);
+            if (tvSelectedIdsLabel != null) tvSelectedIdsLabel.setVisibility(View.GONE);
+            return;
+        }
+        if (hsThumbnails != null) hsThumbnails.setVisibility(View.VISIBLE);
+        if (tvSelectedIdsLabel != null) tvSelectedIdsLabel.setVisibility(View.VISIBLE);
+
+        int margin = (int) (8 * getResources().getDisplayMetrics().density);
+
+        for (int i = 0; i < validIdBitmaps.size(); i++) {
+            final int index = i;
+            android.widget.FrameLayout card = new android.widget.FrameLayout(this);
+            android.widget.LinearLayout.LayoutParams cardParams = new android.widget.LinearLayout.LayoutParams(
+                    (int) (96 * getResources().getDisplayMetrics().density),
+                    (int) (96 * getResources().getDisplayMetrics().density)
+            );
+            cardParams.setMargins(i == 0 ? 0 : margin, 0, 0, 0);
+            card.setLayoutParams(cardParams);
+            card.setForeground(getResources().getDrawable(android.R.drawable.dialog_holo_light_frame));
+
+            ImageView thumb = new ImageView(this);
+            thumb.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            thumb.setAdjustViewBounds(true);
+            thumb.setImageBitmap(validIdBitmaps.get(i));
+
+            android.widget.FrameLayout.LayoutParams thumbParams = new android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+            );
+            thumb.setLayoutParams(thumbParams);
+            card.addView(thumb);
+
+            ImageView close = new ImageView(this);
+            close.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+            android.widget.FrameLayout.LayoutParams closeParams = new android.widget.FrameLayout.LayoutParams(
+                    (int) (24 * getResources().getDisplayMetrics().density),
+                    (int) (24 * getResources().getDisplayMetrics().density)
+            );
+            closeParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
+            close.setLayoutParams(closeParams);
+            close.setPadding(margin / 2, margin / 2, margin / 2, margin / 2);
+            close.setBackgroundResource(android.R.color.transparent);
+            close.setOnClickListener(v -> {
+                validIdBitmaps.remove(index);
+                validIdUris.remove(index);
+                if (validIdBitmaps.isEmpty()) {
+                    hasValidId = false;
+                    ivValidId.setVisibility(View.GONE);
+                    btnNext.setEnabled(false);
+                } else {
+                    ivValidId.setImageBitmap(validIdBitmaps.get(validIdBitmaps.size() - 1));
+                }
+                updateImageCounter();
+                refreshThumbnails();
+            });
+            card.addView(close);
+
+            card.setOnClickListener(v -> {
+                // Set main preview to this image
+                ivValidId.setAdjustViewBounds(true);
+                ivValidId.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                ivValidId.setImageBitmap(validIdBitmaps.get(index));
+                ivValidId.setVisibility(View.VISIBLE);
+            });
+
+            thumbnailsContainer.addView(card);
         }
     }
 
@@ -748,6 +959,23 @@ public class ValidIdActivity extends AppCompatActivity {
         userData.put("createdDate", createdDate);
         userData.put("createdTime", createdTime);
         userData.put("isVerified", false);
+
+        // Merge previously saved personal info from SharedPreferences if available
+        try {
+            SharedPreferences sp = getSharedPreferences("user_profile_prefs", MODE_PRIVATE);
+            String birthday = sp.getString("birthday", null);
+            String gender = sp.getString("gender", null);
+            String civilStatus = sp.getString("civil_status", null);
+            String religion = sp.getString("religion", null);
+            String bloodType = sp.getString("blood_type", null);
+            boolean pwd = sp.getBoolean("pwd", false);
+            if (birthday != null) userData.put("birthday", birthday);
+            if (gender != null) userData.put("gender", gender);
+            if (civilStatus != null) userData.put("civil_status", civilStatus);
+            if (religion != null) userData.put("religion", religion);
+            if (bloodType != null) userData.put("blood_type", bloodType);
+            userData.put("pwd", pwd);
+        } catch (Exception ignored) {}
 
         FirestoreHelper.createUserWithAutoId(userData,
             new com.google.android.gms.tasks.OnSuccessListener<com.google.firebase.firestore.DocumentReference>() {

@@ -17,6 +17,17 @@
     <color name="text_dark">#2B2B2B</color>
     <color name="text_hint">#666666</color>
 
+    <color name="ldrrmo_red">#C62828</color>
+    <color name="red_primary">#D32F2F</color>
+    <color name="rhu_green">#2E7D32</color>
+    <color name="pnp_blue">#1565C0</color>
+    <color name="bfp_yellow">#F57F17</color>
+    <color name="gray_text">#757575</color>
+    <color name="road_safety_orange">#E65100</color>
+    <color name="fire_safety_red">#B71C1C</color>
+    <color name="landslide_safety_orange">#FF6F00</color>
+    <color name="earthquake_safety_red">#C62828</color>
+    <color name="red_secondary">#B71C1C</color>
     <color name="orange_primary">#FF5722</color>
     <color name="orange_dark">#E64A19</color>
 

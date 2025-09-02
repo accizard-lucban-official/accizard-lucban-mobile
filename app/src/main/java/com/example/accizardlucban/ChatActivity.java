@@ -344,22 +344,22 @@ public class ChatActivity extends AppCompatActivity {
 
         String userId = currentUser.getUid();
         String source = isFromCamera ? "camera" : "gallery";
-        
+
         StorageHelper.uploadChatImage(userId, imageBitmap,
-            new OnSuccessListener<String>() {
-                @Override
-                public void onSuccess(String downloadUrl) {
-                    Log.d(TAG, "Image uploaded successfully to Firebase Storage: " + downloadUrl);
-                    Toast.makeText(ChatActivity.this, "Image uploaded to Firebase Storage", Toast.LENGTH_SHORT).show();
-                }
-            },
-            new OnFailureListener() {
-                @Override
-                public void onFailure(@NonNull Exception e) {
-                    Log.e(TAG, "Error uploading image to Firebase Storage", e);
-                    Toast.makeText(ChatActivity.this, "Failed to upload image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
+                new OnSuccessListener<String>() {
+                    @Override
+                    public void onSuccess(String downloadUrl) {
+                        Log.d(TAG, "Image uploaded successfully to Firebase Storage: " + downloadUrl);
+                        Toast.makeText(ChatActivity.this, "Image uploaded to Firebase Storage", Toast.LENGTH_SHORT).show();
+                    }
+                },
+                new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.e(TAG, "Error uploading image to Firebase Storage", e);
+                        Toast.makeText(ChatActivity.this, "Failed to upload image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private String getCurrentTime() {

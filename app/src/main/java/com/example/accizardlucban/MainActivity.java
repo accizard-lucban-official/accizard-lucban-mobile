@@ -8,6 +8,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
+import android.text.method.PasswordTransformationMethod;
+import android.widget.ImageView;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
@@ -24,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private Button signInButton;
     private TextView forgotPasswordText, signUpText, emergencyText;
     private LinearLayout callLucbanLayout; // Changed from TextView to LinearLayout
+    private ImageView ivTogglePassword;
     private static final String PREFS_NAME = "user_profile_prefs";
     private static final String KEY_EMAIL = "email";
     private static final String KEY_PASSWORD = "password";
@@ -58,6 +61,10 @@ public class MainActivity extends AppCompatActivity {
             signUpText = findViewById(R.id.sign_up_text);
             emergencyText = findViewById(R.id.emergency_text);
             callLucbanLayout = findViewById(R.id.call_lucban_text); // Changed to LinearLayout
+            ivTogglePassword = findViewById(R.id.ivTogglePassword);
+            
+            // Setup password visibility toggle
+            setupPasswordToggle();
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error initializing views: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -93,11 +100,11 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onComplete(@NonNull com.google.android.gms.tasks.Task<AuthResult> task) {
                                 if (task.isSuccessful()) {
-                                    Toast.makeText(MainActivity.this, "Firebase Auth: Signed in successfully", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(MainActivity.this, "Signed in successfully", Toast.LENGTH_SHORT).show();
                                     // Fetch user profile from Firestore and save to SharedPreferences
                                     fetchAndSaveUserProfile(email);
                                 } else {
-                                    Toast.makeText(MainActivity.this, "Firebase Auth failed: " + (task.getException() != null ? task.getException().getMessage() : "Unknown error"), Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(MainActivity.this, "Firebase Auth failed: " + (task.getException() != null ? task.getException().getMessage() : "Username or Password did not match"), Toast.LENGTH_SHORT).show();
                                 }
                             }
                         });
@@ -234,5 +241,27 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
                 finish();
             });
+    }
+
+    private void setupPasswordToggle() {
+        if (ivTogglePassword != null) {
+            ivTogglePassword.setOnClickListener(new View.OnClickListener() {
+                private boolean isPasswordVisible = false;
+                @Override
+                public void onClick(View v) {
+                    if (isPasswordVisible) {
+                        passwordEditText.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                        ivTogglePassword.setAlpha(0.5f);
+                        ivTogglePassword.setImageResource(R.drawable.ic_eye_off); // Closed eye
+                    } else {
+                        passwordEditText.setTransformationMethod(null);
+                        ivTogglePassword.setAlpha(1.0f);
+                        ivTogglePassword.setImageResource(R.drawable.baseline_remove_red_eye_24); // Open eye
+                    }
+                    isPasswordVisible = !isPasswordVisible;
+                    passwordEditText.setSelection(passwordEditText.getText().length());
+                }
+            });
+        }
     }
 }

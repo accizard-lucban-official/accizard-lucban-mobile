@@ -122,13 +122,17 @@
                         <EditText
                             android:id="@+id/first_name_edit"
                             android:layout_width="match_parent"
-                            android:layout_height="48dp"
+                            android:layout_height="56dp"
                             android:hint="First Name"
                             android:background="@drawable/edittext_background"
-                            android:paddingHorizontal="16dp"
+                            android:paddingHorizontal="20dp"
+                            android:paddingVertical="16dp"
                             android:textSize="16sp"
                             android:textColor="#333333"
-                            android:textColorHint="#999999" />
+                            android:textColorHint="#999999"
+                            android:gravity="center_vertical"
+                            android:scrollHorizontally="false"
+                            android:scrollbars="none" />
 
                     </LinearLayout>
 
@@ -151,13 +155,17 @@
                         <EditText
                             android:id="@+id/last_name_edit"
                             android:layout_width="match_parent"
-                            android:layout_height="48dp"
-                            android:hint="First Name"
+                            android:layout_height="56dp"
+                            android:hint="Last Name"
                             android:background="@drawable/edittext_background"
-                            android:paddingHorizontal="16dp"
+                            android:paddingHorizontal="20dp"
+                            android:paddingVertical="16dp"
                             android:textSize="16sp"
                             android:textColor="#333333"
-                            android:textColorHint="#999999" />
+                            android:textColorHint="#999999"
+                            android:gravity="center_vertical"
+                            android:scrollHorizontally="false"
+                            android:scrollbars="none" />
 
                     </LinearLayout>
 
@@ -182,14 +190,18 @@
                     <EditText
                         android:id="@+id/mobile_number_edit"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
+                        android:layout_height="56dp"
                         android:hint="09XXXXXXXXX"
                         android:background="@drawable/edittext_background"
-                        android:paddingHorizontal="16dp"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="16dp"
                         android:textSize="16sp"
                         android:textColor="#333333"
                         android:textColorHint="#999999"
-                        android:inputType="phone" />
+                        android:inputType="phone"
+                        android:gravity="center_vertical"
+                        android:scrollHorizontally="false"
+                        android:scrollbars="none" />
 
                 </LinearLayout>
 
@@ -219,13 +231,17 @@
                         <EditText
                             android:id="@+id/province_edit"
                             android:layout_width="match_parent"
-                            android:layout_height="48dp"
+                            android:layout_height="56dp"
                             android:hint="Province"
                             android:background="@drawable/edittext_background"
-                            android:paddingHorizontal="16dp"
+                            android:paddingHorizontal="20dp"
+                            android:paddingVertical="16dp"
                             android:textSize="16sp"
                             android:textColor="#333333"
-                            android:textColorHint="#999999" />
+                            android:textColorHint="#999999"
+                            android:gravity="center_vertical"
+                            android:scrollHorizontally="false"
+                            android:scrollbars="none" />
 
                     </LinearLayout>
 
@@ -248,13 +264,17 @@
                         <EditText
                             android:id="@+id/city_edit"
                             android:layout_width="match_parent"
-                            android:layout_height="48dp"
+                            android:layout_height="56dp"
                             android:hint="City/Town"
                             android:background="@drawable/edittext_background"
-                            android:paddingHorizontal="16dp"
+                            android:paddingHorizontal="20dp"
+                            android:paddingVertical="16dp"
                             android:textSize="16sp"
                             android:textColor="#333333"
-                            android:textColorHint="#999999" />
+                            android:textColorHint="#999999"
+                            android:gravity="center_vertical"
+                            android:scrollHorizontally="false"
+                            android:scrollbars="none" />
 
                     </LinearLayout>
 
@@ -303,14 +323,18 @@
                     <EditText
                         android:id="@+id/password_edit"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
+                        android:layout_height="56dp"
                         android:hint="Type new password"
                         android:background="@drawable/edittext_background"
-                        android:paddingHorizontal="16dp"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="16dp"
                         android:textSize="16sp"
                         android:textColor="#333333"
                         android:textColorHint="#999999"
-                        android:inputType="textPassword" />
+                        android:inputType="textPassword"
+                        android:gravity="center_vertical"
+                        android:scrollHorizontally="false"
+                        android:scrollbars="none" />
 
                 </LinearLayout>
 

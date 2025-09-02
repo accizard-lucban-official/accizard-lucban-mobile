@@ -76,7 +76,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:background="@drawable/rounded_top_background"
+        android:background="@drawable/buttom_sheet_background"
         android:padding="24dp">
 
         <!-- Name Fields Row -->
@@ -104,13 +104,17 @@
                 <EditText
                     android:id="@+id/etFirstName"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
+                    android:layout_height="56dp"
                     android:background="@drawable/edittext_background"
                     android:hint="First Name"
                     android:textColorHint="@color/text_hint"
                     android:textColor="@color/text_dark"
-                    android:paddingHorizontal="16dp"
-                    android:inputType="textPersonName" />
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="16dp"
+                    android:inputType="textPersonName"
+                    android:gravity="center_vertical"
+                    android:scrollHorizontally="false"
+                    android:scrollbars="none" />
 
             </LinearLayout>
 
@@ -132,13 +136,17 @@
                 <EditText
                     android:id="@+id/etLastName"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
+                    android:layout_height="56dp"
                     android:background="@drawable/edittext_background"
                     android:hint="Last Name"
                     android:textColorHint="@color/text_hint"
                     android:textColor="@color/text_dark"
-                    android:paddingHorizontal="16dp"
-                    android:inputType="textPersonName" />
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="16dp"
+                    android:inputType="textPersonName"
+                    android:gravity="center_vertical"
+                    android:scrollHorizontally="false"
+                    android:scrollbars="none" />
 
             </LinearLayout>
 
@@ -156,14 +164,18 @@
         <EditText
             android:id="@+id/etMobileNumber"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="56dp"
             android:background="@drawable/edittext_background"
             android:hint="+63"
             android:textColorHint="@color/text_hint"
             android:textColor="@color/text_dark"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="16dp"
             android:inputType="phone"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"
+            android:gravity="center_vertical"
+            android:scrollHorizontally="false"
+            android:scrollbars="none" />
 
         <!-- Email Address -->
         <TextView
@@ -177,14 +189,18 @@
         <EditText
             android:id="@+id/etEmail"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="56dp"
             android:background="@drawable/edittext_background"
             android:hint="Enter your email"
             android:textColorHint="@color/text_hint"
             android:textColor="@color/text_dark"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="16dp"
             android:inputType="textEmailAddress"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"
+            android:gravity="center_vertical"
+            android:scrollHorizontally="false"
+            android:scrollbars="none" />
 
         <!-- Password -->
         <TextView
@@ -197,7 +213,7 @@
 
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="56dp"
             android:layout_marginBottom="24dp">
 
             <EditText
@@ -208,9 +224,13 @@
                 android:hint="Create a password"
                 android:textColorHint="@color/text_hint"
                 android:textColor="@color/text_dark"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="16dp"
                 android:paddingEnd="48dp"
-                android:inputType="textPassword" />
+                android:inputType="textPassword"
+                android:gravity="center_vertical"
+                android:scrollHorizontally="false"
+                android:scrollbars="none" />
 
             <ImageView
                 android:id="@+id/ivTogglePassword"
@@ -248,12 +268,16 @@
                 android:textSize="14sp" />
 
             <TextView
+                android:id="@+id/tvTermsConditions"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Terms and Conditions"
                 android:textColor="@color/orange_primary"
                 android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackground" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -263,12 +287,16 @@
                 android:textSize="14sp" />
 
             <TextView
+                android:id="@+id/tvPrivacyPolicy"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Privacy Policy"
                 android:textColor="@color/orange_primary"
                 android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackground" />
 
         </LinearLayout>
 

@@ -98,5 +98,19 @@
     <string name="invalid_email">Please enter a valid email address</string>
     <string name="login_successful">Login successful!</string>
 
+    <string-array name="incident_types">
+        <item>Select Incident Type</item>
+        <item>Fire Emergency</item>
+        <item>Medical Emergency</item>
+        <item>Road Accident</item>
+        <item>Natural Disaster</item>
+        <item>Landslide</item>
+        <item>Flood</item>
+        <item>Earthquake</item>
+        <item>Crime/Security</item>
+        <item>Infrastructure Damage</item>
+        <item>Other Emergency</item>
+    </string-array>
+
     <string name="mapbox_access_token">pk.eyJ1IjoiYWNjaXphcmQtbHVjYmFuIiwiYSI6ImNtY3VhOHdxODAwcjcya3BzYTR2M25kcTEifQ.aBi4Zmkezyqa7Pfh519KbQ</string>
 </resources>

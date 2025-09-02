@@ -1,230 +1,259 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
     android:background="@color/color">
 
-    <LinearLayout
+    <!-- Header Section with Image Background -->
+    <FrameLayout
+        android:id="@+id/header_frame"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="0dp">
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.25">
 
-        <!-- Header Section with Image Background -->
-        <FrameLayout
+        <!-- Background Image -->
+        <ImageView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="200dp">
+            android:layout_height="match_parent"
+            android:src="@drawable/header_background"
+            android:scaleType="centerCrop"
+            android:contentDescription="Header Background" />
 
-            <!-- Background Image -->
-            <ImageView
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:src="@drawable/header_background"
-                android:scaleType="centerCrop"
-                android:contentDescription="Header Background" />
-
-            <!-- Header Content -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="24dp">
-
-                <!-- Logo Image -->
-                <ImageView
-                    android:layout_width="200dp"
-                    android:layout_height="120dp"
-                    android:src="@drawable/accizard_logotype_svg"
-                    android:contentDescription="App Logo" />
-
-                <!-- Header Text -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="REPORT PROTECT PREVENT"
-                    android:textColor="@android:color/white"
-                    android:textSize="12sp"
-                    android:letterSpacing="0.1"
-                    android:textStyle="bold"
-                    android:shadowColor="#80000000"
-                    android:shadowDx="2"
-                    android:shadowDy="2"
-                    android:shadowRadius="4" />
-            </LinearLayout>
-
-        </FrameLayout>
-
-        <!-- Content Section -->
+        <!-- Header Content -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/buttom_sheet_background"
+            android:layout_height="200dp"
+            android:gravity="center"
             android:orientation="vertical"
-            android:padding="39dp">
+            android:padding="24dp">
 
-            <!-- Logo -->
+            <!-- Logo Image -->
             <ImageView
-                android:layout_width="100dp"
-                android:layout_height="100dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="32dp"
-                android:src="@drawable/accizard_logo_svg" />
+                android:layout_width="120dp"
+                android:layout_height="80dp"
+                android:src="@drawable/accizard_logotype_svg"
+                android:contentDescription="App Logo" />
 
-            <!-- Welcome Text -->
+            <!-- Header Text -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="8dp"
-                android:text="Welcome Back"
-                android:fontFamily="@font/poppinsbold"
-                android:textColor="@color/dark_gray"
-                android:textSize="24sp"
-                android:textStyle="bold" />
+                android:layout_marginTop="8dp"
+                android:text="REPORT PROTECT PREVENT"
+                android:textColor="@android:color/white"
+                android:textSize="10sp"
+                android:letterSpacing="0.1"
+                android:textStyle="bold"
+                android:shadowColor="#80000000"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="4" />
+        </LinearLayout>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="0dp"
-                android:text="Sign in to continue"
-                android:textColor="@color/medium_gray"
-                android:textSize="16sp" />
+    </FrameLayout>
 
-            <!-- Email Input -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Email"
-                android:textColor="@color/dark_gray"
-                android:textSize="14sp" />
+    <!-- Content Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="@drawable/buttom_sheet_background"
+        android:orientation="vertical"
+        android:padding="24dp"
+        app:layout_constraintTop_toBottomOf="@id/header_frame"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-            <EditText
-                android:id="@+id/email_edit_text"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginBottom="24dp"
-                android:background="@drawable/edittext_background"
-                android:hint="your@email.com"
-                android:inputType="textEmailAddress"
-                android:padding="16dp"
-                android:textColor="@color/dark_gray"
-                android:textColorHint="@color/light_gray"
-                android:textSize="16sp" />
+        <!-- Logo -->
+        <ImageView
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:src="@drawable/accizard_logo_svg" />
 
-            <!-- Password Input -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Password"
-                android:textColor="@color/dark_gray"
-                android:textSize="14sp" />
+        <!-- Welcome Text -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="4dp"
+            android:text="Welcome Back"
+            android:fontFamily="@font/poppinsbold"
+            android:textColor="@color/dark_gray"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:text="Sign in to continue"
+            android:textColor="@color/medium_gray"
+            android:textSize="14sp" />
+
+        <!-- Email Input -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:text="Email"
+            android:textColor="@color/dark_gray"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/email_edit_text"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/edittext_background"
+            android:hint="Your@email.com"
+            android:inputType="textEmailAddress"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="16dp"
+            android:textColor="@color/dark_gray"
+            android:textColorHint="@color/light_gray"
+            android:textSize="16sp"
+            android:gravity="center_vertical"
+            android:scrollHorizontally="false"
+            android:scrollbars="none" />
+
+        <!-- Password Input -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:text="Password"
+            android:textColor="@color/dark_gray"
+            android:textSize="14sp" />
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="8dp">
 
             <EditText
                 android:id="@+id/password_edit_text"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginBottom="16dp"
+                android:layout_height="match_parent"
                 android:background="@drawable/edittext_background"
                 android:hint="Password"
                 android:inputType="textPassword"
-                android:padding="16dp"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="16dp"
+                android:paddingEnd="48dp"
                 android:textColor="@color/dark_gray"
                 android:textColorHint="@color/light_gray"
-                android:textSize="16sp" />
-
-            <!-- Forgot Password -->
-            <TextView
-                android:id="@+id/forgot_password_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:layout_marginBottom="32dp"
-                android:text="Forgot Password?"
-                android:textColor="@color/orange_primary"
-                android:textSize="14sp" />
-
-            <!-- Sign In Button -->
-            <Button
-                android:id="@+id/sign_in_button"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginBottom="24dp"
-                android:background="@drawable/button_background"
-                android:text="Login"
-                android:textColor="@android:color/white"
                 android:textSize="16sp"
-                android:textStyle="bold" />
+                android:gravity="center_vertical"
+                android:scrollHorizontally="false"
+                android:scrollbars="none" />
 
-            <!-- Sign Up Link -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="16dp"
-                android:orientation="horizontal">
+            <ImageView
+                android:id="@+id/ivTogglePassword"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_eye_off"
+                android:alpha="0.5"
+                android:contentDescription="Toggle password visibility" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Don't have an account? "
-                    android:textColor="@color/medium_gray"
-                    android:textSize="14sp" />
+        </RelativeLayout>
 
-                <TextView
-                    android:id="@+id/sign_up_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Sign up"
-                    android:textColor="@color/orange_primary"
-                    android:textSize="14sp" />
+        <!-- Forgot Password -->
+        <TextView
+            android:id="@+id/forgot_password_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginBottom="16dp"
+            android:text="Forgot Password?"
+            android:textColor="@color/orange_primary"
+            android:textSize="14sp" />
 
-            </LinearLayout>
+        <!-- Sign In Button -->
 
-            <!-- Emergency -->
+        <!-- Sign Up Link -->
+
+        <Button
+            android:id="@+id/sign_in_button"
+            android:layout_width="210dp"
+            android:layout_height="48dp"
+            android:layout_marginBottom="12dp"
+            android:layout_gravity="center_horizontal"
+            android:background="@drawable/button_background"
+            android:text="Login"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="128dp"
+            android:orientation="horizontal">
+
             <TextView
-                android:id="@+id/emergency_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="16dp"
-                android:text="Emergency?"
+                android:text="Don't have an account? "
                 android:textColor="@color/medium_gray"
                 android:textSize="14sp" />
 
-            <!-- Call Lucban -->
-            <LinearLayout
-                android:id="@+id/call_lucban_text"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/call_button_background"
-                android:gravity="center"
-                android:orientation="horizontal">
+            <TextView
+                android:id="@+id/sign_up_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sign up"
+                android:textColor="@color/orange_primary"
+                android:textSize="14sp" />
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_marginEnd="8dp"
-                    android:src="@drawable/ic_phone"
-                    android:tint="@color/orange_primary" />
+        </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Swipe to Call Lucban LDRRMO"
-                    android:textColor="@color/medium_gray"
-                    android:textSize="14sp" />
+        <!-- Emergency -->
+        <TextView
+            android:id="@+id/emergency_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="8dp"
+            android:text="Emergency?"
+            android:textColor="@color/medium_gray"
+            android:textSize="14sp" />
 
-            </LinearLayout>
+        <!-- Call Lucban -->
+        <LinearLayout
+            android:id="@+id/call_lucban_text"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:background="@drawable/call_button_background"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/phone_call"
+                android:tint="@color/orange_primary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Swipe to Call Lucban LDRRMO"
+                android:textColor="@color/medium_gray"
+                android:textSize="14sp" />
 
         </LinearLayout>
 
     </LinearLayout>
 
-</ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

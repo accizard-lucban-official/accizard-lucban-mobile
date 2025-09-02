@@ -205,17 +205,14 @@ public class FirestoreHelper {
         return userData;
     }
     
-    // Helper method to create report data map
+    // Helper method to create report data map (without category and priority)
     public static Map<String, Object> createReportData(String userId, String title, 
-                                                      String description, String location,
-                                                      String priority, String category) {
+                                                      String description, String location) {
         Map<String, Object> reportData = new HashMap<>();
         reportData.put("userId", userId);
         reportData.put("title", title);
         reportData.put("description", description);
         reportData.put("location", location);
-        reportData.put("priority", priority);
-        reportData.put("category", category);
         reportData.put("status", "pending");
         reportData.put("timestamp", System.currentTimeMillis());
         return reportData;

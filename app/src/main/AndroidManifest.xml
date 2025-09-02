@@ -5,6 +5,7 @@
     <!-- Required permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
@@ -37,6 +38,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AccizardLucban"
         android:requestLegacyExternalStorage="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="true"
         tools:targetApi="31">
 
         <!-- Google Maps API Key -->
@@ -57,18 +60,42 @@
         <!-- Launcher Activity -->
         <activity
             android:name=".MainActivity"
-            android:exported="true"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.AccizardLucban">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".PasswordResetConfirmActivity"
+            android:exported="true">
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https"
+                      android:host="accizardlucban.app"
+                      android:pathPrefix="/reset-password" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="accizard"
+                      android:host="reset-password" />
+            </intent-filter>
+        </activity>
+
         <!-- Authentication Activities -->
         <activity
             android:name=".ResetPasswordActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".TestEmailActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:parentActivityName=".MainActivity" />
@@ -91,6 +118,12 @@
             android:exported="false"
             android:screenOrientation="portrait"
             android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".PersonalInfoActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".RegistrationActivity" />
 
         <activity
             android:name=".ProfilePictureActivity"

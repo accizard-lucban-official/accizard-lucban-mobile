@@ -192,7 +192,9 @@
                     android:id="@+id/ivProfilePicture"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:src="@drawable/ic_profile_placeholder" />
+                    android:src="@drawable/ic_profile_placeholder"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitCenter" />
 
                 <Button
                     android:id="@+id/btnTakePhoto"
@@ -232,7 +234,7 @@
                     android:id="@+id/btnBack"
                     android:layout_width="56dp"
                     android:layout_height="56dp"
-                    android:background="@drawable/ic_arrow_back"
+                    android:background="@drawable/back_icon"
                     android:textColor="@color/text_dark"
                     android:textSize="18sp"
                     android:textStyle="bold" />

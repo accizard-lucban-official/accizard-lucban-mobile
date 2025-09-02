@@ -17,6 +17,12 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.SharedPreferences;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AddressInfoActivity extends AppCompatActivity {
 
@@ -191,6 +197,9 @@ public class AddressInfoActivity extends AppCompatActivity {
         }
         editor.apply();
 
+        // Persist to Firestore under current user's document as well
+        updateFirestoreAddressInfo(selectedProvince, cityTown, barangay);
+
         Intent intent = new Intent(AddressInfoActivity.this, ProfilePictureActivity.class);
         intent.putExtra("firstName", firstName);
         intent.putExtra("lastName", lastName);
@@ -201,5 +210,32 @@ public class AddressInfoActivity extends AppCompatActivity {
         intent.putExtra("cityTown", cityTown);
         intent.putExtra("barangay", barangay);
         startActivity(intent);
+    }
+
+    private void updateFirestoreAddressInfo(String province, String cityTown, String barangay) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            return;
+        }
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("users")
+                .whereEqualTo("firebaseUid", user.getUid())
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
+                        String docId = doc.getId();
+
+                        Map<String, Object> updates = new HashMap<>();
+                        updates.put("province", province);
+                        updates.put("cityTown", cityTown);
+                        updates.put("barangay", barangay);
+                        updates.put("address", province + ", " + cityTown + ", " + barangay);
+
+                        db.collection("users").document(docId).update(updates);
+                    }
+                });
     }
 }

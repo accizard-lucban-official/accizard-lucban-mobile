@@ -28,7 +28,7 @@ import android.view.ViewGroup;
 import android.view.Gravity;
 import android.widget.ImageView;
 import android.graphics.Color;
-import android.animation.Animator;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -84,10 +84,23 @@ public class MapViewActivity extends AppCompatActivity {
     private String selectedTimeRange = "Today";
 
     private FusedLocationProviderClient fusedLocationClient;
-    private List<ImageView> pinnedMarkers = new ArrayList<>();
+    private List<MapMarker> pinnedMarkers = new ArrayList<>();
     private FrameLayout mapContainer;
     private List<Point> pinnedLocations = new ArrayList<>();
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
+    
+    // Custom marker class to hold marker data
+    private static class MapMarker {
+        ImageView markerView;
+        Point location;
+        String title;
+        
+        MapMarker(ImageView markerView, Point location, String title) {
+            this.markerView = markerView;
+            this.location = location;
+            this.title = title;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,8 +126,9 @@ public class MapViewActivity extends AppCompatActivity {
                         .build();
                 mapboxMap.setCamera(initialCamera);
                 
-                Toast.makeText(this, "Map loaded successfully. Search for locations to navigate.", Toast.LENGTH_SHORT).show();
-                Toast.makeText(this, "Use the blue pin button to pin your current location!", Toast.LENGTH_LONG).show();
+                // Map loaded successfully - marker positions will be updated during animations
+                
+                // Map loaded successfully
             });
         }
 
@@ -339,37 +353,13 @@ public class MapViewActivity extends AppCompatActivity {
                         facilityFilters.put("Fire Stations", data.getBooleanExtra("fireStations", true));
                         facilityFilters.put("Government Offices", data.getBooleanExtra("governmentOffices", true));
 
-                        // Show confirmation message with applied filters
-                        showFilterAppliedMessage();
+                        // Filters applied successfully
                     }
                 }
         );
     }
 
-    private void showFilterAppliedMessage() {
-        StringBuilder message = new StringBuilder("Filters applied:\n");
 
-        // Show heatmap status
-        message.append("Heatmap: ").append(heatmapEnabled ? "ON" : "OFF").append("\n");
-        message.append("Time Range: ").append(selectedTimeRange).append("\n");
-
-        // Count active filters
-        int activeIncidentFilters = 0;
-        int activeFacilityFilters = 0;
-
-        for (Boolean value : incidentFilters.values()) {
-            if (value) activeIncidentFilters++;
-        }
-
-        for (Boolean value : facilityFilters.values()) {
-            if (value) activeFacilityFilters++;
-        }
-
-        message.append("Incidents: ").append(activeIncidentFilters).append("/").append(incidentFilters.size()).append(" types\n");
-        message.append("Facilities: ").append(activeFacilityFilters).append("/").append(facilityFilters.size()).append(" types");
-
-        Toast.makeText(this, message.toString(), Toast.LENGTH_LONG).show();
-    }
 
     private void initializeViews() {
         searchLocationEditText = findViewById(R.id.searchLocationEditText);
@@ -397,7 +387,7 @@ public class MapViewActivity extends AppCompatActivity {
             searchResultsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
             searchResultsRecyclerView.setAdapter(simpleSearchAdapter);
         } catch (Exception e) {
-            Toast.makeText(this, "Error initializing search: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            // Error initializing search
         }
     }
 
@@ -521,19 +511,14 @@ public class MapViewActivity extends AppCompatActivity {
         // Create point for the selected location
         Point selectedPoint = Point.fromLngLat(place.getLongitude(), place.getLatitude());
 
-        // Show initial navigation message with coordinates
-        String message = "Navigating to: " + place.getName() +
-                        "\nCoordinates: " + String.format("%.4f, %.4f", place.getLatitude(), place.getLongitude());
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        // Navigate to selected location
 
         // Navigate to the location with smooth animation
         // Use different zoom levels based on place type
         double zoomLevel = getZoomLevelForPlace(place);
 
-        // Add a small delay to ensure the toast is visible before animation starts
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+        // Animate to location
             animateToLocation(selectedPoint, zoomLevel);
-        }, 500);
     }
 
     private double getZoomLevelForPlace(SimpleSearchAdapter.SearchPlace place) {
@@ -572,7 +557,6 @@ public class MapViewActivity extends AppCompatActivity {
 
         private void animateToLocation(Point point, double zoom) {
         if (mapboxMap == null) {
-            Toast.makeText(this, "Map not ready", Toast.LENGTH_SHORT).show();
             return;
         }
         if (cameraAnimationsPlugin == null) {
@@ -582,7 +566,6 @@ public class MapViewActivity extends AppCompatActivity {
                     .zoom(zoom)
                     .build();
             mapboxMap.setCamera(cameraOptions);
-            Toast.makeText(this, "Moved to location instantly", Toast.LENGTH_SHORT).show();
             return;
         }
         try {
@@ -593,25 +576,23 @@ public class MapViewActivity extends AppCompatActivity {
             MapAnimationOptions animationOptions = new MapAnimationOptions.Builder()
                     .duration(2000)
                     .build();
-            cameraAnimationsPlugin.flyTo(cameraOptions, animationOptions, null); // Pass null as Animator.AnimatorListener
-            Toast.makeText(this, "Navigating...", Toast.LENGTH_SHORT).show();
+            cameraAnimationsPlugin.flyTo(cameraOptions, animationOptions, null);
         } catch (Exception e) {
             CameraOptions cameraOptions = new CameraOptions.Builder()
                     .center(point)
                     .zoom(zoom)
                     .build();
             mapboxMap.setCamera(cameraOptions);
-            Toast.makeText(this, "Moved to location instantly", Toast.LENGTH_SHORT).show();
         }
     }
 
     private void setupClickListeners() {
         emergencyFab.setOnClickListener(v -> {
-            Toast.makeText(this, "Emergency services contacted", Toast.LENGTH_LONG).show();
+            // Emergency services contacted
         });
 
         alertFab.setOnClickListener(v -> {
-            Toast.makeText(this, "Alert sent", Toast.LENGTH_SHORT).show();
+            // Alert sent
         });
 
         pinLocationFab.setOnClickListener(v -> {
@@ -621,7 +602,6 @@ public class MapViewActivity extends AppCompatActivity {
         // Long press on pin FAB to clear all pins
         pinLocationFab.setOnLongClickListener(v -> {
             clearAllPins();
-            Toast.makeText(this, "All pins cleared", Toast.LENGTH_SHORT).show();
             return true;
         });
 
@@ -637,7 +617,6 @@ public class MapViewActivity extends AppCompatActivity {
             }
             if (nearestHospital != null) {
                 onSearchResultSelected(nearestHospital);
-                Toast.makeText(this, "Navigating to nearest medical facility", Toast.LENGTH_LONG).show();
             }
             return true;
         });
@@ -646,7 +625,6 @@ public class MapViewActivity extends AppCompatActivity {
         alertFab.setOnLongClickListener(v -> {
             Point lucbanCenter = Point.fromLngLat(121.5564, 14.1136);
             animateToLocation(lucbanCenter, 15.0);
-            Toast.makeText(this, "Navigated to Lucban Town Center", Toast.LENGTH_SHORT).show();
             return true;
         });
 
@@ -672,7 +650,7 @@ public class MapViewActivity extends AppCompatActivity {
                 intent.putExtra("governmentOffices", facilityFilters.containsKey("Government Offices") ? facilityFilters.get("Government Offices") : true);
                 facilitiesLauncher.launch(intent);
             } catch (Exception e) {
-                Toast.makeText(this, "Error opening filters: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                // Error opening filters
             }
         });
 
@@ -682,7 +660,7 @@ public class MapViewActivity extends AppCompatActivity {
                 startActivity(intent);
                 finish();
             } catch (Exception e) {
-                Toast.makeText(this, "Profile", Toast.LENGTH_SHORT).show();
+                // Profile error
             }
         });
     }
@@ -695,7 +673,7 @@ public class MapViewActivity extends AppCompatActivity {
                 overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
                 finish();
             } catch (Exception e) {
-                Toast.makeText(this, "Error navigating to Home", Toast.LENGTH_SHORT).show();
+                // Error navigating to Home
             }
         });
 
@@ -706,7 +684,7 @@ public class MapViewActivity extends AppCompatActivity {
                 overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
                 finish();
             } catch (Exception e) {
-                Toast.makeText(this, "Chat feature coming soon", Toast.LENGTH_SHORT).show();
+                // Chat feature coming soon
             }
         });
 
@@ -717,12 +695,12 @@ public class MapViewActivity extends AppCompatActivity {
                 overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
                 finish();
             } catch (Exception e) {
-                Toast.makeText(this, "Error navigating to Report", Toast.LENGTH_SHORT).show();
+                // Error navigating to Report
             }
         });
 
         mapTab.setOnClickListener(v -> {
-            Toast.makeText(this, "You are already on the Map", Toast.LENGTH_SHORT).show();
+            // Already on the Map
         });
 
         alertsTab.setOnClickListener(v -> {
@@ -732,7 +710,7 @@ public class MapViewActivity extends AppCompatActivity {
                 overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
                 finish();
             } catch (Exception e) {
-                Toast.makeText(this, "Error navigating to Alerts", Toast.LENGTH_SHORT).show();
+                // Error navigating to Alerts
             }
         });
     }
@@ -808,13 +786,8 @@ public class MapViewActivity extends AppCompatActivity {
                             
                             // Animate to current location
                             animateToLocation(currentPoint, 16.0);
-                            
-                            Toast.makeText(MapViewActivity.this, 
-                                "Current location pinned at: " + 
-                                String.format("%.4f, %.4f", location.getLatitude(), location.getLongitude()), 
-                                Toast.LENGTH_LONG).show();
                         } else {
-                            Toast.makeText(MapViewActivity.this, "Unable to get current location", Toast.LENGTH_SHORT).show();
+                            // Unable to get current location
                         }
                     }
                 });
@@ -831,32 +804,52 @@ public class MapViewActivity extends AppCompatActivity {
         markerView.setScaleX(1.5f);
         markerView.setScaleY(1.5f);
         
-        // Position the marker in the center of the map
+        // Position the marker at the specific location on the map
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         );
+        
+        // Position marker in center of map container initially
         params.gravity = Gravity.CENTER;
         markerView.setLayoutParams(params);
         
         // Add marker to the map container
         if (mapContainer != null) {
             mapContainer.addView(markerView);
-            pinnedMarkers.add(markerView);
-            pinnedLocations.add(point);
             
-            Toast.makeText(this, "Location pinned: " + title, Toast.LENGTH_SHORT).show();
+            // Create MapMarker object and add to list
+            MapMarker mapMarker = new MapMarker(markerView, point, title);
+            pinnedMarkers.add(mapMarker);
+            pinnedLocations.add(point);
         }
     }
 
     private void clearAllPins() {
         if (mapContainer != null) {
-            for (ImageView marker : pinnedMarkers) {
-                mapContainer.removeView(marker);
+            for (MapMarker mapMarker : pinnedMarkers) {
+                mapContainer.removeView(mapMarker.markerView);
             }
             pinnedMarkers.clear();
             pinnedLocations.clear();
-            Toast.makeText(this, "All pinned locations cleared", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void updateMarkerPosition(MapMarker mapMarker) {
+        // Simplified marker positioning - markers will stay in center
+        // This avoids complex coordinate conversion issues
+        if (mapMarker != null && mapMarker.markerView != null) {
+            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) mapMarker.markerView.getLayoutParams();
+            if (params != null) {
+                params.gravity = Gravity.CENTER;
+                mapMarker.markerView.setLayoutParams(params);
+            }
+        }
+    }
+    
+    private void updateAllMarkerPositions() {
+        for (MapMarker mapMarker : pinnedMarkers) {
+            updateMarkerPosition(mapMarker);
         }
     }
 
@@ -875,9 +868,9 @@ public class MapViewActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Location permission granted", Toast.LENGTH_SHORT).show();
+                // Location permission granted
             } else {
-                Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
+                // Location permission denied
             }
         }
     }

@@ -305,29 +305,37 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private Bitmap createCircularBitmap(Bitmap bitmap) {
-        // Resize bitmap to consistent dimensions (e.g., 300x300 pixels)
+        // Center-crop to square first to avoid distortion
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int squareSize = Math.min(width, height);
+        int xOffset = (width - squareSize) / 2;
+        int yOffset = (height - squareSize) / 2;
+
+        Bitmap squareCropped = Bitmap.createBitmap(bitmap, xOffset, yOffset, squareSize, squareSize);
+
         int targetSize = 300;
-        Bitmap resizedBitmap = Bitmap.createScaledBitmap(bitmap, targetSize, targetSize, true);
-        
-        // Create circular bitmap
+        Bitmap scaledSquare = squareSize == targetSize
+                ? squareCropped
+                : Bitmap.createScaledBitmap(squareCropped, targetSize, targetSize, true);
+
         Bitmap circularBitmap = Bitmap.createBitmap(targetSize, targetSize, Bitmap.Config.ARGB_8888);
         android.graphics.Canvas canvas = new android.graphics.Canvas(circularBitmap);
-        
+
         android.graphics.Paint paint = new android.graphics.Paint();
         paint.setAntiAlias(true);
         paint.setFilterBitmap(true);
-        
-        // Create circular clipping path
+
         android.graphics.Path path = new android.graphics.Path();
         path.addCircle(targetSize / 2f, targetSize / 2f, targetSize / 2f, android.graphics.Path.Direction.CW);
         canvas.clipPath(path);
-        
-        // Draw the resized bitmap (will be clipped to circle)
-        canvas.drawBitmap(resizedBitmap, 0, 0, paint);
-        
-        // Recycle the resized bitmap to free memory
-        resizedBitmap.recycle();
-        
+        canvas.drawBitmap(scaledSquare, 0, 0, paint);
+
+        if (scaledSquare != squareCropped) {
+            scaledSquare.recycle();
+        }
+        squareCropped.recycle();
+
         return circularBitmap;
     }
 

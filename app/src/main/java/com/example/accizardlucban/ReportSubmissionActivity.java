@@ -10,6 +10,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -36,6 +37,7 @@ import android.view.LayoutInflater;
 import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.List;
+import com.example.accizardlucban.StorageHelper;
 
 public class ReportSubmissionActivity extends AppCompatActivity {
 
@@ -51,6 +53,15 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private Button submitReportButton;
     private ImageButton profileButton;
     private RecyclerView reportLogRecyclerView;
+    
+    // Tab Components
+    private LinearLayout submitReportTab;
+    private LinearLayout reportLogTab;
+    private LinearLayout submitReportContent;
+    private ScrollView reportLogContent;
+    private View submitReportIndicator;
+    private View reportLogIndicator;
+    
     private static final int IMAGE_PICK_REQUEST = 2001;
     private Uri selectedImageUri;
     private ImageView imagePreview;
@@ -86,6 +97,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
 
         // Setup click listeners
         setupClickListeners();
+        
+        // Setup tab functionality
+        setupTabFunctionality();
     }
 
     private void initializeViews() {
@@ -101,6 +115,14 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         reportLogRecyclerView = findViewById(R.id.reportLogRecyclerView);
         imagePreview = findViewById(R.id.imagePreview);
         attachmentsContainer = findViewById(R.id.attachmentsContainer);
+        
+        // Tab components
+        submitReportTab = findViewById(R.id.submitReportTab);
+        reportLogTab = findViewById(R.id.reportLogTab);
+        submitReportContent = findViewById(R.id.submitReportContent);
+        reportLogContent = findViewById(R.id.reportLogContent);
+        submitReportIndicator = findViewById(R.id.submitReportIndicator);
+        reportLogIndicator = findViewById(R.id.reportLogIndicator);
 
         // Bottom navigation
         homeTab = findViewById(R.id.homeTab);
@@ -114,16 +136,15 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         // Create array of report types
         String[] reportTypes = {
                 "Select Report Type",
-                "Road Accident",
-                "Fire Emergency",
+                "Road Crash",
                 "Medical Emergency",
                 "Flooding",
+                "Volcanic Activity",
                 "Landslide",
-                "Criminal Activity",
-                "Infrastructure Damage",
-                "Power Outage",
-                "Water Supply Issue",
-                "Other"
+                "Earthquake",
+                "Civil Disturbance",
+                "Armed Conflict",
+                "Infectious Disease"
         };
 
         // Create adapter and set to spinner
@@ -152,6 +173,21 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 navigateToProfile();
+            }
+        });
+        
+        // Tab click listeners
+        submitReportTab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                switchToSubmitReportTab();
+            }
+        });
+        
+        reportLogTab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                switchToReportLogTab();
             }
         });
 
@@ -372,14 +408,12 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             String description = descriptionEditText.getText().toString().trim();
             String location = locationEditText.getText().toString().trim();
 
-            // Create report data
+            // Create report data (without category and priority)
             Map<String, Object> reportData = FirestoreHelper.createReportData(
                 currentUser.getUid(),
                 reportType,
                 description,
-                location,
-                "medium", // Default priority
-                reportType.toLowerCase()
+                location
             );
 
             // Upload images first if any, then submit report
@@ -529,6 +563,67 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         builder.setView(dialogView)
                 .setPositiveButton("Close", null)
                 .show();
+    }
+
+    // Tab functionality methods
+    private void setupTabFunctionality() {
+        // Start with Submit Report tab active
+        switchToSubmitReportTab();
+    }
+    
+    private void switchToSubmitReportTab() {
+        // Update tab text colors - find TextViews by their position in the tab layout
+        TextView submitTabText = (TextView) submitReportTab.getChildAt(0);
+        TextView reportLogTabText = (TextView) reportLogTab.getChildAt(0);
+        
+        if (submitTabText != null) {
+            submitTabText.setTextColor(0xFFFF5722); // Orange color
+        }
+        if (reportLogTabText != null) {
+            reportLogTabText.setTextColor(0xFF666666); // Dark gray color
+        }
+        
+        // Show/hide content
+        submitReportContent.setVisibility(View.VISIBLE);
+        reportLogContent.setVisibility(View.GONE);
+        
+        // Update tab indicators
+        updateTabIndicators(true, false);
+    }
+    
+    private void switchToReportLogTab() {
+        // Update tab text colors - find TextViews by their position in the tab layout
+        TextView submitTabText = (TextView) submitReportTab.getChildAt(0);
+        TextView reportLogTabText = (TextView) reportLogTab.getChildAt(0);
+        
+        if (submitTabText != null) {
+            submitTabText.setTextColor(0xFF666666); // Dark gray color
+        }
+        if (reportLogTabText != null) {
+            reportLogTabText.setTextColor(0xFFFF5722); // Orange color
+        }
+        
+        // Show/hide content
+        submitReportContent.setVisibility(View.GONE);
+        reportLogContent.setVisibility(View.VISIBLE);
+        
+        // Update tab indicators
+        updateTabIndicators(false, true);
+    }
+    
+    private void updateTabIndicators(boolean submitReportActive, boolean reportLogActive) {
+        // Update tab indicator colors using the specific indicator views
+        if (submitReportIndicator != null) {
+            submitReportIndicator.setBackgroundColor(submitReportActive ? 
+                0xFFFF5722 : // Orange color
+                0x00000000); // Transparent
+        }
+        
+        if (reportLogIndicator != null) {
+            reportLogIndicator.setBackgroundColor(reportLogActive ? 
+                0xFFFF5722 : // Orange color
+                0x00000000); // Transparent
+        }
     }
 
     @Override
