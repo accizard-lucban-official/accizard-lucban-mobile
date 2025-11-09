@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/bottom_sheet_background">
+
+    <!-- Handle bar -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="20dp"
+        android:background="#E0E0E0"
+        android:layout_marginTop="8dp" />
+
+    <!-- Agency Logo/Icon -->
+    <de.hdodenhof.circleimageview.CircleImageView
+        android:id="@+id/agencyIcon"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:src="@drawable/ic_emergency"
+        android:scaleType="centerCrop"
+        android:padding="0dp"
+        android:contentDescription="Agency Icon"
+        />
+
+    <!-- Agency Name -->
+    <TextView
+        android:id="@+id/agencyName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="Lucban LDRRMO"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Agency Full Name -->
+    <TextView
+        android:id="@+id/agencyFullName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="Local Disaster Risk Reduction Management"
+        android:textSize="14sp"
+        android:textColor="@android:color/darker_gray"
+        android:layout_marginBottom="16dp"
+        android:gravity="center" />
+
+    <!-- Facebook Link (only visible for LDRRMO) -->
+    <LinearLayout
+        android:id="@+id/facebookLinkContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="8dp"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone">
+        
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_facebook"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="Facebook Icon" />
+        
+        <TextView
+            android:id="@+id/facebookLink"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MDRRMO Lucban"
+            android:textSize="20sp"
+            android:textColor="#1877F2"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true" />
+        
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/top_right"
+            android:layout_marginStart="6dp"
+            android:contentDescription="External Link Icon" />
+    </LinearLayout>
+
+    <!-- Phone Number -->
+    <TextView
+        android:id="@+id/phoneNumber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:text="555-555"
+        android:textSize="20sp"
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="32dp"
+        android:textStyle="bold" />
+
+    <!-- Swipe to Call Button -->
+    <FrameLayout
+        android:id="@+id/swipeToCallContainer"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@drawable/call_button_background"
+        android:layout_marginBottom="16dp">
+        
+        <!-- Background text hint -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="Swipe to Call →"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:alpha="0.7" />
+        
+        <!-- Swipeable phone icon -->
+        <ImageView
+            android:id="@+id/swipePhoneIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="start|center_vertical"
+            android:layout_margin="4dp"
+            android:src="@drawable/ic_phone"
+            android:padding="8dp"
+            android:background="@drawable/circle_background"
+            android:contentDescription="Swipe to Call" />
+    </FrameLayout>
+
+</LinearLayout>

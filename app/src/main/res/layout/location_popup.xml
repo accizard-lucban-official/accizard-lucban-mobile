@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/location_popup_background"
+    android:padding="16dp"
+    android:layout_margin="16dp"
+    android:elevation="8dp">
+
+    <!-- Location Name -->
+    <TextView
+        android:id="@+id/tvPopupLocationName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📍 Location Name"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        android:layout_marginBottom="8dp"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+    <!-- Coordinates -->
+    <TextView
+        android:id="@+id/tvPopupCoordinates"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Coordinates: 0.0000, 0.0000"
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <!-- Cancel Button -->
+        <Button
+            android:id="@+id/btnCancelLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="Cancel"
+            android:textSize="14sp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/button_outline_background"
+            android:textColor="@color/text_secondary"
+            android:minWidth="80dp" />
+
+        <!-- Select Location Button -->
+        <Button
+            android:id="@+id/btnSelectLocationPopup"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="Select"
+            android:textSize="14sp"
+            android:background="@drawable/button_primary_background"
+            android:textColor="@color/white"
+            android:minWidth="80dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

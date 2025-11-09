@@ -10,14 +10,27 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    
+    <!-- Push Notification permissions -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Storage permissions for different API levels -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28"
-        tools:ignore="ScopedStorage" />
+        android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    
+    <!-- Additional permissions for file access -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    
+    <!-- Audio recording permission -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- Feature requirements -->
     <uses-feature
@@ -55,7 +68,7 @@
         <!-- Mapbox Access Token -->
         <meta-data
             android:name="com.mapbox.maps.token"
-            android:value="pk.eyJ1IjoiYWNjaXphcmQtbHVjYmFuIiwiYSI6ImNtY3VhOHdxODAwcjcya3BzYTR2M25kcTEifQ.aBi4Zmkezyqa7Pfh519KbQ" />
+            android:value="pk.eyJ1IjoiYWNjaXphcmQtbHVjYmFuLW9mZmljaWFsIiwiYSI6ImNtaG93dTA2aDBnMG8ydm9vemd6a29sNzIifQ.j1N_NloJE19I2Mk4X3J2KA" />
 
         <!-- Launcher Activity -->
         <activity
@@ -144,10 +157,16 @@
             android:parentActivityName=".RegistrationActivity" />
 
         <activity
+            android:name=".CameraCaptureActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".ValidIdActivity" />
+
+        <activity
             android:name=".SuccessActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:parentActivityName=".RegistrationActivity" />
+            android:parentActivityName=".ValidIdActivity" />
 
         <!-- Onboarding Activity -->
         <activity
@@ -210,6 +229,12 @@
             android:screenOrientation="portrait"
             android:parentActivityName=".ReportSubmissionActivity" />
 
+        <activity
+            android:name=".SafetyTipsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".MainDashboard" />
+
         <!-- File Provider for camera and file operations -->
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -220,6 +245,23 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Firebase Cloud Messaging Service -->
+        <service
+            android:name=".MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- Default notification icon and color for FCM -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/accizard_logo_svg" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/colorPrimary" />
 
     </application>
 

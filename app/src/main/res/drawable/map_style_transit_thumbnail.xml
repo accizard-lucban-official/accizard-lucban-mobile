@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="60dp"
+    android:height="40dp"
+    android:viewportWidth="60"
+    android:viewportHeight="40">
+    
+    <!-- Background -->
+    <path
+        android:fillColor="#F5F5F5"
+        android:pathData="M0,0L60,0L60,40L0,40Z"/>
+    
+    <!-- Roads -->
+    <path
+        android:strokeColor="#CCCCCC"
+        android:strokeWidth="1"
+        android:pathData="M10,20L50,20M20,15L40,15M20,25L40,25M30,10L30,30"/>
+    
+    <!-- Transit lines -->
+    <path
+        android:strokeColor="#F44336"
+        android:strokeWidth="2"
+        android:pathData="M15,20L45,20"/>
+    <path
+        android:strokeColor="#2196F3"
+        android:strokeWidth="2"
+        android:pathData="M25,15L35,15"/>
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="2"
+        android:pathData="M20,25L40,25"/>
+    <path
+        android:strokeColor="#FF9800"
+        android:strokeWidth="2"
+        android:pathData="M30,10L30,30"/>
+    <path
+        android:strokeColor="#9C27B0"
+        android:strokeWidth="2"
+        android:pathData="M10,18L50,18"/>
+    
+    <!-- Transit stops -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M20,20A1.5,1.5 0,1 1,20 23A1.5,1.5 0,1 1,20 20Z"/>
+    <path
+        android:fillColor="#333333"
+        android:pathData="M30,20A1.5,1.5 0,1 1,30 23A1.5,1.5 0,1 1,30 20Z"/>
+    <path
+        android:fillColor="#333333"
+        android:pathData="M40,20A1.5,1.5 0,1 1,40 23A1.5,1.5 0,1 1,40 20Z"/>
+    
+    <!-- Buildings -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M15,25L20,25L20,30L15,30Z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M25,22L30,22L30,30L25,30Z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M35,20L40,20L40,30L35,30Z"/>
+</vector>

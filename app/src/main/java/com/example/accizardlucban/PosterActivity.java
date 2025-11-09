@@ -38,7 +38,7 @@ public class PosterActivity extends AppCompatActivity {
     private Button selectImageButton;
     private Button getLocationButton;
     private Button submitReportButton;
-    private Button backButton;
+    private ImageView backButton;
 
     private FusedLocationProviderClient fusedLocationClient;
     private Bitmap incidentImage;

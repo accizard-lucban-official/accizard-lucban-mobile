@@ -16,6 +16,12 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.animation.ObjectAnimator;
 import android.view.animation.AccelerateDecelerateInterpolator;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.TextPaint;
+import android.text.style.ClickableSpan;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.content.SharedPreferences;
@@ -26,7 +32,7 @@ public class RegistrationActivity extends AppCompatActivity {
     private EditText etFirstName, etLastName, etMobileNumber, etEmail, etPassword;
     private CheckBox cbTerms;
     private Button btnCreateAccount;
-    private TextView tvSignIn, tvTermsConditions, tvPrivacyPolicy;
+    private TextView tvSignIn, tvTermsConditions;
     private ImageView ivTogglePassword;
     private FrameLayout popupContainer;
     private View popupView;
@@ -42,6 +48,7 @@ public class RegistrationActivity extends AppCompatActivity {
         setContentView(R.layout.registration_activity);
 
         initializeViews();
+        restoreRegistrationData(); // Restore registration data if exists
         setupClickListeners();
         setupPasswordToggle();
     }
@@ -57,9 +64,11 @@ public class RegistrationActivity extends AppCompatActivity {
         tvSignIn = findViewById(R.id.tvSignIn);
         ivTogglePassword = findViewById(R.id.ivTogglePassword);
         
-        // Find Terms and Conditions TextViews
+        // Find Terms and Conditions TextView
         tvTermsConditions = findViewById(R.id.tvTermsConditions);
-        tvPrivacyPolicy = findViewById(R.id.tvPrivacyPolicy);
+        
+        // Set up spannable text with clickable Terms and Privacy Policy
+        setupTermsText();
         
         // Create popup container
         popupContainer = new FrameLayout(this);
@@ -72,13 +81,83 @@ public class RegistrationActivity extends AppCompatActivity {
         ViewGroup rootLayout = findViewById(android.R.id.content);
         rootLayout.addView(popupContainer);
     }
+    
+    private void setupTermsText() {
+        String fullText = "I agree to the Terms and Conditions and Privacy Policy";
+        SpannableString spannableString = new SpannableString(fullText);
+        
+        // Get orange color from resources
+        int orangeColor = getResources().getColor(R.color.orange_primary, getTheme());
+        
+        // Make "Terms and Conditions" clickable
+        String termsText = "Terms and Conditions";
+        int termsStart = fullText.indexOf(termsText);
+        int termsEnd = termsStart + termsText.length();
+        
+        ClickableSpan termsSpan = new ClickableSpan() {
+            @Override
+            public void onClick(View widget) {
+                showTermsPopup();
+            }
+            
+            @Override
+            public void updateDrawState(TextPaint ds) {
+                super.updateDrawState(ds);
+                ds.setColor(orangeColor);
+                ds.setUnderlineText(false);
+                ds.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            }
+        };
+        
+        spannableString.setSpan(termsSpan, termsStart, termsEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        spannableString.setSpan(new ForegroundColorSpan(orangeColor), termsStart, termsEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        spannableString.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), termsStart, termsEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        
+        // Make "Privacy Policy" clickable
+        String privacyText = "Privacy Policy";
+        int privacyStart = fullText.indexOf(privacyText);
+        int privacyEnd = privacyStart + privacyText.length();
+        
+        ClickableSpan privacySpan = new ClickableSpan() {
+            @Override
+            public void onClick(View widget) {
+                showTermsPopup();
+            }
+            
+            @Override
+            public void updateDrawState(TextPaint ds) {
+                super.updateDrawState(ds);
+                ds.setColor(orangeColor);
+                ds.setUnderlineText(false);
+                ds.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            }
+        };
+        
+        spannableString.setSpan(privacySpan, privacyStart, privacyEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        spannableString.setSpan(new ForegroundColorSpan(orangeColor), privacyStart, privacyEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        spannableString.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), privacyStart, privacyEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        
+        tvTermsConditions.setText(spannableString);
+        tvTermsConditions.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+    }
 
     private void setupClickListeners() {
         btnCreateAccount.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (validateInputs()) {
-                    proceedToPersonalInfo();
+                try {
+                    android.util.Log.d("RegistrationActivity", "Create Account button clicked");
+                    
+                    if (validateInputs()) {
+                        android.util.Log.d("RegistrationActivity", "Validation passed, proceeding to PersonalInfo");
+                        proceedToPersonalInfo();
+                    } else {
+                        android.util.Log.d("RegistrationActivity", "Validation failed - check error messages");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    android.util.Log.e("RegistrationActivity", "Exception in button click", e);
+                    Toast.makeText(RegistrationActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 }
             }
         });
@@ -98,24 +177,7 @@ public class RegistrationActivity extends AppCompatActivity {
             }
         });
         
-        // Set click listeners for Terms and Conditions
-        if (tvTermsConditions != null) {
-            tvTermsConditions.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    showTermsPopup();
-                }
-            });
-        }
-        
-        if (tvPrivacyPolicy != null) {
-            tvPrivacyPolicy.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    showTermsPopup();
-                }
-            });
-        }
+        // Note: Terms and Privacy Policy clicks are handled by clickable spans in setupTermsText()
     }
 
     private void setupPasswordToggle() {
@@ -139,60 +201,111 @@ public class RegistrationActivity extends AppCompatActivity {
     }
 
     private boolean validateInputs() {
-        if (TextUtils.isEmpty(etFirstName.getText().toString().trim())) {
+        android.util.Log.d("RegistrationActivity", "Starting validation...");
+        
+        // Check if views are initialized
+        if (etFirstName == null || etLastName == null || etMobileNumber == null || 
+            etEmail == null || etPassword == null || cbTerms == null) {
+            android.util.Log.e("RegistrationActivity", "ERROR: Some views are null!");
+            Toast.makeText(this, "Form initialization error. Please restart the app.", Toast.LENGTH_LONG).show();
+            return false;
+        }
+        
+        // First Name validation
+        String firstName = etFirstName.getText().toString().trim();
+        if (TextUtils.isEmpty(firstName)) {
             etFirstName.setError("First name is required");
             etFirstName.requestFocus();
+            android.util.Log.d("RegistrationActivity", "Validation failed: First name is empty");
+            Toast.makeText(this, "Please enter your first name", Toast.LENGTH_SHORT).show();
             return false;
         }
+        android.util.Log.d("RegistrationActivity", "✓ First name: " + firstName);
 
-        if (TextUtils.isEmpty(etLastName.getText().toString().trim())) {
+        // Last Name validation
+        String lastName = etLastName.getText().toString().trim();
+        if (TextUtils.isEmpty(lastName)) {
             etLastName.setError("Last name is required");
             etLastName.requestFocus();
+            android.util.Log.d("RegistrationActivity", "Validation failed: Last name is empty");
+            Toast.makeText(this, "Please enter your last name", Toast.LENGTH_SHORT).show();
             return false;
         }
+        android.util.Log.d("RegistrationActivity", "✓ Last name: " + lastName);
 
-        if (TextUtils.isEmpty(etMobileNumber.getText().toString().trim())) {
+        // Mobile Number validation
+        String mobileNumber = etMobileNumber.getText().toString().trim();
+        if (TextUtils.isEmpty(mobileNumber)) {
             etMobileNumber.setError("Mobile number is required");
             etMobileNumber.requestFocus();
+            android.util.Log.d("RegistrationActivity", "Validation failed: Mobile number is empty");
+            Toast.makeText(this, "Please enter your mobile number", Toast.LENGTH_SHORT).show();
             return false;
         }
-
-        // Mobile number validation (Philippine format)
-        String mobileNumber = etMobileNumber.getText().toString().trim();
+        
+        // Mobile number format validation
         if (!isValidPhilippineMobileNumber(mobileNumber)) {
-            etMobileNumber.setError("Please enter a valid Philippine mobile number");
+            etMobileNumber.setError("Please enter a valid Philippine mobile number (e.g., 09123456789)");
             etMobileNumber.requestFocus();
+            android.util.Log.d("RegistrationActivity", "Validation failed: Invalid mobile number format: " + mobileNumber);
+            Toast.makeText(this, "Invalid mobile number format.\nExample: 09123456789 or +639123456789", Toast.LENGTH_LONG).show();
             return false;
         }
+        android.util.Log.d("RegistrationActivity", "✓ Mobile number: " + mobileNumber);
 
-        if (TextUtils.isEmpty(etEmail.getText().toString().trim())) {
+        // Email validation
+        String email = etEmail.getText().toString().trim();
+        if (TextUtils.isEmpty(email)) {
             etEmail.setError("Email is required");
             etEmail.requestFocus();
+            android.util.Log.d("RegistrationActivity", "Validation failed: Email is empty");
+            Toast.makeText(this, "Please enter your email address", Toast.LENGTH_SHORT).show();
             return false;
         }
 
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(etEmail.getText().toString().trim()).matches()) {
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             etEmail.setError("Please enter a valid email");
             etEmail.requestFocus();
+            android.util.Log.d("RegistrationActivity", "Validation failed: Invalid email format: " + email);
+            Toast.makeText(this, "Please enter a valid email address", Toast.LENGTH_SHORT).show();
             return false;
         }
+        android.util.Log.d("RegistrationActivity", "✓ Email: " + email);
 
-        if (TextUtils.isEmpty(etPassword.getText().toString().trim())) {
+        // Password validation
+        String password = etPassword.getText().toString().trim();
+        if (TextUtils.isEmpty(password)) {
             etPassword.setError("Password is required");
             etPassword.requestFocus();
+            android.util.Log.d("RegistrationActivity", "Validation failed: Password is empty");
+            Toast.makeText(this, "Please enter a password", Toast.LENGTH_SHORT).show();
             return false;
         }
-        String password = etPassword.getText().toString().trim();
+        
         if (!isStrongPassword(password)) {
-            etPassword.setError("Password must be at least 8 characters, include uppercase, lowercase, number, and symbol");
+            etPassword.setError("Your password must be at least 8 characters long and contain at least one special character (e.g., !, @, #, $)");
             etPassword.requestFocus();
+            android.util.Log.d("RegistrationActivity", "Validation failed: Password not strong enough: " + password);
             return false;
         }
+        android.util.Log.d("RegistrationActivity", "✓ Password: [hidden]");
+        
+        // Terms and Conditions validation
+        if (cbTerms == null) {
+            android.util.Log.e("RegistrationActivity", "ERROR: cbTerms checkbox is null!");
+            Toast.makeText(this, "Terms checkbox error. Please restart.", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        
         if (!cbTerms.isChecked()) {
-            Toast.makeText(this, "Please agree to Terms and Conditions", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Please agree to Terms and Conditions by checking the box", Toast.LENGTH_LONG).show();
+            android.util.Log.d("RegistrationActivity", "Validation failed: Terms checkbox not checked");
+            cbTerms.requestFocus();
             return false;
         }
+        android.util.Log.d("RegistrationActivity", "✓ Terms and Conditions: Accepted");
 
+        android.util.Log.d("RegistrationActivity", "✅ ALL VALIDATIONS PASSED!");
         return true;
     }
 
@@ -227,23 +340,34 @@ public class RegistrationActivity extends AppCompatActivity {
 
     private void proceedToPersonalInfo() {
         try {
-            // Save first and last name to SharedPreferences
+            android.util.Log.d("RegistrationActivity", "Proceeding to PersonalInfoActivity");
+            
+            // Save first and last name to SharedPreferences (existing functionality)
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
             SharedPreferences.Editor editor = prefs.edit();
             editor.putString(KEY_FIRST_NAME, etFirstName.getText().toString().trim());
             editor.putString(KEY_LAST_NAME, etLastName.getText().toString().trim());
             editor.apply();
 
+            // ALSO save to registration_data for retention
+            saveRegistrationData();
+
+            android.util.Log.d("RegistrationActivity", "Creating intent for PersonalInfoActivity");
             Intent intent = new Intent(RegistrationActivity.this, PersonalInfoActivity.class);
             intent.putExtra("firstName", etFirstName.getText().toString().trim());
             intent.putExtra("lastName", etLastName.getText().toString().trim());
             intent.putExtra("mobileNumber", etMobileNumber.getText().toString().trim());
             intent.putExtra("email", etEmail.getText().toString().trim());
             intent.putExtra("password", etPassword.getText().toString().trim());
+            
+            android.util.Log.d("RegistrationActivity", "Starting PersonalInfoActivity");
             startActivity(intent);
+            
+            android.util.Log.d("RegistrationActivity", "Successfully navigated to PersonalInfoActivity");
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Error proceeding to personal info: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            android.util.Log.e("RegistrationActivity", "Error proceeding to personal info", e);
+            Toast.makeText(this, "Error proceeding to personal info: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
     
@@ -406,6 +530,81 @@ public class RegistrationActivity extends AppCompatActivity {
             hideTermsPopup();
         } else {
             super.onBackPressed();
+        }
+    }
+
+    /**
+     * Restores registration data from SharedPreferences if exists
+     * This allows users to continue registration after going back
+     */
+    private void restoreRegistrationData() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("registration_data", MODE_PRIVATE);
+            
+            // Restore first name
+            String savedFirstName = prefs.getString("saved_first_name", null);
+            if (savedFirstName != null && !savedFirstName.isEmpty()) {
+                etFirstName.setText(savedFirstName);
+                android.util.Log.d("RegistrationActivity", "First name restored: " + savedFirstName);
+            }
+            
+            // Restore last name
+            String savedLastName = prefs.getString("saved_last_name", null);
+            if (savedLastName != null && !savedLastName.isEmpty()) {
+                etLastName.setText(savedLastName);
+                android.util.Log.d("RegistrationActivity", "Last name restored: " + savedLastName);
+            }
+            
+            // Restore mobile number
+            String savedMobile = prefs.getString("saved_mobile_number", null);
+            if (savedMobile != null && !savedMobile.isEmpty()) {
+                etMobileNumber.setText(savedMobile);
+                android.util.Log.d("RegistrationActivity", "Mobile number restored: " + savedMobile);
+            }
+            
+            // Restore email
+            String savedEmail = prefs.getString("saved_email", null);
+            if (savedEmail != null && !savedEmail.isEmpty()) {
+                etEmail.setText(savedEmail);
+                android.util.Log.d("RegistrationActivity", "Email restored: " + savedEmail);
+            }
+            
+            // Restore password
+            String savedPassword = prefs.getString("saved_password", null);
+            if (savedPassword != null && !savedPassword.isEmpty()) {
+                etPassword.setText(savedPassword);
+                android.util.Log.d("RegistrationActivity", "Password restored");
+            }
+            
+            // Restore terms checkbox
+            boolean savedTerms = prefs.getBoolean("saved_terms", false);
+            cbTerms.setChecked(savedTerms);
+            
+            android.util.Log.d("RegistrationActivity", "✅ Registration data restored from SharedPreferences");
+        } catch (Exception e) {
+            android.util.Log.e("RegistrationActivity", "Error restoring registration data", e);
+        }
+    }
+
+    /**
+     * Saves registration data to SharedPreferences for retention
+     */
+    private void saveRegistrationData() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("registration_data", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            
+            editor.putString("saved_first_name", etFirstName.getText().toString().trim());
+            editor.putString("saved_last_name", etLastName.getText().toString().trim());
+            editor.putString("saved_mobile_number", etMobileNumber.getText().toString().trim());
+            editor.putString("saved_email", etEmail.getText().toString().trim());
+            editor.putString("saved_password", etPassword.getText().toString().trim());
+            editor.putBoolean("saved_terms", cbTerms.isChecked());
+            
+            editor.apply();
+            android.util.Log.d("RegistrationActivity", "✅ Registration data saved to SharedPreferences");
+        } catch (Exception e) {
+            android.util.Log.e("RegistrationActivity", "Error saving registration data", e);
         }
     }
 }

@@ -3,6 +3,7 @@ package com.example.accizardlucban;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
@@ -11,16 +12,21 @@ import android.widget.Toast;
 import android.widget.ProgressBar;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 public class ResetPasswordActivity extends AppCompatActivity {
 
+    private static final String TAG = "ResetPasswordActivity";
     private EditText emailEditText;
     private Button sendLinkButton;
     private ProgressBar progressBar;
@@ -86,8 +92,166 @@ public class ResetPasswordActivity extends AppCompatActivity {
         // Show loading state
         setLoadingState(true);
         
-        // Send Firebase password reset email directly
-        sendFirebaseResetEmail(email);
+        // Check if email exists and send verification email
+        checkEmailAndSendVerification(email);
+    }
+    
+    private void checkEmailAndSendVerification(String email) {
+        Log.d(TAG, "Checking if email exists: " + email);
+        
+        // Check if email exists in Firestore users collection
+        db.collection("users")
+                .whereEqualTo("email", email)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        QuerySnapshot result = task.getResult();
+                        if (result != null && !result.isEmpty()) {
+                            // Email exists in our database
+                            QueryDocumentSnapshot document = (QueryDocumentSnapshot) result.getDocuments().get(0);
+                            String firebaseUid = document.getString("firebaseUid");
+                            
+                            Log.d(TAG, "Email found in database. Firebase UID: " + firebaseUid);
+                            
+                            // Check if user has a Firebase Auth account
+                            checkFirebaseUserAndSendVerification(email, firebaseUid);
+                        } else {
+                            // Email not found in our database
+                            setLoadingState(false);
+                            Log.w(TAG, "Email not found in database: " + email);
+                            showEmailNotFoundDialog(email);
+                        }
+                    } else {
+                        // Error checking database
+                        setLoadingState(false);
+                        Log.e(TAG, "Error checking database", task.getException());
+                        Toast.makeText(this, 
+                            "Error checking email: " + task.getException().getMessage(), 
+                            Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+    
+    private void checkFirebaseUserAndSendVerification(String email, String firebaseUid) {
+        Log.d(TAG, "Checking Firebase Auth user status");
+        
+        // Try to sign in to check if Firebase Auth account exists
+        // Note: We need the current user to send verification email
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        
+        if (currentUser != null && currentUser.getEmail() != null && currentUser.getEmail().equals(email)) {
+            // User is already signed in with this email
+            Log.d(TAG, "User already signed in, sending verification email");
+            sendVerificationEmail(currentUser);
+        } else {
+            // User needs to be authenticated first to send verification
+            // We'll send a password reset email instead, which serves as verification
+            Log.d(TAG, "User not signed in, sending password reset as verification");
+            sendPasswordResetAsVerification(email);
+        }
+    }
+    
+    private void sendVerificationEmail(FirebaseUser user) {
+        Log.d(TAG, "Sending verification email to: " + user.getEmail());
+        
+        // Check if email is already verified
+        if (user.isEmailVerified()) {
+            setLoadingState(false);
+            showEmailAlreadyVerifiedDialog(user.getEmail());
+            return;
+        }
+        
+        // Send verification email
+        user.sendEmailVerification()
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        setLoadingState(false);
+                        
+                        if (task.isSuccessful()) {
+                            Log.d(TAG, "Verification email sent successfully");
+                            showVerificationSentDialog(user.getEmail());
+                        } else {
+                            Log.e(TAG, "Failed to send verification email", task.getException());
+                            Toast.makeText(ResetPasswordActivity.this, 
+                                "Failed to send verification email: " + task.getException().getMessage(), 
+                                Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
+    }
+    
+    private void sendPasswordResetAsVerification(String email) {
+        Log.d(TAG, "Sending password reset email as verification to: " + email);
+        
+        mAuth.sendPasswordResetEmail(email)
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        setLoadingState(false);
+                        
+                        if (task.isSuccessful()) {
+                            Log.d(TAG, "Verification email sent successfully");
+                            showVerificationSentDialog(email);
+                        } else {
+                            Log.e(TAG, "Failed to send verification email", task.getException());
+                            Toast.makeText(ResetPasswordActivity.this, 
+                                "Failed to send verification email: " + task.getException().getMessage(), 
+                                Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
+    }
+    
+    private void showEmailNotFoundDialog(String email) {
+        new AlertDialog.Builder(this)
+                .setTitle("Email Not Found")
+                .setMessage("The email address " + email + " is not registered in our system.\n\nWould you like to create a new account?")
+                .setPositiveButton("Register", (dialog, which) -> {
+                    // Navigate to registration
+                    Intent intent = new Intent(ResetPasswordActivity.this, RegistrationActivity.class);
+                    intent.putExtra("email", email);
+                    startActivity(intent);
+                    finish();
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> {
+                    dialog.dismiss();
+                })
+                .show();
+    }
+    
+    private void showEmailAlreadyVerifiedDialog(String email) {
+        new AlertDialog.Builder(this)
+                .setTitle("Email Already Verified")
+                .setMessage("The email address " + email + " is already verified.\n\nYou can sign in with your account.")
+                .setPositiveButton("Sign In", (dialog, which) -> {
+                    // Navigate to login
+                    Intent intent = new Intent(ResetPasswordActivity.this, MainActivity.class);
+                    startActivity(intent);
+                    finish();
+                })
+                .setNegativeButton("OK", (dialog, which) -> {
+                    dialog.dismiss();
+                })
+                .show();
+    }
+    
+    private void showVerificationSentDialog(String email) {
+        new AlertDialog.Builder(this)
+                .setTitle("✓ Verification Email Sent")
+                .setMessage("A verification email has been sent to:\n\n" + email + 
+                           "\n\nPlease check your inbox and follow the instructions to verify your email address.\n\n" +
+                           "Note: Check your spam folder if you don't see the email.")
+                .setPositiveButton("OK", (dialog, which) -> {
+                    dialog.dismiss();
+                    finish();
+                })
+                .setNeutralButton("Resend", (dialog, which) -> {
+                    // Resend verification email
+                    sendResetLink();
+                })
+                .setCancelable(false)
+                .show();
     }
     
     private void checkEmailExists(String email) {

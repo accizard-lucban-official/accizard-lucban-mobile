@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:elevation="8dp">
+
+    <!-- Main popup background -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/chat_action_popup_background"
+        android:padding="8dp">
+
+        <!-- Take a Photo -->
+        <LinearLayout
+            android:id="@+id/menuTakePhoto"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_camera"
+                android:tint="@android:color/white"
+                android:layout_marginEnd="12dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Take a Photo"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:fontFamily="@font/dmsans" />
+
+        </LinearLayout>
+
+        <!-- Open Gallery -->
+        <LinearLayout
+            android:id="@+id/menuOpenGallery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_gallery"
+                android:tint="@android:color/white"
+                android:layout_marginEnd="12dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Open Gallery"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:fontFamily="@font/dmsans" />
+
+        </LinearLayout>
+
+        <!-- Record Video -->
+        <LinearLayout
+            android:id="@+id/menuRecordVideo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_video"
+                android:tint="@android:color/white"
+                android:layout_marginEnd="12dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Record Video"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:fontFamily="@font/dmsans" />
+
+        </LinearLayout>
+
+        <!-- Record Audio -->
+        <LinearLayout
+            android:id="@+id/menuRecordAudio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/audio"
+                android:tint="@android:color/white"
+                android:layout_marginEnd="12dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Record Audio"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:fontFamily="@font/dmsans" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Triangle tail pointing down -->
+    <ImageView
+        android:layout_width="24dp"
+        android:layout_height="12dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="-12dp"
+        android:src="@drawable/popup_tail" />
+
+</FrameLayout>

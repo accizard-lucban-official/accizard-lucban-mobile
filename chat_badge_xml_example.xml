@@ -1,0 +1,306 @@
+<!-- 
+  ========================================
+  CHAT BADGE XML EXAMPLE
+  ========================================
+  
+  Copy this code and paste it into your bottom navigation layout
+  for each activity (MainDashboard, ReportSubmission, MapView, Alerts)
+  
+  Replace the activity name suffix as needed:
+  - chat_badge_main (for MainDashboard)
+  - chat_badge_report (for ReportSubmissionActivity)
+  - chat_badge_map (for MapViewActivity)
+  - chat_badge_alerts (for AlertsActivity)
+-->
+
+<!-- BEFORE: Your existing chat tab (OLD) -->
+<LinearLayout
+    android:id="@+id/chatTab"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="8dp">
+    
+    <!-- OLD: Just the icon -->
+    <ImageView
+        android:id="@+id/chatIcon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_chat"
+        android:contentDescription="Chat" />
+    
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Chat"
+        android:textSize="12sp"
+        android:textColor="@color/tab_text_color" />
+</LinearLayout>
+
+<!-- ========================================== -->
+
+<!-- AFTER: With badge support (NEW) ✅ -->
+<LinearLayout
+    android:id="@+id/chatTab"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="8dp">
+    
+    <!-- NEW: Wrap icon with FrameLayout for badge positioning -->
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+        
+        <!-- Your existing chat icon -->
+        <ImageView
+            android:id="@+id/chatIcon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_chat"
+            android:contentDescription="Chat" />
+        
+        <!-- ✅ NEW: Chat notification badge -->
+        <TextView
+            android:id="@+id/chat_badge_report"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="-4dp"
+            android:layout_marginEnd="-4dp"
+            android:background="@drawable/badge_background"
+            android:gravity="center"
+            android:text="1"
+            android:textColor="@android:color/white"
+            android:textSize="10sp"
+            android:fontFamily="sans-serif-medium"
+            android:visibility="gone"
+            android:elevation="4dp"/>
+    </FrameLayout>
+    
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Chat"
+        android:textSize="12sp"
+        android:textColor="@color/tab_text_color" />
+</LinearLayout>
+
+<!-- ========================================== -->
+
+<!-- 
+  IMPORTANT: Change the badge ID for each activity:
+  
+  For MainDashboard:
+  android:id="@+id/chat_badge_main"
+  
+  For ReportSubmissionActivity:
+  android:id="@+id/chat_badge_report"
+  
+  For MapViewActivity:
+  android:id="@+id/chat_badge_map"
+  
+  For AlertsActivity:
+  android:id="@+id/chat_badge_alerts"
+-->
+
+<!-- ========================================== -->
+
+<!-- FULL EXAMPLE: Complete bottom navigation with all badges -->
+<LinearLayout
+    android:id="@+id/bottomNavigationContainer"
+    android:layout_width="match_parent"
+    android:layout_height="60dp"
+    android:orientation="horizontal"
+    android:background="@color/bottom_nav_background"
+    android:elevation="8dp">
+    
+    <!-- Home Tab -->
+    <LinearLayout
+        android:id="@+id/homeTab"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center">
+        
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_home" />
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Home"
+            android:textSize="12sp" />
+    </LinearLayout>
+    
+    <!-- Chat Tab (with badge) ✅ -->
+    <LinearLayout
+        android:id="@+id/chatTab"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center">
+        
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+            
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_chat" />
+            
+            <!-- Chat Badge -->
+            <TextView
+                android:id="@+id/chat_badge_report"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="-4dp"
+                android:layout_marginEnd="-4dp"
+                android:background="@drawable/badge_background"
+                android:gravity="center"
+                android:textColor="@android:color/white"
+                android:textSize="10sp"
+                android:visibility="gone"
+                android:elevation="4dp"/>
+        </FrameLayout>
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chat"
+            android:textSize="12sp" />
+    </LinearLayout>
+    
+    <!-- Report Tab -->
+    <LinearLayout
+        android:id="@+id/reportTab"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center">
+        
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_report" />
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Report"
+            android:textSize="12sp" />
+    </LinearLayout>
+    
+    <!-- Map Tab -->
+    <LinearLayout
+        android:id="@+id/mapTab"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center">
+        
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_map" />
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Map"
+            android:textSize="12sp" />
+    </LinearLayout>
+    
+    <!-- Alerts Tab (with its own badge) -->
+    <LinearLayout
+        android:id="@+id/alertsTab"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center">
+        
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+            
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_alert" />
+            
+            <!-- Alerts Badge (already exists) -->
+            <TextView
+                android:id="@+id/alerts_badge_report"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="-4dp"
+                android:layout_marginEnd="-4dp"
+                android:background="@drawable/badge_background"
+                android:gravity="center"
+                android:textColor="@android:color/white"
+                android:textSize="10sp"
+                android:visibility="gone"
+                android:elevation="4dp"/>
+        </FrameLayout>
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Alerts"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>
+
+<!-- 
+  ========================================
+  SUMMARY OF CHANGES:
+  ========================================
+  
+  1. Wrap your chat icon with FrameLayout
+  2. Add TextView badge with ID chat_badge_XXX
+  3. Position badge at top-right (-4dp margins)
+  4. Set visibility="gone" (will show when there are unread messages)
+  5. Use badge_background drawable (should already exist)
+  
+  That's it! The Java code will handle the rest automatically.
+-->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

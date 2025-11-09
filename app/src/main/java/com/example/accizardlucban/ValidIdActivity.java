@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -16,19 +17,22 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.LinearLayout;
+import android.content.SharedPreferences;
+import androidx.cardview.widget.CardView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
-import android.content.SharedPreferences;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
@@ -40,8 +44,10 @@ import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
@@ -50,22 +56,24 @@ import java.util.Map;
 public class ValidIdActivity extends AppCompatActivity {
 
     private static final String TAG = "ValidIdActivity";
-    private static final int CAMERA_REQUEST_CODE = 100;
     private static final int GALLERY_REQUEST_CODE = 101;
+    private static final int CAMERA_REQUEST_CODE = 100;
+    private static final int CUSTOM_CAMERA_REQUEST_CODE = 200;
     private static final int CAMERA_PERMISSION_CODE = 102;
     private static final int STORAGE_PERMISSION_CODE = 103;
 
-    private ImageView ivValidId;
-    private Button btnTakePhoto, btnUploadFromGallery, btnNext;
+    private CardView btnUpload;
+    private Button btnNext;
     private ImageButton btnBack;
     private TextView tvValidIdList;
-    private TextView tvSelectedIdsLabel;
-    private android.widget.HorizontalScrollView hsThumbnails;
-    private android.widget.LinearLayout thumbnailsContainer;
-    private String firstName, lastName, mobileNumber, email, password, province, cityTown, barangay;
-    private java.util.List<Uri> validIdUris;
-    private java.util.List<Bitmap> validIdBitmaps;
+    private ImageView ivValidId;
+    private LinearLayout placeholderContainer;
+    
+    private String firstName, lastName, mobileNumber, email, password, province, cityTown, barangay, streetAddress;
+    private Bitmap validIdBitmap;
+    private Uri validIdUri;
     private boolean hasValidId = false;
+    private String selectedValidIdType = null; // e.g., Passport, Driver's License, etc.
     
     // Profile picture data
     private boolean hasProfilePicture = false;
@@ -89,12 +97,9 @@ public class ValidIdActivity extends AppCompatActivity {
             storage = FirebaseStorage.getInstance();
             storageRef = storage.getReference();
             
-            // Initialize lists for multiple images
-            validIdUris = new java.util.ArrayList<>();
-            validIdBitmaps = new java.util.ArrayList<>();
-            
             initializeViews();
             getIntentData();
+            restoreValidIdData(); // Restore previously saved valid ID
             setupClickListeners();
         } catch (Exception e) {
             e.printStackTrace();
@@ -104,35 +109,92 @@ public class ValidIdActivity extends AppCompatActivity {
 
     private void initializeViews() {
         try {
-            // Initialize all views
-            ivValidId = findViewById(R.id.iv_valid_id);
-            btnUploadFromGallery = findViewById(R.id.btn_upload_gallery);
+            // Initialize navigation buttons
             btnNext = findViewById(R.id.btn_next);
             btnBack = findViewById(R.id.btn_back);
             tvValidIdList = findViewById(R.id.tv_valid_ids_list);
+            
+            // Initialize upload button
+            btnUpload = findViewById(R.id.btn_upload);
+            ivValidId = findViewById(R.id.iv_valid_id);
+            
+            // Initialize placeholder container
+            placeholderContainer = findViewById(R.id.placeholder_container);
+            
+            // Add underline to "See list of Valid IDs" text
+            if (tvValidIdList != null) {
+                tvValidIdList.setPaintFlags(tvValidIdList.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
+            }
 
-            // Check if views are found
-            if (btnTakePhoto == null) {
-            }
-            if (btnUploadFromGallery == null) {
-                Toast.makeText(this, "Error: Upload Gallery button not found", Toast.LENGTH_SHORT).show();
-            }
-            if (btnNext == null) {
-                Toast.makeText(this, "Error: Next button not found", Toast.LENGTH_SHORT).show();
-            }
-            if (btnBack == null) {
-                Toast.makeText(this, "Error: Back button not found", Toast.LENGTH_SHORT).show();
-            }
-            if (tvValidIdList == null) {
-                Toast.makeText(this, "Error: Valid ID list text not found", Toast.LENGTH_SHORT).show();
-            }
-            if (ivValidId == null) {
-                Toast.makeText(this, "Error: Image view not found", Toast.LENGTH_SHORT).show();
-            }
+            // Enable click on image view to re-upload: open camera directly
+            ivValidId.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (checkCameraPermission()) {
+                        openCamera();
+                    } else {
+                        requestCameraPermission();
+                    }
+                }
+            });
+            
+            // Enable click on placeholder to open standard phone camera (always)
+            placeholderContainer.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (checkCameraPermission()) {
+                        openCamera();
+                    } else {
+                        requestCameraPermission();
+                    }
+                }
+            });
 
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error initializing views: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showReplaceImageDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Replace ID Image")
+                .setMessage("Do you want to replace the current ID image?")
+                .setPositiveButton("Yes", (dialog, which) -> {
+                    showUploadOptionsDialog();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showUploadOptionsDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Upload ID Image")
+                .setItems(new String[]{"Gallery", "Take Photo with ID Guide"}, (dialog, which) -> {
+                    if (which == 0) {
+                        // Gallery option
+                        if (checkStoragePermission()) {
+                            openGallery();
+            } else {
+                            requestStoragePermission();
+                        }
+                    } else if (which == 1) {
+                        // Camera with ID guide option
+                        openCustomCamera();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                    .show();
+    }
+    
+    private void openCustomCamera() {
+        try {
+            Log.d(TAG, "openCustomCamera: Starting");
+            Intent cameraIntent = new Intent(this, CameraCaptureActivity.class);
+            startActivityForResult(cameraIntent, CUSTOM_CAMERA_REQUEST_CODE);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Error opening camera: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -148,6 +210,7 @@ public class ValidIdActivity extends AppCompatActivity {
                 province = intent.getStringExtra("province");
                 cityTown = intent.getStringExtra("cityTown");
                 barangay = intent.getStringExtra("barangay");
+                streetAddress = intent.getStringExtra("streetAddress");
                 
                 // Get profile picture data
                 hasProfilePicture = intent.getBooleanExtra("hasProfilePicture", false);
@@ -172,39 +235,16 @@ public class ValidIdActivity extends AppCompatActivity {
 
     private void setupClickListeners() {
         try {
-            if (btnTakePhoto != null) {
-                btnTakePhoto.setOnClickListener(new View.OnClickListener() {
+            // Upload Button - directly opens gallery
+            if (btnUpload != null) {
+                btnUpload.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        try {
-                            Toast.makeText(ValidIdActivity.this, "Take Photo button clicked", Toast.LENGTH_SHORT).show();
-                            if (checkCameraPermission()) {
-                                openCamera();
-                            } else {
-                                requestCameraPermission();
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            Toast.makeText(ValidIdActivity.this, "Error accessing camera: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
-            }
-
-            if (btnUploadFromGallery != null) {
-                btnUploadFromGallery.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        try {
-                            Toast.makeText(ValidIdActivity.this, "Upload Gallery button clicked", Toast.LENGTH_SHORT).show();
-                            if (checkStoragePermission()) {
-                                openGalleryMulti();
-                            } else {
-                                requestStoragePermission();
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            Toast.makeText(ValidIdActivity.this, "Error accessing gallery: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        // Directly open gallery
+                        if (checkStoragePermission()) {
+                            openGallery();
+                        } else {
+                            requestStoragePermission();
                         }
                     }
                 });
@@ -234,7 +274,7 @@ public class ValidIdActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
                         try {
-                            Toast.makeText(ValidIdActivity.this, "Back button clicked", Toast.LENGTH_SHORT).show();
+                            saveValidIdData(); // Save current data before going back
                             finish();
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -249,7 +289,7 @@ public class ValidIdActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
                         try {
-                            showAllUploadedImages();
+                            showValidIdList();
                         } catch (Exception e) {
                             e.printStackTrace();
                             Toast.makeText(ValidIdActivity.this, "Error showing valid ID list: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -261,14 +301,6 @@ public class ValidIdActivity extends AppCompatActivity {
             e.printStackTrace();
             Toast.makeText(this, "Error setting up click listeners: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
-    }
-
-    private boolean checkCameraPermission() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void requestCameraPermission() {
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_CODE);
     }
 
     private boolean checkStoragePermission() {
@@ -286,6 +318,14 @@ public class ValidIdActivity extends AppCompatActivity {
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, STORAGE_PERMISSION_CODE);
         }
+    }
+
+    private boolean checkCameraPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestCameraPermission() {
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_CODE);
     }
 
     private void openCamera() {
@@ -316,40 +356,45 @@ public class ValidIdActivity extends AppCompatActivity {
         }
     }
 
-    private void openGalleryMulti() {
-        try {
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("image/*");
-            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            startActivityForResult(Intent.createChooser(intent, "Select Valid ID(s)"), GALLERY_REQUEST_CODE);
-        } catch (Exception e) {
-            e.printStackTrace();
-            Toast.makeText(this, "Error opening gallery: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
     private void showValidIdList() {
         try {
-            String validIds = "Valid IDs accepted:\n\n" +
-                    "• Driver's License\n" +
-                    "• Passport\n" +
-                    "• National ID (PhilID)\n" +
-                    "• SSS ID\n" +
-                    "• PhilHealth ID\n" +
-                    "• TIN ID\n" +
-                    "• Voter's ID\n" +
-                    "• Senior Citizen ID\n" +
-                    "• PWD ID\n" +
-                    "• Postal ID\n" +
-                    "• Barangay ID\n" +
-                    "• School ID (with signature)\n" +
-                    "• Company ID (with signature)";
+            final String[] idTypes = new String[]{
+                    "National ID (PhilID)",
+                    "Driver's License",
+                    "Passport",
+                    "UMID",
+                    "SSS",
+                    "PhilHealth",
+                    "Voter's ID",
+                    "Postal ID",
+                    "Student ID",
+                    "Others"
+            };
+
+            int checkedItem = -1;
+            if (selectedValidIdType != null) {
+                for (int i = 0; i < idTypes.length; i++) {
+                    if (idTypes[i].equalsIgnoreCase(selectedValidIdType)) {
+                        checkedItem = i;
+                        break;
+                    }
+                }
+            }
 
             new AlertDialog.Builder(this)
-                    .setTitle("Valid IDs")
-                    .setMessage(validIds)
-                    .setPositiveButton("OK", null)
+                    .setTitle("Select Valid ID Type")
+                    .setSingleChoiceItems(idTypes, checkedItem, (dialog, which) -> {
+                        selectedValidIdType = idTypes[which];
+                    })
+                    .setPositiveButton("Confirm", (dialog, which) -> {
+                        // Persist selection for retention
+                        saveValidIdData();
+                        // Reflect selection in the UI text
+                        if (tvValidIdList != null && selectedValidIdType != null) {
+                            tvValidIdList.setText("Selected: " + selectedValidIdType);
+                        }
+                    })
+                    .setNegativeButton("Cancel", null)
                     .show();
         } catch (Exception e) {
             e.printStackTrace();
@@ -360,201 +405,7 @@ public class ValidIdActivity extends AppCompatActivity {
     private void enableNextButton() {
         if (btnNext != null) {
             btnNext.setEnabled(true);
-            // You can also change the button appearance here if needed
         }
-    }
-
-    private void updateImageCounter() {
-        if (tvValidIdList != null) {
-            tvValidIdList.setText("Valid IDs (" + validIdBitmaps.size() + " uploaded) - Tap to view all");
-        }
-    }
-
-    private void showAllUploadedImages() {
-        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
-        
-        // Container
-        android.widget.ScrollView scrollView = new android.widget.ScrollView(this);
-        android.widget.LinearLayout root = new android.widget.LinearLayout(this);
-        root.setOrientation(android.widget.LinearLayout.VERTICAL);
-        root.setPadding(50, 50, 50, 50);
-
-        // Header
-        android.widget.TextView header = new android.widget.TextView(this);
-        header.setText("Upload your Valid ID");
-        header.setTextSize(20);
-        header.setTextColor(getResources().getColor(android.R.color.black));
-        header.setPadding(0, 0, 0, 16);
-        root.addView(header);
-
-        // Helper text
-        android.widget.TextView helper = new android.widget.TextView(this);
-        helper.setText("Make sure your ID is clear, readable, and not cropped. Avoid glare and ensure all corners are visible.");
-        helper.setTextSize(14);
-        helper.setTextColor(getResources().getColor(android.R.color.darker_gray));
-        helper.setPadding(0, 0, 0, 20);
-        root.addView(helper);
-
-        // Large preview or placeholder
-        android.widget.ImageView largePreview = new android.widget.ImageView(this);
-        largePreview.setAdjustViewBounds(true);
-        largePreview.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-        largePreview.setBackgroundColor(0xFFEFEFEF);
-        android.widget.LinearLayout.LayoutParams previewParams = new android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        previewParams.setMargins(0, 0, 0, 16);
-        largePreview.setLayoutParams(previewParams);
-        
-        if (!validIdBitmaps.isEmpty()) {
-            largePreview.setImageBitmap(validIdBitmaps.get(validIdBitmaps.size() - 1));
-        } else {
-            largePreview.setImageResource(android.R.drawable.ic_menu_report_image);
-        }
-        root.addView(largePreview);
-
-        // Thumbnail grid section
-        if (!validIdBitmaps.isEmpty()) {
-            android.widget.TextView thumbTitle = new android.widget.TextView(this);
-            thumbTitle.setText("Attached IDs (" + validIdBitmaps.size() + ")");
-            thumbTitle.setTextSize(16);
-            thumbTitle.setTextColor(getResources().getColor(android.R.color.black));
-            thumbTitle.setPadding(0, 0, 0, 8);
-            root.addView(thumbTitle);
-
-            android.widget.GridLayout grid = new android.widget.GridLayout(this);
-            grid.setColumnCount(3);
-            grid.setRowCount((int) Math.ceil(validIdBitmaps.size() / 3.0));
-            android.widget.LinearLayout.LayoutParams gridParams = new android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-            );
-            gridParams.setMargins(0, 0, 0, 16);
-            grid.setLayoutParams(gridParams);
-
-            int margin = (int) (8 * getResources().getDisplayMetrics().density);
-            int thumbSize = (int) (96 * getResources().getDisplayMetrics().density);
-
-            for (int i = 0; i < validIdBitmaps.size(); i++) {
-                final int index = i;
-
-                android.widget.FrameLayout frame = new android.widget.FrameLayout(this);
-                android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
-                lp.width = 0;
-                lp.height = thumbSize;
-                lp.columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f);
-                lp.setMargins(i % 3 == 0 ? 0 : margin, margin, 0, margin);
-                frame.setLayoutParams(lp);
-
-                android.widget.ImageView thumb = new android.widget.ImageView(this);
-                thumb.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-                thumb.setAdjustViewBounds(true);
-                android.widget.FrameLayout.LayoutParams tParams = new android.widget.FrameLayout.LayoutParams(
-                        android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                        android.widget.FrameLayout.LayoutParams.MATCH_PARENT
-                );
-                thumb.setLayoutParams(tParams);
-                thumb.setImageBitmap(validIdBitmaps.get(i));
-                frame.addView(thumb);
-
-                android.widget.ImageView close = new android.widget.ImageView(this);
-                close.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
-                android.widget.FrameLayout.LayoutParams cParams = new android.widget.FrameLayout.LayoutParams(
-                        (int) (24 * getResources().getDisplayMetrics().density),
-                        (int) (24 * getResources().getDisplayMetrics().density)
-                );
-                cParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
-                close.setLayoutParams(cParams);
-                close.setPadding(margin / 2, margin / 2, margin / 2, margin / 2);
-                close.setOnClickListener(v -> {
-                    validIdBitmaps.remove(index);
-                    validIdUris.remove(index);
-                    if (validIdBitmaps.isEmpty()) {
-                        hasValidId = false;
-                        ivValidId.setVisibility(View.GONE);
-                        btnNext.setEnabled(false);
-                    } else {
-                        ivValidId.setImageBitmap(validIdBitmaps.get(validIdBitmaps.size() - 1));
-                    }
-                    updateImageCounter();
-                    refreshThumbnails();
-                    Toast.makeText(ValidIdActivity.this, "Image deleted", Toast.LENGTH_SHORT).show();
-                    showAllUploadedImages();
-                });
-                frame.addView(close);
-
-                frame.setOnClickListener(v -> {
-                    largePreview.setImageBitmap(validIdBitmaps.get(index));
-                });
-
-                grid.addView(frame);
-            }
-            root.addView(grid);
-        }
-
-        // Accepted IDs section
-        android.widget.TextView validIdsTitle = new android.widget.TextView(this);
-        validIdsTitle.setText("Accepted Valid ID Types");
-        validIdsTitle.setTextSize(16);
-        validIdsTitle.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
-        validIdsTitle.setPadding(0, 8, 0, 8);
-        root.addView(validIdsTitle);
-
-        String validIds = "• Driver's License\n" +
-                "• Passport\n" +
-                "• National ID (PhilID)\n" +
-                "• SSS ID\n" +
-                "• PhilHealth ID\n" +
-                "• TIN ID\n" +
-                "• Voter's ID\n" +
-                "• Senior Citizen ID\n" +
-                "• PWD ID\n" +
-                "• Postal ID\n" +
-                "• Barangay ID\n" +
-                "• School ID (with signature)\n" +
-                "• Company ID (with signature)";
-
-        android.widget.TextView validIdsText = new android.widget.TextView(this);
-        validIdsText.setText(validIds);
-        validIdsText.setTextSize(14);
-        validIdsText.setTextColor(getResources().getColor(android.R.color.black));
-        validIdsText.setPadding(0, 0, 0, 20);
-        root.addView(validIdsText);
-
-        // Actions row
-        android.widget.LinearLayout actions = new android.widget.LinearLayout(this);
-        actions.setOrientation(android.widget.LinearLayout.HORIZONTAL);
-        actions.setPadding(0, 8, 0, 0);
-
-        android.widget.Button addMore = new android.widget.Button(this);
-        addMore.setText("Add from Gallery");
-        addMore.setOnClickListener(v -> {
-            if (checkStoragePermission()) {
-                openGalleryMulti();
-            } else {
-                requestStoragePermission();
-            }
-        });
-        actions.addView(addMore);
-
-        android.view.View spacer = new android.view.View(this);
-        android.widget.LinearLayout.LayoutParams spacerParams = new android.widget.LinearLayout.LayoutParams(0, 0, 1f);
-        spacer.setLayoutParams(spacerParams);
-        actions.addView(spacer);
-
-        android.widget.Button close = new android.widget.Button(this);
-        close.setText("Close");
-        close.setOnClickListener(v -> {});
-        actions.addView(close);
-
-        root.addView(actions);
-
-        scrollView.addView(root);
-        builder.setView(scrollView);
-        builder.setCancelable(true);
-        builder.setPositiveButton(null, null);
-        builder.show();
     }
 
     @Override
@@ -564,13 +415,14 @@ public class ValidIdActivity extends AppCompatActivity {
         try {
             if (requestCode == CAMERA_PERMISSION_CODE) {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Open standard phone camera
                     openCamera();
                 } else {
                     Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
                 }
             } else if (requestCode == STORAGE_PERMISSION_CODE) {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    openGalleryMulti();
+                    openGallery();
                 } else {
                     Toast.makeText(this, "Storage permission denied", Toast.LENGTH_SHORT).show();
                 }
@@ -588,49 +440,80 @@ public class ValidIdActivity extends AppCompatActivity {
         try {
             if (resultCode == RESULT_OK && data != null) {
                 if (requestCode == CAMERA_REQUEST_CODE) {
+                    // Handle standard camera result
                     Bitmap bitmap = (Bitmap) data.getExtras().get("data");
                     if (bitmap != null) {
-                        // Add to lists
-                        validIdBitmaps.add(bitmap);
-                        validIdUris.add(null); // Camera images don't have URIs
+                        Log.d(TAG, "Camera image captured, size: " + bitmap.getWidth() + "x" + bitmap.getHeight());
                         
-                        // Display the latest image without stretching
-                        ivValidId.setAdjustViewBounds(true);
-                        ivValidId.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                        ivValidId.setImageBitmap(bitmap);
+                        // Create a temporary file and save the bitmap
+                        validIdUri = saveBitmapToTempFile(bitmap);
+                        validIdBitmap = bitmap;
+                        
+                        // Show the image and hide placeholder
+                        ivValidId.setImageBitmap(validIdBitmap);
                         ivValidId.setVisibility(View.VISIBLE);
-                        
-                        hasValidId = true;
-                        enableNextButton();
-                        updateImageCounter();
-                        Toast.makeText(this, "Valid ID captured successfully (Total: " + validIdBitmaps.size() + ")", Toast.LENGTH_SHORT).show();
-                    }
-                } else if (requestCode == GALLERY_REQUEST_CODE) {
-                    try {
-                        if (data.getClipData() != null) {
-                            int count = data.getClipData().getItemCount();
-                            for (int i = 0; i < count; i++) {
-                                Uri uri = data.getClipData().getItemAt(i).getUri();
-                                addImageFromUri(uri);
-                            }
-                        } else if (data.getData() != null) {
-                            Uri uri = data.getData();
-                            addImageFromUri(uri);
-                        }
-                        if (!validIdBitmaps.isEmpty()) {
-                            Bitmap last = validIdBitmaps.get(validIdBitmaps.size() - 1);
-                            ivValidId.setAdjustViewBounds(true);
-                            ivValidId.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                            ivValidId.setImageBitmap(last);
-                            ivValidId.setVisibility(View.VISIBLE);
+                        placeholderContainer.setVisibility(View.GONE);
+                            
                             hasValidId = true;
                             enableNextButton();
-                            updateImageCounter();
-                            refreshThumbnails();
+                        saveValidIdData();
+                        
+                        // Success toast removed per request
+                    } else {
+                        Log.w(TAG, "Camera bitmap is null");
+                        Toast.makeText(this, "Failed to capture image", Toast.LENGTH_SHORT).show();
+                    }
+                } else if (requestCode == CUSTOM_CAMERA_REQUEST_CODE) {
+                    // Handle custom camera result
+                    String imagePath = data.getStringExtra("image_path");
+                    if (imagePath != null && !imagePath.isEmpty()) {
+                        try {
+                            File imageFile = new File(imagePath);
+                            if (imageFile.exists()) {
+                                validIdUri = Uri.fromFile(imageFile);
+                                validIdBitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), validIdUri);
+                                
+                                if (validIdBitmap != null) {
+                                    // Show the image and hide placeholder
+                                    ivValidId.setImageBitmap(validIdBitmap);
+                                    ivValidId.setVisibility(View.VISIBLE);
+                                    placeholderContainer.setVisibility(View.GONE);
+                                    
+                                    hasValidId = true;
+                                    enableNextButton();
+                                    saveValidIdData();
+                                    
+                                    // Success toast removed per request
+                                } else {
+                                    Log.e(TAG, "Failed to decode bitmap from custom camera");
+                                    Toast.makeText(this, "Error loading captured image", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error processing custom camera image", e);
+                            Toast.makeText(this, "Error processing image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                         }
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error loading images from gallery", e);
-                        Toast.makeText(this, "Error loading images", Toast.LENGTH_SHORT).show();
+                    }
+                } else if (requestCode == GALLERY_REQUEST_CODE) {
+                    Uri selectedUri = data.getData();
+                    if (selectedUri != null) {
+                        Log.d(TAG, "Gallery image selected, URI: " + selectedUri.toString());
+                        validIdUri = selectedUri;
+                        validIdBitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), selectedUri);
+                        if (validIdBitmap != null) {
+                            // Show the image and hide placeholder
+                            ivValidId.setImageBitmap(validIdBitmap);
+                            ivValidId.setVisibility(View.VISIBLE);
+                            placeholderContainer.setVisibility(View.GONE);
+                            
+                            hasValidId = true;
+                            enableNextButton();
+                            saveValidIdData(); // Save data for retention
+                            // Success toast removed per request
+                        } else {
+                            Log.e(TAG, "Failed to decode bitmap from gallery URI");
+                            Toast.makeText(this, "Error loading image from gallery", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 }
             } else {
@@ -642,94 +525,30 @@ public class ValidIdActivity extends AppCompatActivity {
         }
     }
 
-    private void addImageFromUri(Uri selectedUri) {
-        if (selectedUri == null) return;
+    /**
+     * Saves a bitmap to a temporary file and returns its URI
+     */
+    private Uri saveBitmapToTempFile(Bitmap bitmap) {
         try {
-            InputStream inputStream = getContentResolver().openInputStream(selectedUri);
-            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-            if (bitmap != null) {
-                validIdUris.add(selectedUri);
-                validIdBitmaps.add(bitmap);
-            }
+            // Create a temporary file in the cache directory
+            java.io.File tempFile = new java.io.File(getCacheDir(), "valid_id_" + System.currentTimeMillis() + ".jpg");
+            
+            // Save the bitmap to the file
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(tempFile);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos);
+            fos.flush();
+            fos.close();
+            
+            // Return the URI of the file
+            return Uri.fromFile(tempFile);
         } catch (Exception e) {
-            Log.e(TAG, "Error loading image from gallery", e);
-        }
-    }
-
-    private void refreshThumbnails() {
-        if (thumbnailsContainer == null) return;
-        thumbnailsContainer.removeAllViews();
-        if (validIdBitmaps.isEmpty()) {
-            if (hsThumbnails != null) hsThumbnails.setVisibility(View.GONE);
-            if (tvSelectedIdsLabel != null) tvSelectedIdsLabel.setVisibility(View.GONE);
-            return;
-        }
-        if (hsThumbnails != null) hsThumbnails.setVisibility(View.VISIBLE);
-        if (tvSelectedIdsLabel != null) tvSelectedIdsLabel.setVisibility(View.VISIBLE);
-
-        int margin = (int) (8 * getResources().getDisplayMetrics().density);
-
-        for (int i = 0; i < validIdBitmaps.size(); i++) {
-            final int index = i;
-            android.widget.FrameLayout card = new android.widget.FrameLayout(this);
-            android.widget.LinearLayout.LayoutParams cardParams = new android.widget.LinearLayout.LayoutParams(
-                    (int) (96 * getResources().getDisplayMetrics().density),
-                    (int) (96 * getResources().getDisplayMetrics().density)
-            );
-            cardParams.setMargins(i == 0 ? 0 : margin, 0, 0, 0);
-            card.setLayoutParams(cardParams);
-            card.setForeground(getResources().getDrawable(android.R.drawable.dialog_holo_light_frame));
-
-            ImageView thumb = new ImageView(this);
-            thumb.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            thumb.setAdjustViewBounds(true);
-            thumb.setImageBitmap(validIdBitmaps.get(i));
-
-            android.widget.FrameLayout.LayoutParams thumbParams = new android.widget.FrameLayout.LayoutParams(
-                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT
-            );
-            thumb.setLayoutParams(thumbParams);
-            card.addView(thumb);
-
-            ImageView close = new ImageView(this);
-            close.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
-            android.widget.FrameLayout.LayoutParams closeParams = new android.widget.FrameLayout.LayoutParams(
-                    (int) (24 * getResources().getDisplayMetrics().density),
-                    (int) (24 * getResources().getDisplayMetrics().density)
-            );
-            closeParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
-            close.setLayoutParams(closeParams);
-            close.setPadding(margin / 2, margin / 2, margin / 2, margin / 2);
-            close.setBackgroundResource(android.R.color.transparent);
-            close.setOnClickListener(v -> {
-                validIdBitmaps.remove(index);
-                validIdUris.remove(index);
-                if (validIdBitmaps.isEmpty()) {
-                    hasValidId = false;
-                    ivValidId.setVisibility(View.GONE);
-                    btnNext.setEnabled(false);
-                } else {
-                    ivValidId.setImageBitmap(validIdBitmaps.get(validIdBitmaps.size() - 1));
-                }
-                updateImageCounter();
-                refreshThumbnails();
-            });
-            card.addView(close);
-
-            card.setOnClickListener(v -> {
-                // Set main preview to this image
-                ivValidId.setAdjustViewBounds(true);
-                ivValidId.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                ivValidId.setImageBitmap(validIdBitmaps.get(index));
-                ivValidId.setVisibility(View.VISIBLE);
-            });
-
-            thumbnailsContainer.addView(card);
+            Log.e(TAG, "Error saving bitmap to temp file", e);
+            return null;
         }
     }
 
     private void createUserAccount() {
+        saveValidIdData(); // Save current data before creating account
         btnNext.setEnabled(false);
         btnNext.setText("Creating Account...");
 
@@ -741,8 +560,8 @@ public class ValidIdActivity extends AppCompatActivity {
                         if (task.isSuccessful()) {
                             FirebaseUser user = mAuth.getCurrentUser();
                             if (user != null) {
-                                // Generate custom userId (RID-[auto-incremented])
-                                generateCustomUserIdAndContinue(user);
+                                // Send email verification before completing registration
+                                sendEmailVerification(user);
                             }
                         } else {
                             btnNext.setEnabled(true);
@@ -756,34 +575,96 @@ public class ValidIdActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Sends email verification to the user
+     */
+    private void sendEmailVerification(final FirebaseUser user) {
+        btnNext.setText("Sending Verification Email...");
+        
+        user.sendEmailVerification()
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        if (task.isSuccessful()) {
+                            Log.d(TAG, "✅ Verification email sent to: " + user.getEmail());
+                            // Continue with registration after email is sent
+                            generateCustomUserIdAndContinue(user);
+                        } else {
+                            btnNext.setEnabled(true);
+                            btnNext.setText("Next");
+                            Log.e(TAG, "Failed to send verification email", task.getException());
+                            Toast.makeText(ValidIdActivity.this,
+                                    "Failed to send verification email: " + task.getException().getMessage(),
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
+    }
+
     // Generate custom userId in the format RID-[auto-incremented value]
     private void generateCustomUserIdAndContinue(FirebaseUser firebaseUser) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
+        
+        // Order by numeric field instead of string to get proper counting
         db.collection("users")
-                .orderBy("userId", Query.Direction.DESCENDING)
+                .orderBy("userIdNumber", Query.Direction.DESCENDING)
                 .limit(1)
                 .get()
                 .addOnCompleteListener(task -> {
                     String newUserId = "RID-1";
+                    int newUserIdNumber = 1;
+                    
                     if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
                         for (QueryDocumentSnapshot doc : task.getResult()) {
-                            String lastUserId = doc.getString("userId");
-                            if (lastUserId != null && lastUserId.startsWith("RID-")) {
+                            // Get the numeric ID field
+                            Object userIdNumberObj = doc.get("userIdNumber");
+                            if (userIdNumberObj != null) {
                                 try {
-                                    int lastNum = Integer.parseInt(lastUserId.replace("RID-", ""));
-                                    newUserId = "RID-" + (lastNum + 1);
-                                } catch (NumberFormatException e) {
-                                    // fallback to RID-1 if parsing fails
-                                    newUserId = "RID-1";
+                                    if (userIdNumberObj instanceof Long) {
+                                        newUserIdNumber = ((Long) userIdNumberObj).intValue() + 1;
+                                    } else if (userIdNumberObj instanceof Integer) {
+                                        newUserIdNumber = (Integer) userIdNumberObj + 1;
+                                    } else {
+                                        newUserIdNumber = Integer.parseInt(userIdNumberObj.toString()) + 1;
+                                    }
+                                    newUserId = "RID-" + newUserIdNumber;
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Error parsing userIdNumber, using fallback", e);
+                                    // Try to get from userId string as fallback
+                                    String lastUserId = doc.getString("userId");
+                                    if (lastUserId != null && lastUserId.startsWith("RID-")) {
+                                        try {
+                                            newUserIdNumber = Integer.parseInt(lastUserId.replace("RID-", "")) + 1;
+                                            newUserId = "RID-" + newUserIdNumber;
+                                        } catch (NumberFormatException ex) {
+                                            newUserId = "RID-1";
+                                            newUserIdNumber = 1;
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Fallback: try to parse from userId string
+                                String lastUserId = doc.getString("userId");
+                                if (lastUserId != null && lastUserId.startsWith("RID-")) {
+                                    try {
+                                        newUserIdNumber = Integer.parseInt(lastUserId.replace("RID-", "")) + 1;
+                                        newUserId = "RID-" + newUserIdNumber;
+                                    } catch (NumberFormatException e) {
+                                        newUserId = "RID-1";
+                                        newUserIdNumber = 1;
+                                    }
                                 }
                             }
                             break; // Only need the first (highest)
                         }
                     }
+                    
+                    Log.d(TAG, "Generated new user ID: " + newUserId + " (number: " + newUserIdNumber + ")");
                     // Continue registration with newUserId
                     uploadImagesAndSaveUserData(newUserId);
                 })
                 .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to generate user ID", e);
                     Toast.makeText(this, "Failed to generate user ID: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     btnNext.setEnabled(true);
                     btnNext.setText("Next");
@@ -876,22 +757,16 @@ public class ValidIdActivity extends AppCompatActivity {
     }
 
     private void uploadValidId(String userId, String profilePictureUrl) {
-        if (validIdBitmaps.isEmpty()) {
+        if (validIdBitmap == null) {
             saveUserDataToFirestore(userId, profilePictureUrl, null);
             return;
         }
 
-        // Upload multiple valid ID images
-        uploadMultipleValidIds(userId, profilePictureUrl, 0);
+        // Upload valid ID image
+        uploadSingleValidId(userId, profilePictureUrl);
     }
 
-    private void uploadMultipleValidIds(String userId, String profilePictureUrl, int currentIndex) {
-        if (currentIndex >= validIdBitmaps.size()) {
-            // All images uploaded, save user data
-            saveUserDataToFirestore(userId, profilePictureUrl, "Multiple images uploaded");
-            return;
-        }
-
+    private void uploadSingleValidId(String userId, String profilePictureUrl) {
         try {
             // Use firebaseUid for the valid ID path to ensure consistency
             String firebaseUid = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : "";
@@ -901,39 +776,48 @@ public class ValidIdActivity extends AppCompatActivity {
                 return;
             }
             
-            // Create unique filename for each image
-            String imageFileName = "id_" + (currentIndex + 1) + ".jpg";
+            // Create unique filename for the image
+            String imageFileName = "id.jpg";
             StorageReference validIdRef = storageRef.child("valid_ids/" + firebaseUid + "/" + imageFileName);
 
             // Get current image
-            Bitmap bitmap = validIdBitmaps.get(currentIndex);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+            validIdBitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
             byte[] data = baos.toByteArray();
 
-            Log.d(TAG, "Uploading valid ID image " + (currentIndex + 1) + " of " + validIdBitmaps.size());
+            Log.d(TAG, "Uploading valid ID image to: " + validIdRef.getPath());
 
             // Upload the image
             UploadTask uploadTask = validIdRef.putBytes(data);
             uploadTask.addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                 @Override
                 public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                    Log.d(TAG, "Valid ID image " + (currentIndex + 1) + " uploaded successfully");
+                    Log.d(TAG, "Valid ID image uploaded successfully");
                     // Continue with next image
-                    uploadMultipleValidIds(userId, profilePictureUrl, currentIndex + 1);
+                    validIdRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
+                        @Override
+                        public void onSuccess(Uri downloadUri) {
+                            Log.d(TAG, "Valid ID image download URL: " + downloadUri.toString());
+                            saveUserDataToFirestore(userId, profilePictureUrl, downloadUri.toString());
                 }
             }).addOnFailureListener(new OnFailureListener() {
                 @Override
                 public void onFailure(@NonNull Exception e) {
-                    Log.w(TAG, "Failed to upload valid ID image " + (currentIndex + 1), e);
-                    // Continue with next image even if this one fails
-                    uploadMultipleValidIds(userId, profilePictureUrl, currentIndex + 1);
+                            Log.w(TAG, "Failed to get valid ID image download URL", e);
+                            saveUserDataToFirestore(userId, profilePictureUrl, null);
+                        }
+                    });
+                }
+            }).addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception e) {
+                    Log.w(TAG, "Failed to upload valid ID image", e);
+                    saveUserDataToFirestore(userId, profilePictureUrl, null);
                 }
             });
         } catch (Exception e) {
-            Log.w(TAG, "Error processing valid ID image " + (currentIndex + 1), e);
-            // Continue with next image
-            uploadMultipleValidIds(userId, profilePictureUrl, currentIndex + 1);
+            Log.w(TAG, "Error processing valid ID image", e);
+            saveUserDataToFirestore(userId, profilePictureUrl, null);
         }
     }
 
@@ -941,19 +825,42 @@ public class ValidIdActivity extends AppCompatActivity {
         // Create user data map
         Map<String, Object> userData = new HashMap<>();
         userData.put("userId", userId);
+        
+        // Extract and save the numeric part of userId for proper sorting
+        int userIdNumber = 1;
+        try {
+            if (userId != null && userId.startsWith("RID-")) {
+                userIdNumber = Integer.parseInt(userId.replace("RID-", ""));
+            }
+        } catch (NumberFormatException e) {
+            Log.e(TAG, "Error parsing userId number, defaulting to 1", e);
+        }
+        userData.put("userIdNumber", userIdNumber);
+        
         userData.put("firebaseUid", mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : "");
         userData.put("email", email);
         userData.put("fullName", firstName + " " + lastName);
         userData.put("firstName", firstName);
         userData.put("lastName", lastName);
         userData.put("phoneNumber", mobileNumber);
-        userData.put("address", province + ", " + cityTown + ", " + barangay);
+        
+        // Build complete address with street address if provided
+        // Format: Street Address (if provided), Barangay, Town, Province
+        String fullAddress;
+        if (streetAddress != null && !streetAddress.trim().isEmpty()) {
+            fullAddress = streetAddress + ", " + barangay + ", " + cityTown + ", " + province;
+        } else {
+            fullAddress = barangay + ", " + cityTown + ", " + province;
+        }
+        userData.put("address", fullAddress);
         userData.put("province", province);
         userData.put("cityTown", cityTown);
         userData.put("barangay", barangay);
+        userData.put("streetAddress", streetAddress != null ? streetAddress : "");
         userData.put("profilePictureUrl", profilePictureUrl != null ? profilePictureUrl : "");
         userData.put("validIdUrl", validIdUrl != null ? validIdUrl : "");
-        userData.put("validIdCount", validIdBitmaps.size());
+        userData.put("validIdType", selectedValidIdType != null ? selectedValidIdType : "");
+        userData.put("validIdCount", 1); // Only one image
         String createdDate = new java.text.SimpleDateFormat("MM/dd/yyyy", java.util.Locale.getDefault()).format(new java.util.Date());
         String createdTime = new java.text.SimpleDateFormat("hh:mm:ss a", java.util.Locale.getDefault()).format(new java.util.Date());
         userData.put("createdDate", createdDate);
@@ -969,36 +876,283 @@ public class ValidIdActivity extends AppCompatActivity {
             String religion = sp.getString("religion", null);
             String bloodType = sp.getString("blood_type", null);
             boolean pwd = sp.getBoolean("pwd", false);
-            if (birthday != null) userData.put("birthday", birthday);
+            if (birthday != null) {
+                userData.put("birthday", birthday);
+                // Calculate and save age from birthday
+                int age = calculateAgeFromBirthday(birthday);
+                if (age > 0) {
+                    userData.put("age", age);
+                    Log.d(TAG, "Calculated age: " + age + " from birthday: " + birthday);
+                }
+            }
             if (gender != null) userData.put("gender", gender);
             if (civilStatus != null) userData.put("civil_status", civilStatus);
             if (religion != null) userData.put("religion", religion);
             if (bloodType != null) userData.put("blood_type", bloodType);
             userData.put("pwd", pwd);
+            
+            // Save email to SharedPreferences for ProfileActivity access
+            SharedPreferences.Editor editor = sp.edit();
+            editor.putString("email_address", email);
+            editor.putString("first_name", firstName);
+            editor.putString("last_name", lastName);
+            editor.putString("mobile_number", mobileNumber);
+            editor.putString("province", province);
+            editor.putString("city", cityTown);
+            editor.putString("barangay", barangay);
+            editor.putString("street_address", streetAddress != null ? streetAddress : "");
+            
+            // Save complete mailing address
+            // Format: Street Address (if provided), Barangay, Town, Province
+            String mailingAddress;
+            if (streetAddress != null && !streetAddress.trim().isEmpty()) {
+                mailingAddress = streetAddress + ", " + barangay + ", " + cityTown + ", " + province;
+            } else {
+                mailingAddress = barangay + ", " + cityTown + ", " + province;
+            }
+            editor.putString("mailing_address", mailingAddress);
+            
+            editor.apply();
         } catch (Exception ignored) {}
 
-        FirestoreHelper.createUserWithAutoId(userData,
-            new com.google.android.gms.tasks.OnSuccessListener<com.google.firebase.firestore.DocumentReference>() {
-                @Override
-                public void onSuccess(com.google.firebase.firestore.DocumentReference documentReference) {
-                    android.util.Log.d(TAG, "User data saved successfully");
-                    // Navigate to success screen with clean stack
-                    Intent intent = new Intent(ValidIdActivity.this, SuccessActivity.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(intent);
-                    finish();
+        // ✅ UPDATED: Use Firebase Auth UID as document ID for new users
+        // This ensures document ID matches the firebaseUid for easier querying and FCM token management
+        String firebaseUid = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : null;
+        
+        if (firebaseUid != null) {
+            android.util.Log.d(TAG, "Creating user document with Firebase Auth UID as document ID: " + firebaseUid);
+            
+            FirestoreHelper.createUser(firebaseUid, userData,
+                new com.google.android.gms.tasks.OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        android.util.Log.d(TAG, "✅ User data saved successfully with document ID: " + firebaseUid);
+                        // Clear all registration data since registration is complete
+                        clearRegistrationData();
+                        // Navigate to success screen with clean stack
+                        Intent intent = new Intent(ValidIdActivity.this, SuccessActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                        finish();
+                    }
+                },
+                new com.google.android.gms.tasks.OnFailureListener() {
+                    @Override
+                    public void onFailure(@androidx.annotation.NonNull Exception e) {
+                        btnNext.setEnabled(true);
+                        btnNext.setText("Next");
+                        android.util.Log.w(TAG, "Error saving user data", e);
+                        android.widget.Toast.makeText(ValidIdActivity.this,
+                                "Error saving user data: " + e.getMessage(),
+                                android.widget.Toast.LENGTH_LONG).show();
+                    }
+                });
+        } else {
+            // Fallback to auto-generated ID if no Firebase user (shouldn't happen)
+            android.util.Log.w(TAG, "No Firebase Auth user found, using auto-generated document ID");
+            
+            FirestoreHelper.createUserWithAutoId(userData,
+                new com.google.android.gms.tasks.OnSuccessListener<com.google.firebase.firestore.DocumentReference>() {
+                    @Override
+                    public void onSuccess(com.google.firebase.firestore.DocumentReference documentReference) {
+                        android.util.Log.d(TAG, "User data saved with auto-generated ID");
+                        // Clear all registration data since registration is complete
+                        clearRegistrationData();
+                        // Navigate to success screen with clean stack
+                        Intent intent = new Intent(ValidIdActivity.this, SuccessActivity.class);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        startActivity(intent);
+                        finish();
+                    }
+                },
+                new com.google.android.gms.tasks.OnFailureListener() {
+                    @Override
+                    public void onFailure(@androidx.annotation.NonNull Exception e) {
+                        btnNext.setEnabled(true);
+                        btnNext.setText("Next");
+                        android.util.Log.w(TAG, "Error saving user data", e);
+                        android.widget.Toast.makeText(ValidIdActivity.this,
+                                "Error saving user data: " + e.getMessage(),
+                                android.widget.Toast.LENGTH_LONG).show();
+                    }
+                });
+        }
+    }
+
+    /**
+     * Saves valid ID data to SharedPreferences for data retention
+     */
+    private void saveValidIdData() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("registration_data", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            
+            // Save the count of valid ID images
+            editor.putInt("valid_id_count", 1); // Only one image
+            editor.putBoolean("has_valid_id", hasValidId);
+            
+            // Save the URI of the valid ID image
+            if (validIdUri != null) {
+                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                validIdBitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
+                    byte[] byteArray = stream.toByteArray();
+                    String base64Image = android.util.Base64.encodeToString(byteArray, android.util.Base64.DEFAULT);
+                editor.putString("valid_id_uri", validIdUri.toString());
+                editor.putString("valid_id_bitmap", base64Image);
+            } else {
+                editor.remove("valid_id_uri");
+                editor.remove("valid_id_bitmap");
+            }
+            // Save selected valid ID type
+            if (selectedValidIdType != null) {
+                editor.putString("valid_id_type", selectedValidIdType);
+            } else {
+                editor.remove("valid_id_type");
+            }
+            
+            editor.apply();
+            Log.d(TAG, "Valid ID data saved to SharedPreferences. Count: " + 1);
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving valid ID data", e);
+        }
+    }
+
+    /**
+     * Restores valid ID data from SharedPreferences
+     */
+    private void restoreValidIdData() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("registration_data", MODE_PRIVATE);
+            boolean hasSavedValidId = prefs.getBoolean("has_valid_id", false);
+            String savedUriString = prefs.getString("valid_id_uri", null);
+            String savedBitmapBase64 = prefs.getString("valid_id_bitmap", null);
+            String savedValidIdType = prefs.getString("valid_id_type", null);
+            
+            Log.d(TAG, "Attempting to restore valid ID data. Has saved: " + hasSavedValidId + ", URI: " + savedUriString);
+            
+            if (hasSavedValidId && savedUriString != null && savedBitmapBase64 != null) {
+                // Clear existing data
+                validIdBitmap = null;
+                validIdUri = null;
+                
+                Log.d(TAG, "Restoring valid ID image...");
+                
+                // Restore bitmap
+                byte[] byteArray = android.util.Base64.decode(savedBitmapBase64, android.util.Base64.DEFAULT);
+                validIdBitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
+                
+                // Restore URI
+                validIdUri = Uri.parse(savedUriString);
+                
+                                 if (validIdBitmap != null) {
+                    ivValidId.setImageBitmap(validIdBitmap);
+                    ivValidId.setVisibility(View.VISIBLE);
+                    placeholderContainer.setVisibility(View.GONE);
+                    hasValidId = true;
+                    enableNextButton();
+                    Log.d(TAG, "✅ Valid ID data restored from SharedPreferences. Count: " + 1);
+                } else {
+                    Log.w(TAG, "Failed to decode bitmap for restored image");
                 }
-            },
-            new com.google.android.gms.tasks.OnFailureListener() {
-                @Override
-                public void onFailure(@androidx.annotation.NonNull Exception e) {
-                    btnNext.setEnabled(true);
-                    btnNext.setText("Next");
-                    android.util.Log.w(TAG, "Error saving user data", e);
-                    android.widget.Toast.makeText(ValidIdActivity.this,
-                            "Error saving user data: " + e.getMessage(),
-                            android.widget.Toast.LENGTH_LONG).show();
+            } else {
+                Log.d(TAG, "No saved valid ID data found");
+            }
+
+            // Restore selected valid ID type and reflect in UI
+            if (savedValidIdType != null) {
+                selectedValidIdType = savedValidIdType;
+                if (tvValidIdList != null) {
+                    tvValidIdList.setText("Selected: " + selectedValidIdType);
                 }
-            });
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error restoring valid ID data", e);
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Calculates age from birthday string (format: MM/dd/yyyy)
+     */
+    private int calculateAgeFromBirthday(String birthday) {
+        try {
+            if (birthday == null || birthday.isEmpty()) {
+                return 0;
+            }
+
+            // Parse birthday (format: MM/dd/yyyy)
+            SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy", Locale.getDefault());
+            Date birthDate = sdf.parse(birthday);
+            
+            if (birthDate == null) {
+                Log.w(TAG, "Failed to parse birthday: " + birthday);
+                return 0;
+            }
+
+            // Get current date
+            Calendar today = Calendar.getInstance();
+            Calendar birthCalendar = Calendar.getInstance();
+            birthCalendar.setTime(birthDate);
+
+            // Calculate age
+            int age = today.get(Calendar.YEAR) - birthCalendar.get(Calendar.YEAR);
+
+            // Check if birthday has occurred this year
+            if (today.get(Calendar.DAY_OF_YEAR) < birthCalendar.get(Calendar.DAY_OF_YEAR)) {
+                age--;
+            }
+
+            return age;
+        } catch (Exception e) {
+            Log.e(TAG, "Error calculating age from birthday: " + birthday, e);
+            return 0;
+        }
+    }
+
+    /**
+     * Clears all registration data from SharedPreferences when registration is complete
+     */
+    private void clearRegistrationData() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("registration_data", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            
+            // Clear registration activity data
+            editor.remove("saved_first_name");
+            editor.remove("saved_last_name");
+            editor.remove("saved_mobile_number");
+            editor.remove("saved_email");
+            editor.remove("saved_password");
+            editor.remove("saved_terms");
+            
+            // Clear personal info data
+            editor.remove("saved_birthday");
+            editor.remove("saved_gender");
+            editor.remove("saved_civil_status");
+            editor.remove("saved_religion");
+            editor.remove("saved_blood_type");
+            editor.remove("saved_pwd");
+            
+            // Clear address data
+            editor.remove("saved_province");
+            editor.remove("saved_city_town");
+            editor.remove("saved_barangay");
+            editor.remove("saved_street_address");
+            
+            // Clear profile picture data
+            editor.remove("has_profile_picture");
+            editor.remove("profile_picture_base64");
+            
+            // Clear valid ID data
+            editor.remove("has_valid_id");
+            editor.remove("valid_id_count");
+            editor.remove("valid_id_uri");
+            editor.remove("valid_id_bitmap");
+            
+            editor.apply();
+            Log.d(TAG, "✅ All registration data cleared from SharedPreferences");
+        } catch (Exception e) {
+            Log.e(TAG, "Error clearing registration data", e);
+        }
     }
 }

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    
+    <!-- Clear sky night icon -->
+    <path
+        android:fillColor="#4A90E2"
+        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10s10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8s8,3.59 8,8S16.41,20 12,20z"/>
+    
+    <!-- Moon -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M12,3c-4.97,0 -9,4.03 -9,9s4.03,9 9,9s9,-4.03 9,-9S16.97,3 12,3zM12,19c-3.86,0 -7,-3.14 -7,-7s3.14,-7 7,-7s7,3.14 7,7S15.86,19 12,19z"/>
+    
+    <!-- Stars -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M6,6L7,7L6,8L5,7zM18,6L19,7L18,8L17,7zM6,18L7,19L6,20L5,19zM18,18L19,19L18,20L17,19z"/>
+</vector>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

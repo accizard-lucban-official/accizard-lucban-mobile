@@ -9,10 +9,18 @@ public class Report {
     private String title;
     private String description;
     private String location;
+    private String locationName;
+    private Double latitude;
+    private Double longitude;
+    private String coordinates;
+    private String reporterName;
+    private String reporterMobile;
     private String priority; // low, medium, high, emergency
     private String category; // fire, flood, earthquake, landslide, volcanic, health, police, other
-    private String status; // pending, ongoing, responded, resolved
-    private String imageUrl;
+    private String status; // pending, ongoing, responded, resolved, not responded, redundant
+    private String imageUrl; // Legacy single image URL
+    private java.util.List<String> imageUrls; // Multiple image URLs
+    private int imageCount;
     private long timestamp;
     private String adminResponse;
     private long responseTimestamp;
@@ -69,6 +77,30 @@ public class Report {
     public long getResponseTimestamp() { return responseTimestamp; }
     public void setResponseTimestamp(long responseTimestamp) { this.responseTimestamp = responseTimestamp; }
 
+    public String getLocationName() { return locationName; }
+    public void setLocationName(String locationName) { this.locationName = locationName; }
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
+
+    public String getCoordinates() { return coordinates; }
+    public void setCoordinates(String coordinates) { this.coordinates = coordinates; }
+
+    public String getReporterName() { return reporterName; }
+    public void setReporterName(String reporterName) { this.reporterName = reporterName; }
+
+    public String getReporterMobile() { return reporterMobile; }
+    public void setReporterMobile(String reporterMobile) { this.reporterMobile = reporterMobile; }
+
+    public java.util.List<String> getImageUrls() { return imageUrls; }
+    public void setImageUrls(java.util.List<String> imageUrls) { this.imageUrls = imageUrls; }
+
+    public int getImageCount() { return imageCount; }
+    public void setImageCount(int imageCount) { this.imageCount = imageCount; }
+
     // Convert to Map for Firestore
     public Map<String, Object> toMap() {
         Map<String, Object> map = new HashMap<>();
@@ -76,10 +108,18 @@ public class Report {
         map.put("title", title);
         map.put("description", description);
         map.put("location", location);
+        map.put("locationName", locationName != null ? locationName : "");
+        map.put("latitude", latitude);
+        map.put("longitude", longitude);
+        map.put("coordinates", coordinates != null ? coordinates : "");
+        map.put("reporterName", reporterName != null ? reporterName : "");
+        map.put("reporterMobile", reporterMobile != null ? reporterMobile : "");
         map.put("priority", priority);
         map.put("category", category);
         map.put("status", status);
         map.put("imageUrl", imageUrl != null ? imageUrl : "");
+        map.put("imageUrls", imageUrls != null ? imageUrls : new java.util.ArrayList<>());
+        map.put("imageCount", imageCount);
         map.put("timestamp", timestamp);
         map.put("adminResponse", adminResponse != null ? adminResponse : "");
         map.put("responseTimestamp", responseTimestamp);
@@ -103,8 +143,10 @@ public class Report {
     public static final String CATEGORY_OTHER = "other";
 
     // Status constants
-    public static final String STATUS_PENDING = "pending";
-    public static final String STATUS_ONGOING = "ongoing";
-    public static final String STATUS_RESPONDED = "responded";
-    public static final String STATUS_RESOLVED = "resolved";
+    public static final String STATUS_PENDING = "Pending";
+    public static final String STATUS_ONGOING = "Ongoing";
+    public static final String STATUS_RESPONDED = "Responded";
+    public static final String STATUS_NOT_RESPONDED = "Not Responded";
+    public static final String STATUS_REDUNDANT = "Redundant";
+    public static final String STATUS_RESOLVED = "Resolved";
 } 

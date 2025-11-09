@@ -27,4 +27,5 @@
         <item name="android:textSize">12sp</item>
         <item name="android:textColor">@color/gray_medium</item>
     </style>
+
 </resources>

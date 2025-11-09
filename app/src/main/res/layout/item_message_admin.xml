@@ -3,12 +3,23 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="8dp">
+    android:padding="@dimen/padding_small">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="start">
+        android:gravity="start"
+        android:orientation="horizontal">
+
+        <!-- Admin Profile Picture -->
+        <ImageView
+            android:id="@+id/adminProfilePicture"
+            android:layout_width="@dimen/profile_picture_medium"
+            android:layout_height="@dimen/profile_picture_medium"
+            android:src="@drawable/accizard_logo_svg"
+            android:layout_marginEnd="@dimen/margin_small"
+            android:scaleType="centerCrop"
+            android:contentDescription="Admin Profile"/>
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -16,21 +27,22 @@
             android:layout_marginEnd="60dp"
             android:background="@drawable/message_admin_bg"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:padding="@dimen/chat_message_padding"
+            android:maxWidth="@dimen/chat_bubble_max_width">
 
             <TextView
                 android:id="@+id/messageText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="#333333"
-                android:textSize="16sp"
+                android:textSize="@dimen/text_size_large"
                 android:text="Message text"/>
 
             <LinearLayout
                 android:id="@+id/imageContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="@dimen/margin_small"
                 android:orientation="vertical"
                 android:visibility="gone">
 
@@ -43,15 +55,49 @@
                     android:contentDescription="Chat image"
                     android:adjustViewBounds="true"/>
 
+                <VideoView
+                    android:id="@+id/messageVideo"
+                    android:layout_width="200dp"
+                    android:layout_height="150dp"
+                    android:background="@drawable/rounded_input_bg"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/messageAudioContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="12dp"
+                    android:background="@drawable/rounded_input_bg"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/audio"
+                        android:tint="@android:color/white"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:id="@+id/messageAudioText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Play Audio"
+                        android:textColor="@android:color/white"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+
             </LinearLayout>
 
             <TextView
                 android:id="@+id/timestampText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                    android:layout_marginTop="@dimen/margin_tiny"
                 android:textColor="#666666"
-                android:textSize="12sp"
+                    android:textSize="@dimen/text_size_small"
                 android:text="Today • 11:54 AM"/>
         </LinearLayout>
     </LinearLayout>

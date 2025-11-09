@@ -25,15 +25,32 @@
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:padding="4dp" />
 
-        <TextView
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Edit Profile"
-            android:textSize="20sp"
-            android:textColor="#333333"
-            android:textStyle="bold"
-            android:gravity="center" />
+            android:orientation="vertical"
+            android:gravity="center">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Edit Profile"
+                android:textSize="20sp"
+                android:textColor="#333333"
+                android:textStyle="bold"
+                android:gravity="center" />
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="You may leave a field blank if you do not wish to change it."
+                android:textSize="12sp"
+                android:textColor="#999999"
+                android:layout_marginTop="4dp"
+                android:gravity="center" />
+                
+        </LinearLayout>
 
         <Button
             android:id="@+id/save_button"
@@ -44,7 +61,8 @@
             android:textSize="14sp"
             android:textStyle="bold"
             android:background="@drawable/save_button_bg"
-            android:paddingHorizontal="16dp"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
             android:minWidth="0dp" />
 
     </LinearLayout>
@@ -82,7 +100,6 @@
                     android:layout_height="32dp"
                     android:layout_alignParentEnd="true"
                     android:layout_alignParentBottom="true"
-                    android:background="@drawable/camera_button_bg"
                     android:src="@drawable/ic_camera"
                     android:padding="6dp"
                     android:clickable="true"
@@ -125,8 +142,10 @@
                             android:layout_height="56dp"
                             android:hint="First Name"
                             android:background="@drawable/edittext_background"
-                            android:paddingHorizontal="20dp"
-                            android:paddingVertical="16dp"
+                            android:paddingLeft="20dp"
+                            android:paddingRight="20dp"
+                            android:paddingTop="16dp"
+                            android:paddingBottom="16dp"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textColorHint="#999999"
@@ -158,8 +177,10 @@
                             android:layout_height="56dp"
                             android:hint="Last Name"
                             android:background="@drawable/edittext_background"
-                            android:paddingHorizontal="20dp"
-                            android:paddingVertical="16dp"
+                            android:paddingLeft="20dp"
+                            android:paddingRight="20dp"
+                            android:paddingTop="16dp"
+                            android:paddingBottom="16dp"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textColorHint="#999999"
@@ -193,12 +214,50 @@
                         android:layout_height="56dp"
                         android:hint="09XXXXXXXXX"
                         android:background="@drawable/edittext_background"
-                        android:paddingHorizontal="20dp"
-                        android:paddingVertical="16dp"
+                        android:paddingLeft="20dp"
+                        android:paddingRight="20dp"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="16dp"
                         android:textSize="16sp"
                         android:textColor="#333333"
                         android:textColorHint="#999999"
                         android:inputType="phone"
+                        android:gravity="center_vertical"
+                        android:scrollHorizontally="false"
+                        android:scrollbars="none" />
+
+                </LinearLayout>
+
+                <!-- Email Address -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Email Address"
+                        android:textSize="14sp"
+                        android:textColor="#333333"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <EditText
+                        android:id="@+id/email_edit"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:hint="email@example.com"
+                        android:background="@drawable/edittext_background"
+                        android:paddingLeft="20dp"
+                        android:paddingRight="20dp"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="16dp"
+                        android:textSize="16sp"
+                        android:textColor="#333333"
+                        android:textColorHint="#999999"
+                        android:inputType="textEmailAddress"
                         android:gravity="center_vertical"
                         android:scrollHorizontally="false"
                         android:scrollbars="none" />
@@ -234,8 +293,10 @@
                             android:layout_height="56dp"
                             android:hint="Province"
                             android:background="@drawable/edittext_background"
-                            android:paddingHorizontal="20dp"
-                            android:paddingVertical="16dp"
+                            android:paddingLeft="20dp"
+                            android:paddingRight="20dp"
+                            android:paddingTop="16dp"
+                            android:paddingBottom="16dp"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textColorHint="#999999"
@@ -267,8 +328,10 @@
                             android:layout_height="56dp"
                             android:hint="City/Town"
                             android:background="@drawable/edittext_background"
-                            android:paddingHorizontal="20dp"
-                            android:paddingVertical="16dp"
+                            android:paddingLeft="20dp"
+                            android:paddingRight="20dp"
+                            android:paddingTop="16dp"
+                            android:paddingBottom="16dp"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textColorHint="#999999"
@@ -296,11 +359,58 @@
                         android:textStyle="bold"
                         android:layout_marginBottom="8dp" />
 
-                    <Spinner
-                        android:id="@+id/barangay_spinner"
+                    <AutoCompleteTextView
+                        android:id="@+id/barangay_edit"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:background="@drawable/spinner_bg" />
+                        android:layout_height="56dp"
+                        android:hint="Barangay"
+                        android:background="@drawable/edittext_background"
+                        android:paddingLeft="20dp"
+                        android:paddingRight="20dp"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="16dp"
+                        android:textSize="16sp"
+                        android:textColor="#333333"
+                        android:textColorHint="#999999"
+                        android:gravity="center_vertical"
+                        android:scrollHorizontally="false"
+                        android:scrollbars="none"
+                        android:completionThreshold="1" />
+
+                </LinearLayout>
+
+                <!-- Street Address -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Street Address"
+                        android:textSize="14sp"
+                        android:textColor="#333333"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <EditText
+                        android:id="@+id/etStreetAddress"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:hint="Street Address (Optional)"
+                        android:background="@drawable/edittext_background"
+                        android:paddingLeft="20dp"
+                        android:paddingRight="20dp"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="16dp"
+                        android:textSize="16sp"
+                        android:textColor="#333333"
+                        android:textColorHint="#999999"
+                        android:gravity="center_vertical"
+                        android:scrollHorizontally="false"
+                        android:scrollbars="none" />
 
                 </LinearLayout>
 
@@ -309,7 +419,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:layout_marginBottom="32dp">
+                    android:layout_marginBottom="16dp">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -326,8 +436,10 @@
                         android:layout_height="56dp"
                         android:hint="Type new password"
                         android:background="@drawable/edittext_background"
-                        android:paddingHorizontal="20dp"
-                        android:paddingVertical="16dp"
+                        android:paddingLeft="20dp"
+                        android:paddingRight="20dp"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="16dp"
                         android:textSize="16sp"
                         android:textColor="#333333"
                         android:textColorHint="#999999"

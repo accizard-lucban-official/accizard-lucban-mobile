@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="60dp"
+    android:height="40dp"
+    android:viewportWidth="60"
+    android:viewportHeight="40">
+    
+    <!-- Satellite background (green terrain) -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M0,0L60,0L60,40L0,40Z"/>
+    
+    <!-- Roads (darker lines) -->
+    <path
+        android:strokeColor="#424242"
+        android:strokeWidth="1.5"
+        android:pathData="M10,20L50,20M20,15L40,15M20,25L40,25M30,10L30,30"/>
+    
+    <!-- Buildings (gray blocks) -->
+    <path
+        android:fillColor="#757575"
+        android:pathData="M15,25L20,25L20,30L15,30Z"/>
+    <path
+        android:fillColor="#757575"
+        android:pathData="M25,22L30,22L30,30L25,30Z"/>
+    <path
+        android:fillColor="#757575"
+        android:pathData="M35,20L40,20L40,30L35,30Z"/>
+    
+    <!-- Railway line -->
+    <path
+        android:strokeColor="#8D6E63"
+        android:strokeWidth="2"
+        android:pathData="M12,18L48,18"/>
+    <path
+        android:strokeColor="#8D6E63"
+        android:strokeWidth="1"
+        android:pathData="M12,16L48,16M12,20L48,20"/>
+    
+    <!-- Trees/Vegetation areas -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M45,10L55,10L55,20L45,20Z"/>
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M5,15L10,15L10,20L5,20Z"/>
+    
+    <!-- Water features -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M50,25L58,25L58,35L50,35Z"/>
+</vector>

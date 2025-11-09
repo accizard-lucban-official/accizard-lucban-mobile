@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#80000000"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- CardView Container -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardViewPopup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="24dp"
+        android:layout_gravity="center"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp"
+        android:maxHeight="600dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="0dp">
+
+            <!-- Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="@color/orange_primary"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Terms and Conditions"
+                    android:textColor="@android:color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <ImageView
+                    android:id="@+id/btnClosePopup"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Close"
+                    app:tint="@android:color/white" />
+
+            </LinearLayout>
+
+            <!-- Content ScrollView -->
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxHeight="500dp"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Effective Date Section -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Effective Date"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="These Terms and Conditions are effective as of January 1, 2024."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- About the Application -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="About the Application"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="AcciZard Lucban is a mobile application designed to provide emergency assistance and accident reporting services in Lucban, Quezon. The app connects users with emergency services and provides location-based assistance."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- User Responsibilities -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="User Responsibilities"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="• Provide accurate information when reporting incidents\n• Use the application responsibly and only for legitimate emergencies\n• Maintain the confidentiality of your account credentials\n• Report any misuse or technical issues to our support team"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Privacy Policy -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Privacy Policy"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="We collect and process your personal information including location data, contact information, and incident reports to provide emergency services. Your data is protected and will not be shared with third parties except as required for emergency response."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Location Services -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Location Services"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="This application requires access to your device's location services to provide accurate emergency assistance. Location data is used solely for emergency response purposes and is not stored permanently unless required for incident documentation."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Disclaimers -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Disclaimers"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="While we strive to provide reliable emergency services, response times may vary based on circumstances. This application supplements but does not replace traditional emergency services. Always call local emergency numbers (911) for immediate life-threatening situations."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Contact Information -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Contact Us"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="For questions about these Terms and Conditions, please contact us at:\n\nEmail: support@accizardlucban.com\nPhone: +63 123 456 7890\nAddress: Lucban, Quezon, Philippines"
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="24dp" />
+
+                </LinearLayout>
+
+            </ScrollView>
+
+            <!-- Action Buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:background="#F5F5F5">
+
+                <Button
+                    android:id="@+id/btnAcceptTerms"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/button_primary_background"
+                    android:text="Accept"
+                    android:textColor="@android:color/white"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/btnDeclineTerms"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/edittext_background"
+                    android:text="Decline"
+                    android:textColor="@color/text_dark" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
+</FrameLayout>

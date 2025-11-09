@@ -1,11 +1,20 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Base application theme -->
-    <style name="Theme.AccizardLucban" parent="Theme.Material3.DayNight.NoActionBar">
+    <!-- Force light mode only - no dark mode color changes -->
+    <style name="Theme.AccizardLucban" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
         <item name="android:statusBarColor">@color/orange_primary</item>
+        
+        <!-- Force light mode background colors -->
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:colorBackground">@android:color/white</item>
+        
+        <!-- Apply DM Sans globally -->
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
     </style>
 
     <!-- Edit Text Style -->
@@ -22,6 +31,8 @@
         <item name="android:gravity">center_vertical</item>
         <item name="android:scrollHorizontally">false</item>
         <item name="android:scrollbars">none</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
     </style>
 
     <!-- Primary Button Style -->
@@ -30,9 +41,11 @@
         <item name="android:layout_height">56dp</item>
         <item name="android:background">@drawable/button_background</item>
         <item name="android:textColor">@android:color/white</item>
-        <item name="android:textSize">16sp</item>
+        <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
     </style>
 
     <!-- Outline Button Style -->
@@ -41,9 +54,120 @@
         <item name="android:layout_height">56dp</item>
         <item name="android:background">@drawable/button_outline_background</item>
         <item name="android:textColor">@color/orange_primary</item>
-        <item name="android:textSize">16sp</item>
+        <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <!-- Material Design 3 Typography Styles -->
+    
+    <!-- Base Text Appearance -->
+    <style name="TextAppearance.App" parent="TextAppearance.AppCompat">
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <!-- Display Styles -->
+    <style name="TextAppearance.App.DisplayLarge">
+        <item name="android:textSize">57sp</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <style name="TextAppearance.App.DisplayMedium">
+        <item name="android:textSize">45sp</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <style name="TextAppearance.App.DisplaySmall">
+        <item name="android:textSize">36sp</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <!-- Headline Styles -->
+    <style name="TextAppearance.App.HeadlineLarge">
+        <item name="android:textSize">32sp</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <style name="TextAppearance.App.HeadlineMedium">
+        <item name="android:textSize">28sp</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <style name="TextAppearance.App.HeadlineSmall">
+        <item name="android:textSize">24sp</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <!-- Title Styles -->
+    <style name="TextAppearance.App.TitleLarge">
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <style name="TextAppearance.App.TitleMedium">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <style name="TextAppearance.App.TitleSmall">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <!-- Body Styles -->
+    <style name="TextAppearance.App.BodyLarge">
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <style name="TextAppearance.App.BodyMedium">
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <style name="TextAppearance.App.BodySmall">
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <!-- Label Styles -->
+    <style name="TextAppearance.App.LabelLarge">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <style name="TextAppearance.App.LabelMedium">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
+    </style>
+    
+    <style name="TextAppearance.App.LabelSmall">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
     </style>
 
 </resources>

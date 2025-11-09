@@ -6,10 +6,12 @@
     <ImageView
         android:id="@+id/illustration_image"
         android:layout_width="match_parent"
-        android:layout_height="300dp"
+        android:layout_height="match_parent"
         android:layout_centerInParent="true"
         android:scaleType="centerInside"
-        android:layout_marginLeft="40dp"
-        android:layout_marginRight="40dp" />
+        android:adjustViewBounds="true"
+        android:paddingHorizontal="@dimen/padding_xxxlarge"
+        android:paddingVertical="@dimen/padding_large"
+        android:contentDescription="Onboarding Illustration" />
 
 </RelativeLayout>

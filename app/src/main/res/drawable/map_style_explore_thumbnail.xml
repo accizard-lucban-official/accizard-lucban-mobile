@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="60dp"
+    android:height="40dp"
+    android:viewportWidth="60"
+    android:viewportHeight="40">
+    
+    <!-- Background -->
+    <path
+        android:fillColor="#F5F5F5"
+        android:pathData="M0,0L60,0L60,40L0,40Z"/>
+    
+    <!-- Roads -->
+    <path
+        android:strokeColor="#CCCCCC"
+        android:strokeWidth="1"
+        android:pathData="M10,20L50,20M20,15L40,15M20,25L40,25M30,10L30,30"/>
+    
+    <!-- Buildings -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M15,25L20,25L20,30L15,30Z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M25,22L30,22L30,30L25,30Z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M35,20L40,20L40,30L35,30Z"/>
+    
+    <!-- Points of Interest -->
+    <path
+        android:fillColor="#FF5722"
+        android:pathData="M18,27A1.5,1.5 0,1 1,18 30A1.5,1.5 0,1 1,18 27Z"/>
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M28,26A1.5,1.5 0,1 1,28 29A1.5,1.5 0,1 1,28 26Z"/>
+    <path
+        android:fillColor="#FF5722"
+        android:pathData="M38,25A1.5,1.5 0,1 1,38 28A1.5,1.5 0,1 1,38 25Z"/>
+    
+    <!-- Green areas -->
+    <path
+        android:fillColor="#E8F5E8"
+        android:pathData="M45,10L55,10L55,20L45,20Z"/>
+</vector>

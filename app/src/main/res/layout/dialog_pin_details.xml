@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/dialog_background"
+    android:padding="24dp"
+    android:layout_margin="32dp">
+
+    <!-- Success/Info Icon -->
+    <ImageView
+        android:id="@+id/pinIcon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:src="@drawable/ic_location_pin"
+        android:contentDescription="Pin icon" />
+
+    <!-- Main Title -->
+    <TextView
+        android:id="@+id/pinTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="8dp"
+        android:text="Pin Details"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="#1A1A1A"
+        android:gravity="center"
+        android:fontFamily="@font/dmsans" />
+
+    <!-- Description Message -->
+    <TextView
+        android:id="@+id/pinDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:text="Tap on a pin to view details.\n\nReport: Type, Location, Date, Time\nEmergency Facility: Title, Location"
+        android:textSize="16sp"
+        android:textColor="#666666"
+        android:gravity="start"
+        android:textAlignment="viewStart"
+        android:lineSpacingExtra="4dp"
+        android:fontFamily="@font/dmsans" />
+
+</LinearLayout>

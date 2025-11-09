@@ -15,6 +15,9 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Facilities extends AppCompatActivity {
 
     // Timeline section views
@@ -37,6 +40,8 @@ public class Facilities extends AppCompatActivity {
     private CheckBox roadAccidentCheck, fireCheck, medicalEmergencyCheck, floodingCheck;
     private CheckBox volcanicActivityCheck, landslideCheck, earthquakeCheck, civilDisturbanceCheck;
     private CheckBox armedConflictCheck, infectiousDiseaseCheck;
+    private final List<CheckBox> incidentCheckboxes = new ArrayList<>();
+    private boolean isUpdatingIncidentChecks = false;
     private CheckBox evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck;
     private CheckBox fireStationsCheck, governmentOfficesCheck;
 
@@ -71,6 +76,7 @@ public class Facilities extends AppCompatActivity {
         setupButtons();
         setupTimelineOptions();
         setupSelectAllButtons();
+        updateFilterSummary(); // Initialize filter summary display
     }
 
     private void initializeViews() {
@@ -101,6 +107,18 @@ public class Facilities extends AppCompatActivity {
         civilDisturbanceCheck = findViewById(R.id.civilDisturbanceCheck);
         armedConflictCheck = findViewById(R.id.armedConflictCheck);
         infectiousDiseaseCheck = findViewById(R.id.infectiousDiseaseCheck);
+
+        incidentCheckboxes.clear();
+        registerIncidentCheckbox(roadAccidentCheck);
+        registerIncidentCheckbox(fireCheck);
+        registerIncidentCheckbox(medicalEmergencyCheck);
+        registerIncidentCheckbox(floodingCheck);
+        registerIncidentCheckbox(volcanicActivityCheck);
+        registerIncidentCheckbox(landslideCheck);
+        registerIncidentCheckbox(earthquakeCheck);
+        registerIncidentCheckbox(civilDisturbanceCheck);
+        registerIncidentCheckbox(armedConflictCheck);
+        registerIncidentCheckbox(infectiousDiseaseCheck);
         evacuationCentersCheck = findViewById(R.id.evacuationCentersCheck);
         healthFacilitiesCheck = findViewById(R.id.healthFacilitiesCheck);
         policeStationsCheck = findViewById(R.id.policeStationsCheck);
@@ -125,6 +143,12 @@ public class Facilities extends AppCompatActivity {
         }
         if (emergencySupportContent != null) {
             emergencySupportContent.setVisibility(View.GONE);
+        }
+    }
+
+    private void registerIncidentCheckbox(CheckBox checkBox) {
+        if (checkBox != null && !incidentCheckboxes.contains(checkBox)) {
+            incidentCheckboxes.add(checkBox);
         }
     }
 
@@ -186,6 +210,8 @@ public class Facilities extends AppCompatActivity {
             infectiousDiseaseCheck.setChecked(intent.getBooleanExtra("infectiousDisease", true));
         }
 
+        enforceSingleIncidentSelection();
+
         // Load facility filter states
         if (evacuationCentersCheck != null) {
             evacuationCentersCheck.setChecked(intent.getBooleanExtra("evacuationCenters", true));
@@ -222,6 +248,126 @@ public class Facilities extends AppCompatActivity {
         if (emergencySupportHeader != null) {
             emergencySupportHeader.setOnClickListener(v -> toggleSection("facilities"));
         }
+        
+        // Setup checkbox change listeners for visual feedback
+        setupCheckboxListeners();
+    }
+    
+    private void setupCheckboxListeners() {
+        // Incident type checkboxes
+        setupExclusiveIncidentCheckbox(roadAccidentCheck);
+        setupExclusiveIncidentCheckbox(fireCheck);
+        setupExclusiveIncidentCheckbox(medicalEmergencyCheck);
+        setupExclusiveIncidentCheckbox(floodingCheck);
+        setupExclusiveIncidentCheckbox(volcanicActivityCheck);
+        setupExclusiveIncidentCheckbox(landslideCheck);
+        setupExclusiveIncidentCheckbox(earthquakeCheck);
+        setupExclusiveIncidentCheckbox(civilDisturbanceCheck);
+        setupExclusiveIncidentCheckbox(armedConflictCheck);
+        setupExclusiveIncidentCheckbox(infectiousDiseaseCheck);
+        
+        // Facility checkboxes
+        if (evacuationCentersCheck != null) {
+            evacuationCentersCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                updateCheckboxVisualState(buttonView, isChecked);
+                updateFilterSummary();
+            });
+        }
+        
+        if (healthFacilitiesCheck != null) {
+            healthFacilitiesCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                updateCheckboxVisualState(buttonView, isChecked);
+                updateFilterSummary();
+            });
+        }
+        
+        if (policeStationsCheck != null) {
+            policeStationsCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                updateCheckboxVisualState(buttonView, isChecked);
+                updateFilterSummary();
+            });
+        }
+        
+        if (fireStationsCheck != null) {
+            fireStationsCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                updateCheckboxVisualState(buttonView, isChecked);
+                updateFilterSummary();
+            });
+        }
+        
+        if (governmentOfficesCheck != null) {
+            governmentOfficesCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                updateCheckboxVisualState(buttonView, isChecked);
+                updateFilterSummary();
+            });
+        }
+        
+        // Heatmap switch
+        if (heatmapSwitch != null) {
+            heatmapSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                updateFilterSummary();
+            });
+        }
+    }
+
+    private void setupExclusiveIncidentCheckbox(CheckBox checkBox) {
+        if (checkBox == null) {
+            return;
+        }
+
+        checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> handleIncidentCheckboxChange(checkBox, isChecked));
+    }
+
+    private void handleIncidentCheckboxChange(CheckBox changedCheckBox, boolean isChecked) {
+        if (isUpdatingIncidentChecks) {
+            return;
+        }
+
+        isUpdatingIncidentChecks = true;
+        try {
+            if (isChecked) {
+                for (CheckBox other : incidentCheckboxes) {
+                    if (other != null && other != changedCheckBox && other.isChecked()) {
+                        other.setChecked(false);
+                        updateCheckboxVisualState(other, false);
+                    }
+                }
+            }
+
+            updateCheckboxVisualState(changedCheckBox, isChecked);
+            updateFilterSummary();
+        } finally {
+            isUpdatingIncidentChecks = false;
+        }
+    }
+
+    private void enforceSingleIncidentSelection() {
+        if (incidentCheckboxes.isEmpty()) {
+            return;
+        }
+
+        boolean foundChecked = false;
+        isUpdatingIncidentChecks = true;
+        try {
+            for (CheckBox checkBox : incidentCheckboxes) {
+                if (checkBox == null) {
+                    continue;
+                }
+
+                if (checkBox.isChecked()) {
+                    if (!foundChecked) {
+                        foundChecked = true;
+                    } else {
+                        checkBox.setChecked(false);
+                        updateCheckboxVisualState(checkBox, false);
+                    }
+                }
+            }
+        } finally {
+            isUpdatingIncidentChecks = false;
+        }
+
+        updateFilterSummary();
     }
 
     private void setupButtons() {
@@ -380,18 +526,36 @@ public class Facilities extends AppCompatActivity {
     }
 
     private void selectAllIncidents(boolean select) {
-        if (roadAccidentCheck != null) roadAccidentCheck.setChecked(select);
-        if (fireCheck != null) fireCheck.setChecked(select);
-        if (medicalEmergencyCheck != null) medicalEmergencyCheck.setChecked(select);
-        if (floodingCheck != null) floodingCheck.setChecked(select);
-        if (volcanicActivityCheck != null) volcanicActivityCheck.setChecked(select);
-        if (landslideCheck != null) landslideCheck.setChecked(select);
-        if (earthquakeCheck != null) earthquakeCheck.setChecked(select);
-        if (civilDisturbanceCheck != null) civilDisturbanceCheck.setChecked(select);
-        if (armedConflictCheck != null) armedConflictCheck.setChecked(select);
-        if (infectiousDiseaseCheck != null) infectiousDiseaseCheck.setChecked(select);
+        if (incidentCheckboxes.isEmpty()) {
+            updateFilterSummary();
+            return;
+        }
 
-        Toast.makeText(this, select ? "All incidents selected" : "All incidents deselected", Toast.LENGTH_SHORT).show();
+        isUpdatingIncidentChecks = true;
+        if (select) {
+            boolean selectionMade = false;
+            for (CheckBox checkBox : incidentCheckboxes) {
+                if (checkBox == null) continue;
+                if (!selectionMade) {
+                    checkBox.setChecked(true);
+                    updateCheckboxVisualState(checkBox, true);
+                    selectionMade = true;
+                } else {
+                    checkBox.setChecked(false);
+                    updateCheckboxVisualState(checkBox, false);
+                }
+            }
+            Toast.makeText(this, "Only one incident type can be selected at a time.", Toast.LENGTH_SHORT).show();
+        } else {
+            for (CheckBox checkBox : incidentCheckboxes) {
+                if (checkBox == null) continue;
+                checkBox.setChecked(false);
+                updateCheckboxVisualState(checkBox, false);
+            }
+            Toast.makeText(this, "All incidents deselected", Toast.LENGTH_SHORT).show();
+        }
+        isUpdatingIncidentChecks = false;
+        updateFilterSummary();
     }
 
     private void selectAllFacilities(boolean select) {
@@ -436,10 +600,135 @@ public class Facilities extends AppCompatActivity {
         // Set result and finish
         setResult(RESULT_OK, resultIntent);
 
-        // Show confirmation message
-        Toast.makeText(this, "Filters applied successfully!", Toast.LENGTH_SHORT).show();
+        // Show confirmation message with filter summary
+        String filterSummary = getFilterSummary();
+        Toast.makeText(this, "Filters applied successfully!\n" + filterSummary, Toast.LENGTH_LONG).show();
 
         finish();
+    }
+    
+    /**
+     * Update checkbox visual state with animation and feedback
+     */
+    private void updateCheckboxVisualState(android.widget.CompoundButton checkbox, boolean isChecked) {
+        try {
+            // Add visual feedback animation
+            checkbox.animate()
+                .scaleX(isChecked ? 1.1f : 1.0f)
+                .scaleY(isChecked ? 1.1f : 1.0f)
+                .setDuration(150)
+                .withEndAction(() -> {
+                    checkbox.animate()
+                        .scaleX(1.0f)
+                        .scaleY(1.0f)
+                        .setDuration(150)
+                        .start();
+                })
+                .start();
+                
+            // Update checkbox color based on state
+            if (isChecked) {
+                checkbox.setButtonTintList(ContextCompat.getColorStateList(this, android.R.color.holo_orange_light));
+            } else {
+                checkbox.setButtonTintList(ContextCompat.getColorStateList(this, android.R.color.darker_gray));
+            }
+            
+        } catch (Exception e) {
+            // Error updating visual state
+        }
+    }
+    
+    /**
+     * Update filter summary and show current selection count
+     */
+    private void updateFilterSummary() {
+        try {
+            // Count selected incident types
+            int selectedIncidents = 0;
+            int totalIncidents = incidentCheckboxes.size();
+
+            for (CheckBox checkBox : incidentCheckboxes) {
+                if (checkBox != null && checkBox.isChecked()) {
+                    selectedIncidents++;
+                }
+            }
+            
+            // Count selected facilities
+            int selectedFacilities = 0;
+            int totalFacilities = 5; // Total number of facility types
+            
+            if (evacuationCentersCheck != null && evacuationCentersCheck.isChecked()) selectedFacilities++;
+            if (healthFacilitiesCheck != null && healthFacilitiesCheck.isChecked()) selectedFacilities++;
+            if (policeStationsCheck != null && policeStationsCheck.isChecked()) selectedFacilities++;
+            if (fireStationsCheck != null && fireStationsCheck.isChecked()) selectedFacilities++;
+            if (governmentOfficesCheck != null && governmentOfficesCheck.isChecked()) selectedFacilities++;
+            
+            // Update apply button text with selection count
+            if (applyFiltersButton != null) {
+                String buttonText = "Apply Filters";
+                if ((totalIncidents > 0 && selectedIncidents < totalIncidents) || selectedFacilities < totalFacilities || 
+                    (heatmapSwitch != null && heatmapSwitch.isChecked())) {
+                    buttonText += " (" + selectedIncidents + "/" + (totalIncidents == 0 ? "-" : totalIncidents) + " incidents, " + 
+                                 selectedFacilities + "/" + totalFacilities + " facilities)";
+                }
+                applyFiltersButton.setText(buttonText);
+            }
+            
+        } catch (Exception e) {
+            // Error updating filter summary
+        }
+    }
+    
+    /**
+     * Get filter summary for confirmation message
+     */
+    private String getFilterSummary() {
+        try {
+            StringBuilder summary = new StringBuilder();
+            
+            // Add heatmap status
+            if (heatmapSwitch != null && heatmapSwitch.isChecked()) {
+                summary.append("🔥 Heatmap: ON\n");
+            }
+            
+            // Add timeline
+            summary.append("📅 Timeline: ").append(selectedTimeRange).append("\n");
+            
+            // Count disabled incident types
+        int disabledIncidents = 0;
+        for (CheckBox checkBox : incidentCheckboxes) {
+            if (checkBox != null && !checkBox.isChecked()) {
+                disabledIncidents++;
+            }
+        }
+            
+            if (disabledIncidents > 0) {
+                summary.append("🚫 ").append(disabledIncidents).append(" incident types hidden\n");
+            }
+            
+            // Count disabled facilities
+            int disabledFacilities = 0;
+            if (evacuationCentersCheck != null && !evacuationCentersCheck.isChecked()) disabledFacilities++;
+            if (healthFacilitiesCheck != null && !healthFacilitiesCheck.isChecked()) disabledFacilities++;
+            if (policeStationsCheck != null && !policeStationsCheck.isChecked()) disabledFacilities++;
+            if (fireStationsCheck != null && !fireStationsCheck.isChecked()) disabledFacilities++;
+            if (governmentOfficesCheck != null && !governmentOfficesCheck.isChecked()) disabledFacilities++;
+            
+            if (disabledFacilities > 0) {
+                summary.append("🏢 ").append(disabledFacilities).append(" facility types hidden\n");
+            }
+            
+            // If no filters applied, show default message
+            if (disabledIncidents == 0 && disabledFacilities == 0 && 
+                (heatmapSwitch == null || !heatmapSwitch.isChecked())) {
+                summary.append("All filters enabled");
+            }
+            
+            return summary.toString();
+            
+        } catch (Exception e) {
+            return "Filters applied";
+        }
     }
 
     @Override

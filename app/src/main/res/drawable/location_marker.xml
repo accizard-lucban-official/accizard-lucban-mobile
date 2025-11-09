@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Shadow -->
+    <item android:top="20dp">
+        <shape android:shape="oval">
+            <solid android:color="#40000000" />
+            <size android:width="20dp" android:height="10dp" />
+        </shape>
+    </item>
+    
+    <!-- Pin body -->
+    <item android:bottom="10dp">
+        <shape android:shape="oval">
+            <solid android:color="#FF5722" />
+            <size android:width="30dp" android:height="30dp" />
+        </shape>
+    </item>
+    
+    <!-- Pin point -->
+    <item android:top="25dp">
+        <shape android:shape="oval">
+            <solid android:color="#FF5722" />
+            <size android:width="8dp" android:height="8dp" />
+        </shape>
+    </item>
+    
+    <!-- Center dot -->
+    <item android:bottom="15dp">
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFF" />
+            <size android:width="12dp" android:height="12dp" />
+        </shape>
+    </item>
+</layer-list>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

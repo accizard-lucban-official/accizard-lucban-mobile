@@ -1,107 +1,122 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/color"
-    android:fillViewport="true">
+    android:fitsSystemWindows="true">
 
-    <LinearLayout
+    <!-- Header Section with Image Background -->
+    <FrameLayout
+        android:id="@+id/header_frame"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.25"
+        app:layout_constraintWidth_percent="1.0">
 
-        <!-- Header Section -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="0dp">
-
-            <!-- Header Section with Image Background -->
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="200dp">
-
-                <!-- Background Image -->
-                <ImageView
-                    android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:src="@drawable/header_background"
-                    android:scaleType="centerCrop"
-                    android:contentDescription="Header Background" />
-
-                <!-- Header Content -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="24dp">
-
-                    <!-- Logo Image -->
-                    <ImageView
-                        android:layout_width="100dp"
-                        android:layout_height="70dp"
-                        android:layout_marginRight="135dp"
-                        android:layout_marginTop="-70dp"
-                        android:contentDescription="App Logo"
-                        android:src="@drawable/accizard_logotype_logomark_svg" />
-
-                    <!-- Header Text -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="35dp"
-                        android:text="Welcome, New User!"
-                        android:layout_marginTop="25dp"
-                        android:layout_marginRight="55dp"
-                        android:textColor="@android:color/white"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="0dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="55dp"
-                        android:layout_marginRight="110dp"
-                        android:layout_marginBottom="-155dp"
-                        android:text="Sign up to continue"
-                        android:textColor="@android:color/white"
-                        android:textSize="16sp" />
-                </LinearLayout>
-
-            </FrameLayout>
-
-        </LinearLayout>
-
-        <!-- Form Section -->
-        <LinearLayout
+        <!-- Background Image -->
+        <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:src="@drawable/header_background"
+            android:scaleType="centerCrop"
+            android:contentDescription="Header Background" />
+
+        <!-- Header Content -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="@dimen/padding_xxlarge">
+
+            <!-- Logo Image - Top Left -->
+            <ImageView
+                android:id="@+id/ivLogo"
+                android:layout_width="140dp"
+                android:layout_height="62dp"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentStart="true"
+                android:contentDescription="App Logo"
+                android:src="@drawable/accizard_logotype_logomark_svg"
+                android:adjustViewBounds="true"
+                android:scaleType="fitStart" />
+
+            <!-- Header Text - Aligned with Logo Left -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="8dp"
+                android:orientation="vertical"
+                android:gravity="start">
+
+                <TextView
+                    android:id="@+id/tvHeaderTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Welcome, New User!"
+                    android:textColor="@android:color/white"
+                    android:textSize="25sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/tvHeaderSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sign up to continue"
+                    android:textColor="@android:color/white"
+                    android:textSize="20sp" />
+            </LinearLayout>
+
+        </RelativeLayout>
+
+    </FrameLayout>
+
+    <!-- Form Section -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="@drawable/rounded_top_background"
+        android:fillViewport="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/header_frame"
+        app:layout_constraintVertical_bias="0.0"
+        app:layout_constraintWidth_percent="1.0">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_top_background"
-            android:padding="24dp">
+            android:paddingLeft="32dp"
+            android:paddingRight="32dp"
+            android:paddingTop="32dp"
+            android:paddingBottom="@dimen/registration_form_padding_vertical">
 
             <!-- Progress Title -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Complete Your Profile"
+                android:fontFamily="@font/dmsans"
                 android:textColor="@color/text_dark"
-                android:textSize="24sp"
+                android:textSize="@dimen/text_size_title"
                 android:textStyle="bold"
                 android:layout_gravity="center"
-                android:layout_marginBottom="8dp" />
+                android:layout_marginBottom="@dimen/margin_small" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Step 2 of 4: Address Information"
                 android:textColor="@color/text_hint"
-                android:textSize="14sp"
+                android:textSize="@dimen/text_size_medium"
                 android:layout_gravity="center"
-                android:layout_marginBottom="32dp" />
+                android:layout_marginBottom="@dimen/registration_step_margin_bottom" />
 
             <!-- Progress Indicator -->
             <LinearLayout
@@ -109,63 +124,63 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:layout_gravity="center"
-                android:layout_marginBottom="40dp">
+                android:layout_marginBottom="@dimen/spacing_xxxlarge">
 
                 <TextView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="@dimen/registration_step_circle_size"
+                    android:layout_height="@dimen/registration_step_circle_size"
                     android:text="1"
                     android:textColor="@android:color/white"
                     android:textStyle="bold"
                     android:background="@drawable/step_completed_background"
                     android:gravity="center"
-                    android:textSize="16sp" />
+                    android:textSize="@dimen/registration_step_text_size" />
 
                 <View
-                    android:layout_width="40dp"
-                    android:layout_height="2dp"
+                    android:layout_width="@dimen/registration_step_line_width"
+                    android:layout_height="@dimen/registration_step_line_height"
                     android:background="@color/orange_primary"
                     android:layout_gravity="center_vertical" />
 
                 <TextView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="@dimen/registration_step_circle_size"
+                    android:layout_height="@dimen/registration_step_circle_size"
                     android:text="2"
                     android:textColor="@android:color/white"
                     android:textStyle="bold"
                     android:background="@drawable/step_active_background"
                     android:gravity="center"
-                    android:textSize="16sp" />
+                    android:textSize="@dimen/registration_step_text_size" />
 
                 <View
-                    android:layout_width="40dp"
-                    android:layout_height="2dp"
+                    android:layout_width="@dimen/registration_step_line_width"
+                    android:layout_height="@dimen/registration_step_line_height"
                     android:background="@color/step_inactive"
                     android:layout_gravity="center_vertical" />
 
                 <TextView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="@dimen/registration_step_circle_size"
+                    android:layout_height="@dimen/registration_step_circle_size"
                     android:text="3"
                     android:textColor="@color/text_hint"
                     android:background="@drawable/inactive_step"
                     android:gravity="center"
-                    android:textSize="16sp" />
+                    android:textSize="@dimen/registration_step_text_size" />
 
                 <View
-                    android:layout_width="40dp"
-                    android:layout_height="2dp"
+                    android:layout_width="@dimen/registration_step_line_width"
+                    android:layout_height="@dimen/registration_step_line_height"
                     android:background="@color/step_inactive"
                     android:layout_gravity="center_vertical" />
 
                 <TextView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="@dimen/registration_step_circle_size"
+                    android:layout_height="@dimen/registration_step_circle_size"
                     android:text="4"
                     android:textColor="@color/text_hint"
                     android:background="@drawable/inactive_step"
                     android:gravity="center"
-                    android:textSize="16sp" />
+                    android:textSize="@dimen/registration_step_text_size" />
 
             </LinearLayout>
 
@@ -175,20 +190,20 @@
                 android:layout_height="wrap_content"
                 android:text="Province"
                 android:textColor="@color/text_dark"
-                android:textSize="14sp"
-                android:layout_marginBottom="8dp" />
+                android:textSize="@dimen/registration_label_text_size"
+                android:layout_marginBottom="@dimen/registration_label_margin_bottom" />
 
             <AutoCompleteTextView
                 android:id="@+id/actvProvince"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
+                android:layout_height="@dimen/registration_field_height"
                 android:background="@drawable/edittext_background"
                 android:hint="Enter your province"
                 android:inputType="textCapWords"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="@dimen/registration_field_padding"
                 android:textColor="@color/text_dark"
                 android:textColorHint="@color/text_hint"
-                android:layout_marginBottom="16dp" />
+                android:layout_marginBottom="@dimen/registration_field_margin_bottom" />
 
             <!-- City/Town Field -->
             <TextView
@@ -196,55 +211,99 @@
                 android:layout_height="wrap_content"
                 android:text="City/Town"
                 android:textColor="@color/text_dark"
-                android:textSize="14sp"
-                android:layout_marginBottom="8dp" />
+                android:textSize="@dimen/registration_label_text_size"
+                android:layout_marginBottom="@dimen/registration_label_margin_bottom" />
 
             <AutoCompleteTextView
                 android:id="@+id/actvCityTown"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
+                android:layout_height="@dimen/registration_field_height"
                 android:background="@drawable/edittext_background"
                 android:hint="Enter your city/town"
                 android:inputType="textCapWords"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="@dimen/registration_field_padding"
                 android:textColor="@color/text_dark"
                 android:textColorHint="@color/text_hint"
-                android:layout_marginBottom="16dp" />
+                android:layout_marginBottom="@dimen/registration_field_margin_bottom" />
+
+            <!-- Street Address Field -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="House Number/Street/Subdivision (Optional)"
+                android:textColor="@color/text_dark"
+                android:textSize="@dimen/registration_label_text_size"
+                android:layout_marginBottom="@dimen/registration_label_margin_bottom" />
+
+            <EditText
+                android:id="@+id/etStreetAddress"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/registration_field_height"
+                android:background="@drawable/edittext_background"
+                android:hint="Enter your street address (e.g., house number, street name)"
+                android:inputType="textCapWords"
+                android:paddingHorizontal="@dimen/registration_field_padding"
+                android:textColor="@color/text_dark"
+                android:textColorHint="@color/text_hint"
+                android:layout_marginBottom="@dimen/registration_field_margin_bottom" />
 
             <!-- Barangay Field (wrapped for dynamic visibility) -->
             <LinearLayout
                 android:id="@+id/layoutBarangay"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:visibility="visible">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Barangay"
                     android:textColor="@color/text_dark"
-                    android:textSize="16sp"
-                    android:layout_marginBottom="8dp" />
+                    android:textSize="@dimen/registration_label_text_size"
+                    android:layout_marginBottom="@dimen/registration_label_margin_bottom" />
 
-                <Spinner
+                <AutoCompleteTextView
                     android:id="@+id/spinnerBarangay"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
+                    android:layout_height="@dimen/registration_field_height"
                     android:background="@drawable/edittext_background"
-                    android:layout_marginBottom="40dp" />
+                    android:hint="Enter your barangay"
+                    android:textColorHint="@color/text_hint"
+                    android:textColor="@color/text_dark"
+                    android:paddingHorizontal="@dimen/registration_field_padding"
+                    android:inputType="textCapWords"
+                    android:layout_marginBottom="@dimen/spacing_xxxlarge" />
             </LinearLayout>
 
-            <EditText
-                android:id="@+id/etBarangayOther"
+            <!-- Barangay Text Field (for non-Lucban users) -->
+            <LinearLayout
+                android:id="@+id/layoutBarangayOther"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/edittext_background"
-                android:hint="Enter your barangay"
-                android:textColorHint="@color/text_hint"
-                android:textColor="@color/text_dark"
-                android:paddingHorizontal="16dp"
-                android:inputType="textCapWords"
-                android:layout_marginBottom="16dp"
-                android:visibility="gone" />
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+                
+                <TextView
+                    android:id="@+id/tvBarangayLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Barangay"
+                    android:textColor="@color/text_dark"
+                    android:textSize="@dimen/registration_label_text_size"
+                    android:layout_marginBottom="@dimen/registration_label_margin_bottom" />
+
+                <EditText
+                    android:id="@+id/etBarangayOther"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/registration_field_height"
+                    android:background="@drawable/edittext_background"
+                    android:hint="Enter your barangay"
+                    android:textColorHint="@color/text_hint"
+                    android:textColor="@color/text_dark"
+                    android:paddingHorizontal="@dimen/registration_field_padding"
+                    android:inputType="textCapWords"
+                    android:layout_marginBottom="@dimen/registration_field_margin_bottom" />
+            </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
@@ -258,13 +317,14 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <Button
+                <ImageButton
                     android:id="@+id/btnBack"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@drawable/back_icon"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:layout_width="@dimen/registration_back_button_size"
+                    android:layout_height="@dimen/registration_back_button_size"
+                    android:background="@drawable/back_button_background"
+                    android:src="@drawable/ic_chevron_back_gray"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="Back" />
 
                 <View
                     android:layout_width="0dp"
@@ -274,16 +334,16 @@
                 <Button
                     android:id="@+id/btnNext"
                     android:layout_width="120dp"
-                    android:layout_height="56dp"
+                    android:layout_height="@dimen/registration_button_height"
                     android:text="Next"
                     android:textColor="@android:color/white"
-                    android:textSize="16sp"
+                    android:textSize="@dimen/registration_button_text_size"
                     android:textStyle="bold" />
 
             </LinearLayout>
 
         </LinearLayout>
 
-    </LinearLayout>
+    </ScrollView>
 
-</ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

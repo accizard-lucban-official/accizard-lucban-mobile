@@ -177,7 +177,7 @@ public class TermAndConditionsActivity extends AppCompatActivity {
                 // Close activity after animation
                 backButton.postDelayed(() -> {
                     finish();
-                    overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
+                    overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
                 }, 150);
             });
         }
@@ -291,11 +291,11 @@ public class TermAndConditionsActivity extends AppCompatActivity {
 
             backButton.postDelayed(() -> {
                 super.onBackPressed();
-                overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
+                overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
             }, 150);
         } else {
             super.onBackPressed();
-            overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
         }
     }
 

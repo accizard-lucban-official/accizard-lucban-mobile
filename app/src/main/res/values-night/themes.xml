@@ -1,7 +1,19 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.AccizardLucban" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+    <!-- Force light mode colors even in dark mode -->
+    <!-- This ensures the app maintains its original color scheme regardless of system dark mode -->
+    <style name="Base.Theme.AccizardLucban" parent="Theme.Material3.Light.NoActionBar">
+        <!-- Use the same colors as light theme -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:statusBarColor">@color/orange_primary</item>
+        
+        <!-- Force light mode background colors -->
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:colorBackground">@android:color/white</item>
+        
+        <!-- Apply DM Sans globally -->
+        <item name="android:fontFamily">@font/dmsans</item>
+        <item name="fontFamily">@font/dmsans</item>
     </style>
 </resources>

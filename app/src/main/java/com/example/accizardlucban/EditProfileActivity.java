@@ -12,11 +12,14 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.Toast;
+import android.text.Editable;
+import android.text.TextWatcher;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -49,8 +52,8 @@ public class EditProfileActivity extends AppCompatActivity {
     private ImageView backButton, profilePicture, editPictureButton;
     private Button saveButton;
     private EditText firstNameEdit, lastNameEdit, mobileNumberEdit,
-            provinceEdit, cityEdit, passwordEdit;
-    private Spinner barangaySpinner;
+            emailEdit, provinceEdit, cityEdit, streetAddressEdit, passwordEdit;
+    private AutoCompleteTextView barangayEdit;
 
     private static final String PREFS_NAME = "user_profile_prefs";
     private static final String KEY_FIRST_NAME = "first_name";
@@ -59,8 +62,8 @@ public class EditProfileActivity extends AppCompatActivity {
     private static final String KEY_EMAIL = "email";
     private static final String KEY_PROVINCE = "province";
     private static final String KEY_CITY = "city";
-    private static final String KEY_PASSWORD = "password";
     private static final String KEY_BARANGAY = "barangay";
+    private static final String KEY_STREET_ADDRESS = "street_address";
 
     private Bitmap newProfileBitmap;
     private Uri newProfileImageUri;
@@ -72,8 +75,8 @@ public class EditProfileActivity extends AppCompatActivity {
         setContentView(R.layout.activity_edit_profile);
 
         initViews();
-        setupSpinner();
         setupClickListeners();
+        setupBarangayAdapter();
         loadUserData();
         loadProfilePicture();
     }
@@ -87,35 +90,14 @@ public class EditProfileActivity extends AppCompatActivity {
         firstNameEdit = findViewById(R.id.first_name_edit);
         lastNameEdit = findViewById(R.id.last_name_edit);
         mobileNumberEdit = findViewById(R.id.mobile_number_edit);
+        emailEdit = findViewById(R.id.email_edit);
         provinceEdit = findViewById(R.id.province_edit);
         cityEdit = findViewById(R.id.city_edit);
+        barangayEdit = findViewById(R.id.barangay_edit);
+        streetAddressEdit = findViewById(R.id.etStreetAddress);
         passwordEdit = findViewById(R.id.password_edit);
-        barangaySpinner = findViewById(R.id.barangay_spinner);
     }
 
-    private void setupSpinner() {
-        String[] barangays = {
-                "Select Barangay",
-                "Barangay 1 (Poblacion)",
-                "Barangay 2 (Poblacion)",
-                "Barangay 3 (Poblacion)",
-                "Barangay 4 (Poblacion)",
-                "Barangay 5 (Poblacion)",
-                "Barangay 6 (Poblacion)",
-                "Barangay 7 (Poblacion)",
-                "Barangay 8 (Poblacion)",
-                "Anlilising",
-                "Ayaas",
-                "Bukid",
-                "Silangan",
-                "Kanlurang"
-        };
-
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, barangays);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        barangaySpinner.setAdapter(adapter);
-    }
 
     private void setupClickListeners() {
         backButton.setOnClickListener(new View.OnClickListener() {
@@ -138,6 +120,55 @@ public class EditProfileActivity extends AppCompatActivity {
                 saveProfile();
             }
         });
+
+        // Setup field watchers for barangay adapter
+        provinceEdit.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                updateBarangayAdapter();
+            }
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        cityEdit.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                updateBarangayAdapter();
+            }
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+    }
+
+    private void setupBarangayAdapter() {
+        barangayEdit.setThreshold(1);
+        updateBarangayAdapter();
+    }
+
+    private void updateBarangayAdapter() {
+        String selectedProvince = provinceEdit.getText().toString().trim();
+        String cityTown = cityEdit.getText().toString().trim();
+        
+        if ("Quezon".equalsIgnoreCase(selectedProvince) && "Lucban".equalsIgnoreCase(cityTown)) {
+            // Set up Lucban barangays for Autocomplete
+            String[] lucbanBarangays = {
+                    "Abang", "Aliliw", "Atulinao", "Ayuti (Poblacion)", "Barangay 1 (Poblacion)", "Barangay 2 (Poblacion)", 
+                    "Barangay 3 (Poblacion)", "Barangay 4 (Poblacion)", "Barangay 5 (Poblacion)", "Barangay 6 (Poblacion)", 
+                    "Barangay 7 (Poblacion)", "Barangay 8 (Poblacion)", "Barangay 9 (Poblacion)", "Barangay 10 (Poblacion)", 
+                    "Igang", "Kabatete", "Kakawit", "Kalangay", "Kalyaat", "Kilib", "Kulapi", "Mahabang Parang", 
+                    "Malupak", "Manasa", "May-It", "Nagsinamo", "Nalunao", "Palola", "Piis", "Samil", "Tiawe", "Tinamnan"
+            };
+            InitialLetterAutoCompleteAdapter adapter = new InitialLetterAutoCompleteAdapter(this, lucbanBarangays);
+            barangayEdit.setAdapter(adapter);
+        } else {
+            // Allow free text input for other locations
+            barangayEdit.setAdapter(null);
+        }
     }
 
     private SharedPreferences getUserPrefs() {
@@ -145,22 +176,114 @@ public class EditProfileActivity extends AppCompatActivity {
     }
 
     private void loadUserData() {
-        SharedPreferences prefs = getUserPrefs();
-        firstNameEdit.setText(prefs.getString(KEY_FIRST_NAME, ""));
-        lastNameEdit.setText(prefs.getString(KEY_LAST_NAME, ""));
-        mobileNumberEdit.setText(prefs.getString(KEY_MOBILE, ""));
-        provinceEdit.setText(prefs.getString(KEY_PROVINCE, ""));
-        cityEdit.setText(prefs.getString(KEY_CITY, ""));
-        // Don't set password for security
-        // Set barangay spinner selection
-        String barangay = prefs.getString(KEY_BARANGAY, "Select Barangay");
-        ArrayAdapter<String> adapter = (ArrayAdapter<String>) barangaySpinner.getAdapter();
-        if (adapter != null && barangay != null) {
-            int position = adapter.getPosition(barangay);
-            if (position >= 0) {
-                barangaySpinner.setSelection(position);
-            }
+        // First try to load from Intent extras (passed from ProfileActivity)
+        Intent intent = getIntent();
+        if (intent != null) {
+            String firstName = intent.getStringExtra("firstName");
+            String lastName = intent.getStringExtra("lastName");
+            String mobileNumber = intent.getStringExtra("mobileNumber");
+            String email = intent.getStringExtra("email");
+            String province = intent.getStringExtra("province");
+            String city = intent.getStringExtra("city");
+            String barangay = intent.getStringExtra("barangay");
+            String streetAddress = intent.getStringExtra("streetAddress");
+            
+            if (firstName != null) firstNameEdit.setText(firstName);
+            if (lastName != null) lastNameEdit.setText(lastName);
+            if (mobileNumber != null) mobileNumberEdit.setText(mobileNumber);
+            if (email != null) emailEdit.setText(email);
+            if (province != null) provinceEdit.setText(province);
+            if (city != null) cityEdit.setText(city);
+            if (barangay != null) barangayEdit.setText(barangay);
+            if (streetAddress != null) streetAddressEdit.setText(streetAddress);
+        } else {
+            // Fallback to SharedPreferences if no Intent data
+            SharedPreferences prefs = getUserPrefs();
+            firstNameEdit.setText(prefs.getString(KEY_FIRST_NAME, ""));
+            lastNameEdit.setText(prefs.getString(KEY_LAST_NAME, ""));
+            mobileNumberEdit.setText(prefs.getString(KEY_MOBILE, ""));
+            emailEdit.setText(prefs.getString(KEY_EMAIL, ""));
+            provinceEdit.setText(prefs.getString(KEY_PROVINCE, ""));
+            cityEdit.setText(prefs.getString(KEY_CITY, ""));
+            barangayEdit.setText(prefs.getString(KEY_BARANGAY, ""));
+            streetAddressEdit.setText(prefs.getString(KEY_STREET_ADDRESS, ""));
         }
+        
+        // Also try to load from Firestore to get the latest data
+        loadUserDataFromFirestore();
+    }
+
+    private void loadUserDataFromFirestore() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Log.d(TAG, "No user signed in, skipping Firestore data load");
+            return;
+        }
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("users")
+            .whereEqualTo("firebaseUid", user.getUid())
+            .limit(1)
+            .get()
+            .addOnSuccessListener(queryDocumentSnapshots -> {
+                if (!queryDocumentSnapshots.isEmpty()) {
+                    QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
+                    
+                    // Load email from Firebase Auth (most reliable)
+                    String email = user.getEmail();
+                    if (email != null && !email.isEmpty()) {
+                        emailEdit.setText(email);
+                    } else {
+                        // Fallback to Firestore
+                        String firestoreEmail = doc.getString("email");
+                        if (firestoreEmail != null && !firestoreEmail.isEmpty()) {
+                            emailEdit.setText(firestoreEmail);
+                        }
+                    }
+                    
+                    // Load other fields from Firestore
+                    String firstName = doc.getString("firstName");
+                    String lastName = doc.getString("lastName");
+                    String mobileNumber = doc.getString("mobileNumber");
+                    if (mobileNumber == null) mobileNumber = doc.getString("phoneNumber");
+                    String province = doc.getString("province");
+                    String city = doc.getString("city");
+                    if (city == null) city = doc.getString("cityTown");
+                    String barangay = doc.getString("barangay");
+                    String streetAddress = doc.getString("streetAddress");
+                    
+                    // Only update fields that are empty (don't overwrite intent data)
+                    if (firstName != null && firstNameEdit.getText().toString().trim().isEmpty()) {
+                        firstNameEdit.setText(firstName);
+                    }
+                    if (lastName != null && lastNameEdit.getText().toString().trim().isEmpty()) {
+                        lastNameEdit.setText(lastName);
+                    }
+                    if (mobileNumber != null && mobileNumberEdit.getText().toString().trim().isEmpty()) {
+                        mobileNumberEdit.setText(mobileNumber);
+                    }
+                    if (province != null && provinceEdit.getText().toString().trim().isEmpty()) {
+                        provinceEdit.setText(province);
+                    }
+                    if (city != null && cityEdit.getText().toString().trim().isEmpty()) {
+                        cityEdit.setText(city);
+                    }
+                    if (barangay != null && barangayEdit.getText().toString().trim().isEmpty()) {
+                        barangayEdit.setText(barangay);
+                    }
+                    if (streetAddress != null && streetAddressEdit.getText().toString().trim().isEmpty()) {
+                        streetAddressEdit.setText(streetAddress);
+                    }
+                    
+                    // Update barangay adapter after loading data
+                    updateBarangayAdapter();
+                    
+                    Log.d(TAG, "User data loaded from Firestore");
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error loading user data from Firestore", e);
+            });
     }
 
     private void saveProfile() {
@@ -168,157 +291,210 @@ public class EditProfileActivity extends AppCompatActivity {
             return;
         }
         
-        // Save to SharedPreferences first
+        // Get form data
         String firstName = firstNameEdit.getText().toString().trim();
         String lastName = lastNameEdit.getText().toString().trim();
         String mobileNumber = mobileNumberEdit.getText().toString().trim();
+        String email = emailEdit.getText().toString().trim();
         String province = provinceEdit.getText().toString().trim();
         String city = cityEdit.getText().toString().trim();
-        String password = passwordEdit.getText().toString().trim();
-        String barangay = barangaySpinner.getSelectedItem().toString();
+        String barangay = barangayEdit.getText().toString().trim();
+        String streetAddress = streetAddressEdit.getText().toString().trim();
+        String newPassword = passwordEdit.getText().toString().trim();
 
-        SharedPreferences.Editor editor = getUserPrefs().edit();
-        editor.putString(KEY_FIRST_NAME, firstName);
-        editor.putString(KEY_LAST_NAME, lastName);
-        editor.putString(KEY_MOBILE, mobileNumber);
-        editor.putString(KEY_PROVINCE, province);
-        editor.putString(KEY_CITY, city);
-        editor.putString(KEY_BARANGAY, barangay);
-        editor.apply();
+        // Save to SharedPreferences immediately for instant local updates
+        ProfileDataManager profileManager = ProfileDataManager.getInstance(this);
+        profileManager.saveProfileLocally(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+        
+        Log.d(TAG, "Profile data saved locally, now syncing to Firestore...");
 
-        // If there's a new profile picture, upload it first
-        if (hasNewProfilePicture) {
-            uploadNewProfilePicture();
+        // Handle password change if provided
+        if (!newPassword.isEmpty()) {
+            updatePassword(newPassword, () -> {
+                // After password is updated, proceed with profile sync
+                proceedWithProfileSync(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+            });
         } else {
-            // Update Firestore profile data
-            updateFirestoreProfile(firstName, lastName, mobileNumber, province, city, barangay, password);
+            // No password change, proceed with profile sync
+            proceedWithProfileSync(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
         }
     }
 
-    private void updateFirestoreProfile(String firstName, String lastName, String mobileNumber, 
-                                      String province, String city, String barangay, String password) {
+    private void proceedWithProfileSync(String firstName, String lastName, String mobileNumber,
+                                       String email, String province, String city, String barangay, String streetAddress) {
+        // If there's a new profile picture, upload it first, then sync profile data
+        if (hasNewProfilePicture) {
+            uploadNewProfilePicture();
+        } else {
+            // Sync profile data to Firestore
+            syncProfileToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+        }
+    }
+
+    private void updatePassword(String newPassword, Runnable onComplete) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
-            Toast.makeText(this, "Profile updated successfully!", Toast.LENGTH_SHORT).show();
-            finish();
+            Toast.makeText(this, "User not signed in", Toast.LENGTH_SHORT).show();
+            if (onComplete != null) onComplete.run();
             return;
         }
 
-        final boolean[] needToUpdate = {false};
-        
-        // Update Firebase Auth password if changed
-        if (!password.isEmpty()) {
-            user.updatePassword(password)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        SharedPreferences.Editor pwEditor = getUserPrefs().edit();
-                        pwEditor.putString(KEY_PASSWORD, password);
-                        pwEditor.apply();
-                        Toast.makeText(this, "Password updated successfully!", Toast.LENGTH_SHORT).show();
-                    } else {
-                        String errorMsg = (task.getException() != null) ? task.getException().getMessage() : "Unknown error";
-                        Toast.makeText(this, "Failed to update password in Firebase: " + errorMsg, Toast.LENGTH_LONG).show();
-                        if (errorMsg != null && errorMsg.toLowerCase().contains("recent login")) {
-                            Toast.makeText(this, "Please re-authenticate and try again.", Toast.LENGTH_LONG).show();
-                        }
-                    }
-                });
-            needToUpdate[0] = true;
+        // Validate password strength
+        if (!isStrongPassword(newPassword)) {
+            passwordEdit.setError("Password must be at least 8 characters long and contain at least one uppercase, one lowercase, one digit, and one special character");
+            Toast.makeText(this, "Password does not meet security requirements", Toast.LENGTH_LONG).show();
+            return;
         }
 
-        // Update Firestore user profile
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        String firebaseUid = user.getUid();
-        db.collection("users")
-            .whereEqualTo("firebaseUid", firebaseUid)
-            .limit(1)
-            .get()
-            .addOnSuccessListener(queryDocumentSnapshots -> {
-                if (!queryDocumentSnapshots.isEmpty()) {
-                    QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
-                    String docId = doc.getId();
-                    Map<String, Object> userProfile = new HashMap<>();
-                    userProfile.put("firstName", firstName);
-                    userProfile.put("lastName", lastName);
-                    userProfile.put("fullName", firstName + " " + lastName);
-                    userProfile.put("mobileNumber", mobileNumber);
-                    userProfile.put("province", province);
-                    userProfile.put("city", city);
-                    userProfile.put("barangay", barangay);
-                    
-                    db.collection("users").document(docId)
-                        .update(userProfile)
-                        .addOnSuccessListener(aVoid -> {
-                            if (needToUpdate[0]) {
-                                Toast.makeText(this, "Profile and Firebase Auth updated successfully!", Toast.LENGTH_SHORT).show();
-                            } else {
-                                Toast.makeText(this, "Profile updated successfully!", Toast.LENGTH_SHORT).show();
-                            }
-                            finish();
-                        })
-                        .addOnFailureListener(e -> {
-                            Toast.makeText(this, "Failed to update profile on server: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                        });
-                } else {
-                    Toast.makeText(this, "User profile not found in database.", Toast.LENGTH_LONG).show();
-                    finish();
-                }
+        user.updatePassword(newPassword)
+            .addOnSuccessListener(aVoid -> {
+                Log.d(TAG, "Password updated successfully");
+                runOnUiThread(() -> {
+                    Toast.makeText(EditProfileActivity.this, "Password updated successfully", Toast.LENGTH_SHORT).show();
+                    passwordEdit.setText(""); // Clear password field
+                    if (onComplete != null) onComplete.run();
+                });
             })
             .addOnFailureListener(e -> {
-                Toast.makeText(this, "Failed to query user profile: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                finish();
+                Log.e(TAG, "Error updating password: " + e.getMessage(), e);
+                runOnUiThread(() -> {
+                    String errorMsg = "Failed to update password";
+                    if (e.getMessage() != null) {
+                        if (e.getMessage().contains("requires-recent-login")) {
+                            errorMsg = "Please log out and log back in before changing password";
+                        } else {
+                            errorMsg = "Error: " + e.getMessage();
+                        }
+                    }
+                    Toast.makeText(EditProfileActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                    if (onComplete != null) onComplete.run();
+                });
+            });
+    }
+
+    private boolean isStrongPassword(String password) {
+        if (password.length() < 8) return false;
+        boolean hasUpper = false, hasLower = false, hasDigit = false, hasSymbol = false;
+        for (char c : password.toCharArray()) {
+            if (Character.isUpperCase(c)) hasUpper = true;
+            else if (Character.isLowerCase(c)) hasLower = true;
+            else if (Character.isDigit(c)) hasDigit = true;
+            else if ("!@#$%^&*()-_=+[{]}|;:'\",<.>/?`~".indexOf(c) >= 0) hasSymbol = true;
+        }
+        return hasUpper && hasLower && hasDigit && hasSymbol;
+    }
+
+    private void syncProfileToFirestore(String firstName, String lastName, String mobileNumber,
+                                       String email, String province, String city, String barangay, String streetAddress) {
+        ProfileDataManager profileManager = ProfileDataManager.getInstance(this);
+        
+        profileManager.syncToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress, 
+            new ProfileDataManager.SyncCallback() {
+                @Override
+                public void onSuccess() {
+                    Log.d(TAG, "Profile synced to Firestore successfully");
+                    runOnUiThread(() -> {
+                        Toast.makeText(EditProfileActivity.this, "Profile updated successfully!", Toast.LENGTH_SHORT).show();
+                        
+                        // Set result to indicate profile was updated
+                        Intent resultIntent = new Intent();
+                        resultIntent.putExtra("profile_updated", true);
+                        resultIntent.putExtra("full_name", firstName + " " + lastName);
+                        String locationText = city;
+                        if (barangay != null && !barangay.isEmpty()) {
+                            locationText = city + ", " + barangay;
+                        } else {
+                            locationText = city + ", " + province;
+                        }
+                        // Build mailing address with street address if provided
+                        String mailingAddress = city + ", " + province;
+                        if (streetAddress != null && !streetAddress.isEmpty()) {
+                            mailingAddress = streetAddress + ", " + barangay + ", " + city + ", " + province;
+                        } else if (barangay != null && !barangay.isEmpty()) {
+                            mailingAddress = barangay + ", " + city + ", " + province;
+                        }
+                        resultIntent.putExtra("location", locationText);
+                        setResult(RESULT_OK, resultIntent);
+                        
+                        finish();
+                    });
+                }
+                
+                @Override
+                public void onFailure(Exception e) {
+                    Log.e(TAG, "Failed to sync profile to Firestore: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        Toast.makeText(EditProfileActivity.this, 
+                            "Profile updated locally, but failed to sync to server. Changes will sync when online.", 
+                            Toast.LENGTH_LONG).show();
+                        
+                        // Still set result as profile was updated locally
+                        Intent resultIntent = new Intent();
+                        resultIntent.putExtra("profile_updated", true);
+                        resultIntent.putExtra("full_name", firstName + " " + lastName);
+                        String locationText = city;
+                        if (barangay != null && !barangay.isEmpty()) {
+                            locationText = city + ", " + barangay;
+                        } else {
+                            locationText = city + ", " + province;
+                        }
+                        // Build mailing address with street address if provided
+                        String mailingAddress = city + ", " + province;
+                        if (streetAddress != null && !streetAddress.isEmpty()) {
+                            mailingAddress = streetAddress + ", " + barangay + ", " + city + ", " + province;
+                        } else if (barangay != null && !barangay.isEmpty()) {
+                            mailingAddress = barangay + ", " + city + ", " + province;
+                        }
+                        resultIntent.putExtra("location", locationText);
+                        setResult(RESULT_OK, resultIntent);
+                        
+                        finish();
+                    });
+                }
             });
     }
 
     private boolean validateForm() {
         boolean isValid = true;
 
-        // Validate first name
+        // Validate first name (required)
         if (TextUtils.isEmpty(firstNameEdit.getText().toString().trim())) {
             firstNameEdit.setError("First name is required");
             isValid = false;
         }
 
-        // Validate last name
+        // Validate last name (required)
         if (TextUtils.isEmpty(lastNameEdit.getText().toString().trim())) {
             lastNameEdit.setError("Last name is required");
             isValid = false;
         }
 
-        // Validate mobile number
+        // Validate mobile number (required if provided)
         String mobile = mobileNumberEdit.getText().toString().trim();
-        if (TextUtils.isEmpty(mobile)) {
-            mobileNumberEdit.setError("Mobile number is required");
-            isValid = false;
-        } else if (!mobile.matches("^09\\d{9}$")) {
-            mobileNumberEdit.setError("Invalid mobile number format");
+        if (!mobile.isEmpty() && !mobile.matches("^09\\d{9}$")) {
+            mobileNumberEdit.setError("Invalid mobile number format (should be 09XXXXXXXXX)");
             isValid = false;
         }
 
-        // Email validation removed
-
-        // Validate province
-        if (TextUtils.isEmpty(provinceEdit.getText().toString().trim())) {
-            provinceEdit.setError("Province is required");
+        // Validate email (required if provided)
+        String email = emailEdit.getText().toString().trim();
+        if (!email.isEmpty() && !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            emailEdit.setError("Invalid email format");
             isValid = false;
         }
 
-        // Validate city
-        if (TextUtils.isEmpty(cityEdit.getText().toString().trim())) {
-            cityEdit.setError("City/Town is required");
+        // Validate province (required if city is provided)
+        String province = provinceEdit.getText().toString().trim();
+        String city = cityEdit.getText().toString().trim();
+        if (!city.isEmpty() && TextUtils.isEmpty(province)) {
+            provinceEdit.setError("Province is required when City/Town is provided");
             isValid = false;
         }
 
-        // Validate barangay selection
-        if (barangaySpinner.getSelectedItemPosition() == 0) {
-            Toast.makeText(this, "Please select a barangay", Toast.LENGTH_SHORT).show();
-            isValid = false;
-        }
-
-        // Validate password if provided
+        // Validate password (if provided, must meet strength requirements)
         String password = passwordEdit.getText().toString().trim();
-        if (!TextUtils.isEmpty(password) && password.length() < 6) {
-            passwordEdit.setError("Password must be at least 6 characters");
+        if (!password.isEmpty() && !isStrongPassword(password)) {
+            passwordEdit.setError("Password must be at least 8 characters long and contain at least one uppercase, one lowercase, one digit, and one special character");
             isValid = false;
         }
 
@@ -489,8 +665,20 @@ public class EditProfileActivity extends AppCompatActivity {
         profileRef.getDownloadUrl().addOnSuccessListener(uri -> {
             Log.d(TAG, "Found profile picture in Storage: " + uri.toString());
             loadImageFromUrl(uri.toString());
-            // Update Firestore with the found URL
-            updateProfilePictureUrlInFirestore(uri.toString());
+            // Update Firestore with the found URL using ProfileDataManager
+            ProfileDataManager profileManager = ProfileDataManager.getInstance(EditProfileActivity.this);
+            profileManager.saveProfilePictureUrlLocally(uri.toString());
+            profileManager.syncProfilePictureUrlToFirestore(uri.toString(), new ProfileDataManager.SyncCallback() {
+                @Override
+                public void onSuccess() {
+                    Log.d(TAG, "Profile picture URL synced to Firestore");
+                }
+                
+                @Override
+                public void onFailure(Exception e) {
+                    Log.e(TAG, "Failed to sync profile picture URL to Firestore", e);
+                }
+            });
         }).addOnFailureListener(e -> {
             Log.d(TAG, "No profile picture found in Storage for UID: " + firebaseUid);
         });
@@ -502,7 +690,7 @@ public class EditProfileActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 java.net.URL url = new java.net.URL(imageUrl);
-                Bitmap bitmap = BitmapFactory.decodeStream(url.openConnection().getInputStream());
+                final Bitmap bitmap = BitmapFactory.decodeStream(url.openConnection().getInputStream());
                 runOnUiThread(() -> {
                     if (bitmap != null && profilePicture != null) {
                         // Create circular bitmap
@@ -554,7 +742,16 @@ public class EditProfileActivity extends AppCompatActivity {
 
     private void uploadNewProfilePicture() {
         if (!hasNewProfilePicture) {
-            saveProfileToFirestore();
+            // No new picture, just sync profile data
+            String firstName = firstNameEdit.getText().toString().trim();
+            String lastName = lastNameEdit.getText().toString().trim();
+            String mobileNumber = mobileNumberEdit.getText().toString().trim();
+            String email = emailEdit.getText().toString().trim();
+            String province = provinceEdit.getText().toString().trim();
+            String city = cityEdit.getText().toString().trim();
+            String barangay = barangayEdit.getText().toString().trim();
+            String streetAddress = streetAddressEdit.getText().toString().trim();
+            syncProfileToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
             return;
         }
 
@@ -564,15 +761,51 @@ public class EditProfileActivity extends AppCompatActivity {
             return;
         }
 
-        // Inside uploadNewProfilePicture() method in EditProfileActivity.java
         String userId = user.getUid();
         if (newProfileBitmap != null) {
-            StorageHelper.uploadProfileImage(userId, newProfileBitmap, // <--- CORRECTED METHOD NAME
+            StorageHelper.uploadProfileImage(userId, newProfileBitmap,
                     new OnSuccessListener<String>() {
                         @Override
                         public void onSuccess(String downloadUrl) {
                             Log.d(TAG, "Profile picture uploaded successfully: " + downloadUrl);
-                            updateProfilePictureUrlInFirestore(downloadUrl);
+                            
+                            // Save profile picture URL locally immediately
+                            ProfileDataManager profileManager = ProfileDataManager.getInstance(EditProfileActivity.this);
+                            profileManager.saveProfilePictureUrlLocally(downloadUrl);
+                            
+                            // Sync profile picture URL to Firestore
+                            profileManager.syncProfilePictureUrlToFirestore(downloadUrl, 
+                                new ProfileDataManager.SyncCallback() {
+                                    @Override
+                                    public void onSuccess() {
+                                        Log.d(TAG, "Profile picture URL synced to Firestore");
+                                        // Now sync profile data
+                                        String firstName = firstNameEdit.getText().toString().trim();
+                                        String lastName = lastNameEdit.getText().toString().trim();
+                                        String mobileNumber = mobileNumberEdit.getText().toString().trim();
+                                        String email = emailEdit.getText().toString().trim();
+                                        String province = provinceEdit.getText().toString().trim();
+                                        String city = cityEdit.getText().toString().trim();
+                                        String barangay = barangayEdit.getText().toString().trim();
+                                        String streetAddress = streetAddressEdit.getText().toString().trim();
+                                        syncProfileToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+                                    }
+                                    
+                                    @Override
+                                    public void onFailure(Exception e) {
+                                        Log.e(TAG, "Failed to sync profile picture URL to Firestore", e);
+                                        // Still proceed with profile data sync
+                                        String firstName = firstNameEdit.getText().toString().trim();
+                                        String lastName = lastNameEdit.getText().toString().trim();
+                                        String mobileNumber = mobileNumberEdit.getText().toString().trim();
+                                        String email = emailEdit.getText().toString().trim();
+                                        String province = provinceEdit.getText().toString().trim();
+                                        String city = cityEdit.getText().toString().trim();
+                                        String barangay = barangayEdit.getText().toString().trim();
+                                        String streetAddress = streetAddressEdit.getText().toString().trim();
+                                        syncProfileToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+                                    }
+                                });
                         }
                     },
                     new OnFailureListener() {
@@ -580,60 +813,32 @@ public class EditProfileActivity extends AppCompatActivity {
                         public void onFailure(@NonNull Exception e) {
                             Log.e(TAG, "Error uploading profile picture", e);
                             Toast.makeText(EditProfileActivity.this, "Failed to upload profile picture: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                            // Consider if you still want to save profile to Firestore if image upload fails,
-                            // or perhaps just show an error and let the user retry.
-                            saveProfileToFirestore();
+                            
+                            // Still sync profile data even if picture upload failed
+                            String firstName = firstNameEdit.getText().toString().trim();
+                            String lastName = lastNameEdit.getText().toString().trim();
+                            String mobileNumber = mobileNumberEdit.getText().toString().trim();
+                            String email = emailEdit.getText().toString().trim();
+                            String province = provinceEdit.getText().toString().trim();
+                            String city = cityEdit.getText().toString().trim();
+                            String barangay = barangayEdit.getText().toString().trim();
+                            String streetAddress = streetAddressEdit.getText().toString().trim();
+                            syncProfileToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
                         }
                     });
+        } else {
+            // No bitmap available, just sync profile data
+            String firstName = firstNameEdit.getText().toString().trim();
+            String lastName = lastNameEdit.getText().toString().trim();
+            String mobileNumber = mobileNumberEdit.getText().toString().trim();
+            String email = emailEdit.getText().toString().trim();
+            String province = provinceEdit.getText().toString().trim();
+            String city = cityEdit.getText().toString().trim();
+            String barangay = barangayEdit.getText().toString().trim();
+            String streetAddress = streetAddressEdit.getText().toString().trim();
+            syncProfileToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
         }
     }
 
-    private void updateProfilePictureUrlInFirestore(String profilePictureUrl) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) return;
-
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        db.collection("users")
-            .whereEqualTo("firebaseUid", user.getUid())
-            .limit(1)
-            .get()
-            .addOnSuccessListener(queryDocumentSnapshots -> {
-                if (!queryDocumentSnapshots.isEmpty()) {
-                    QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
-                    String docId = doc.getId();
-                    Map<String, Object> updates = new HashMap<>();
-                    updates.put("profilePictureUrl", profilePictureUrl);
-                    
-                    db.collection("users").document(docId)
-                        .update(updates)
-                        .addOnSuccessListener(aVoid -> {
-                            Log.d(TAG, "Profile picture URL updated in Firestore");
-                            saveProfileToFirestore();
-                        })
-                        .addOnFailureListener(e -> {
-                            Log.e(TAG, "Error updating profile picture URL in Firestore", e);
-                            saveProfileToFirestore();
-                        });
-                } else {
-                    saveProfileToFirestore();
-                }
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "Error querying user document", e);
-                saveProfileToFirestore();
-            });
-    }
-
-    private void saveProfileToFirestore() {
-        // This method will be called after profile picture upload
-        String firstName = firstNameEdit.getText().toString().trim();
-        String lastName = lastNameEdit.getText().toString().trim();
-        String mobileNumber = mobileNumberEdit.getText().toString().trim();
-        String province = provinceEdit.getText().toString().trim();
-        String city = cityEdit.getText().toString().trim();
-        String password = passwordEdit.getText().toString().trim();
-        String barangay = barangaySpinner.getSelectedItem().toString();
-        
-        updateFirestoreProfile(firstName, lastName, mobileNumber, province, city, barangay, password);
-    }
+    // Old methods removed - now using ProfileDataManager for all sync operations
 }

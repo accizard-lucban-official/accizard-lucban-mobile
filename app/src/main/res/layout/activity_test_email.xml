@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/color">
+
+    <!-- Header -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📧 Email Test Center"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/orange_primary"
+        android:gravity="center"
+        android:layout_marginBottom="32dp" />
+
+    <!-- Instructions -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Test the email notification system by sending a password reset email to your mobile phone."
+        android:textSize="16sp"
+        android:textColor="@color/text_dark"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Email Input -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Your Email Address"
+        android:textColor="@color/text_dark"
+        android:textSize="14sp"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/etTestEmail"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@drawable/edittext_background"
+        android:hint="Enter your email address"
+        android:inputType="textEmailAddress"
+        android:padding="16dp"
+        android:textColor="@color/text_dark"
+        android:textColorHint="@color/text_hint"
+        android:textSize="16sp"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Progress Bar -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone" />
+
+    <!-- Send Button -->
+    <Button
+        android:id="@+id/btnSendTestEmail"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@drawable/button_primary_background"
+        android:text="Send Test Email"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Status -->
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ready to test email"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:padding="16dp"
+        android:background="#f0f0f0"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Logs ScrollView -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Debug Logs:"
+        android:textColor="@color/text_dark"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#f8f9fa"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tvLogs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Logs will appear here..."
+            android:textSize="12sp"
+            android:textColor="@color/text_dark"
+            android:fontFamily="monospace" />
+
+    </ScrollView>
+
+</LinearLayout>

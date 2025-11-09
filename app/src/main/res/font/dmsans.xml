@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    
+    <!-- Regular (400) -->
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="400"
+        android:font="@font/dmsans_regular"
+        app:fontStyle="normal"
+        app:fontWeight="400"
+        app:font="@font/dmsans_regular" />
+    
+    <!-- Italic (400) -->
+    <font
+        android:fontStyle="italic"
+        android:fontWeight="400"
+        android:font="@font/dmsans_italic"
+        app:fontStyle="italic"
+        app:fontWeight="400"
+        app:font="@font/dmsans_italic" />
+    
+    <!-- Medium (500) -->
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="500"
+        android:font="@font/dmsans_medium"
+        app:fontStyle="normal"
+        app:fontWeight="500"
+        app:font="@font/dmsans_medium" />
+    
+    <!-- Medium Italic (500) -->
+    <font
+        android:fontStyle="italic"
+        android:fontWeight="500"
+        android:font="@font/dmsans_mediumitalic"
+        app:fontStyle="italic"
+        app:fontWeight="500"
+        app:font="@font/dmsans_mediumitalic" />
+    
+    <!-- Semi Bold (600) -->
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="600"
+        android:font="@font/dmsans_semibold"
+        app:fontStyle="normal"
+        app:fontWeight="600"
+        app:font="@font/dmsans_semibold" />
+    
+    <!-- Bold (700) -->
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="700"
+        android:font="@font/dmsans_bold"
+        app:fontStyle="normal"
+        app:fontWeight="700"
+        app:font="@font/dmsans_bold" />
+    
+</font-family>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

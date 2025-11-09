@@ -1,0 +1,274 @@
+// ========================================
+// FIRESTORE SECURITY RULES
+// User-Specific Chat Implementation
+// ========================================
+// Copy and paste this into:
+// Firebase Console > Firestore Database > Rules > Edit Rules > Publish
+// ========================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+    
+    // Check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Check if user is admin
+    function isAdmin() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Check if user owns the resource
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    // ========================================
+    // USERS COLLECTION
+    // ========================================
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isOwner(userId);
+      
+      // Users can create/update their own profile
+      allow create, update: if isOwner(userId);
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // CHAT ROOMS (User-Specific)
+    // ========================================
+    // Each chat room document ID = User's UID
+    // This ensures complete privacy and isolation
+    match /chats/{chatRoomId} {
+      
+      // Users can only access their own chat room
+      // chatRoomId MUST match their UID
+      allow read: if isOwner(chatRoomId);
+      
+      // Users can create/update their own chat room metadata
+      allow create, update: if isOwner(chatRoomId) && 
+                              request.resource.data.userId == request.auth.uid;
+      
+      // Users cannot delete their chat room
+      allow delete: if false;
+      
+      // ===== ADMIN ACCESS =====
+      // Admins can read all chat rooms
+      allow read: if isAdmin();
+      
+      // Admins can write to all chat rooms (to send messages)
+      allow write: if isAdmin();
+    }
+    
+    // ========================================
+    // CHAT MESSAGES (User-Specific)
+    // ========================================
+    match /chats/{chatRoomId}/messages/{messageId} {
+      
+      // Users can only read messages in their own chat room
+      allow read: if isOwner(chatRoomId);
+      
+      // Users can create messages in their own chat room
+      // Must set correct senderId
+      allow create: if isOwner(chatRoomId) && 
+                      request.resource.data.senderId == request.auth.uid;
+      
+      // Users can update their own messages only
+      allow update: if isOwner(chatRoomId) && 
+                      resource.data.senderId == request.auth.uid;
+      
+      // Users can delete their own messages only
+      allow delete: if isOwner(chatRoomId) && 
+                      resource.data.senderId == request.auth.uid;
+      
+      // ===== ADMIN ACCESS =====
+      // Admins can read all messages in all chat rooms
+      allow read: if isAdmin();
+      
+      // Admins can create messages in any chat room
+      allow create: if isAdmin();
+      
+      // Admins can update any message (mark as read, etc.)
+      allow update: if isAdmin();
+      
+      // Admins can delete any message
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // ANNOUNCEMENTS COLLECTION
+    // ========================================
+    match /announcements/{announcementId} {
+      // Anyone authenticated can read announcements
+      allow read: if isSignedIn();
+      
+      // Only admins can create, update, or delete announcements
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ========================================
+    // REPORTS COLLECTION
+    // ========================================
+    match /reports/{reportId} {
+      // Users can read their own reports
+      // Admins can read all reports
+      allow read: if isSignedIn() && 
+                    (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Users can create reports
+      // Must set userId to their own UID
+      allow create: if isSignedIn() && 
+                      request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own reports
+      // Admins can update any report
+      allow update: if isSignedIn() && 
+                      (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Only admins can delete reports
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // EMERGENCY CONTACTS COLLECTION
+    // ========================================
+    match /emergency_contacts/{contactId} {
+      // Anyone authenticated can read emergency contacts
+      allow read: if isSignedIn();
+      
+      // Only admins can create, update, or delete contacts
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ========================================
+    // NOTIFICATIONS COLLECTION
+    // ========================================
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isSignedIn() && 
+                    resource.data.userId == request.auth.uid;
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if isSignedIn() && 
+                      resource.data.userId == request.auth.uid;
+      
+      // Only admins can create notifications
+      allow create: if isAdmin();
+      
+      // Users can delete their own notifications
+      allow delete: if isSignedIn() && 
+                      resource.data.userId == request.auth.uid;
+    }
+    
+    // ========================================
+    // USER PROFILES COLLECTION (if exists)
+    // ========================================
+    match /user_profiles/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId);
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // DEFAULT RULE - DENY ALL
+    // ========================================
+    // This is the most secure approach
+    // Any collection not explicitly defined above will be denied
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// ========================================
+// RULES EXPLANATION
+// ========================================
+//
+// CHAT PRIVACY:
+// --------------
+// 1. Each user gets their own chat room (document ID = user's UID)
+// 2. Users can ONLY access chat rooms where chatRoomId == their UID
+// 3. Users CANNOT read other users' messages
+// 4. Admins can access all chat rooms and messages
+//
+// SECURITY GUARANTEES:
+// --------------------
+// ✅ User A cannot read User B's chat
+// ✅ User A cannot send messages to User B's chat
+// ✅ User A cannot modify User B's messages
+// ✅ Only the chat owner and admins can access each chat
+// ✅ Users must be authenticated to access anything
+//
+// ADMIN CAPABILITIES:
+// -------------------
+// ✅ Read all chat rooms
+// ✅ Send messages to any user
+// ✅ Update message status (mark as read)
+// ✅ Delete inappropriate messages
+// ✅ Manage all collections
+//
+// TESTING IN FIREBASE CONSOLE:
+// -----------------------------
+// 1. Go to Firestore Database > Rules
+// 2. Click on "Rules Playground" tab
+// 3. Test different scenarios:
+//    - User reading their own chat: ALLOW
+//    - User reading another user's chat: DENY
+//    - Admin reading any chat: ALLOW
+//    - Unauthenticated access: DENY
+//
+// ========================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

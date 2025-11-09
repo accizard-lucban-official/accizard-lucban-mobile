@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="#F5F5F5">
 
     <!-- Header -->
@@ -12,7 +13,6 @@
         android:orientation="horizontal"
         android:padding="16dp"
         android:background="@android:color/white"
-        android:elevation="4dp"
         android:gravity="center_vertical">
 
         <ImageView
@@ -36,116 +36,376 @@
             android:textStyle="bold"
             android:gravity="center" />
 
-        <TextView
-            android:id="@+id/sign_out_button"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Sign Out"
-            android:textColor="#FF5722"
-            android:textSize="16sp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
             android:clickable="true"
             android:focusable="true"
             android:background="?android:attr/selectableItemBackground"
-            android:padding="8dp" />
+            android:padding="8dp">
+
+            <TextView
+                android:id="@+id/sign_out_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sign Out"
+                android:textColor="#FF5722"
+                android:textSize="16sp" />
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_arrow_right"
+                android:tint="#FF5722"
+                android:layout_marginStart="4dp"
+                android:contentDescription="Arrow right" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
     <!-- Profile Content -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/header_layout"
-        android:layout_above="@id/bottom_navigation">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="32dp"
-            android:gravity="center_horizontal">
+            android:padding="16dp">
 
-            <!-- Profile Picture -->
-            <ImageView
-                android:id="@+id/profile_picture"
-                android:layout_width="120dp"
-                android:layout_height="120dp"
-                android:layout_marginBottom="24dp"
-                android:background="@drawable/profile_picture_bg"
-                android:src="@drawable/ic_person_large"
-                android:scaleType="centerInside"
-                android:contentDescription="Profile picture" />
-
-            <!-- Profile Info -->
-            <TextView
-                android:id="@+id/resident_name"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Resident Name"
-                android:textSize="24sp"
-                android:textColor="#333333"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
-
-            <TextView
-                android:id="@+id/created_date_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text=""
-                android:visibility="gone"
-                android:textColor="#999999"
-                android:textSize="14sp"
-                android:layout_marginBottom="16dp" />
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
-
-                <View
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:background="@drawable/green_dot"
-                    android:layout_marginEnd="8dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Verified Resident"
-                    android:textSize="14sp"
-                    android:textColor="#4CAF50" />
-
-            </LinearLayout>
-
-            <!-- Edit Profile Button -->
-            <Button
-                android:id="@+id/edit_profile_button"
-                android:layout_width="200dp"
-                android:layout_height="50dp"
-                android:text="✏ Edit Profile"
-                android:textColor="@android:color/white"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:background="@drawable/edit_button_bg"
-                android:layout_marginBottom="40dp"
-                android:elevation="2dp" />
-
-            <!-- Settings Options -->
+            <!-- Profile Picture Section -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:padding="24dp"
+                android:layout_marginBottom="16dp">
 
-                <!-- Toggle Current Location -->
+                <!-- Profile Picture -->
+                <FrameLayout
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:layout_marginBottom="16dp">
+                    
+                    <!-- Background circle -->
+                    <View
+                        android:id="@+id/profile_picture_background"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/circle_background_gray" />
+                    
+                    <!-- Profile Picture -->
+                    <ImageView
+                        android:id="@+id/profile_picture"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:src="@drawable/ic_person_large"
+                        android:scaleType="centerCrop"
+                        android:contentDescription="Profile picture" />
+                        
+                </FrameLayout>
+
+                <!-- Edit Profile Button -->
                 <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:padding="8dp"
+                    android:layout_marginBottom="16dp">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_edit"
+                        android:tint="#FF5722"
+                        android:layout_marginEnd="8dp"
+                        android:contentDescription="Edit icon" />
+
+                    <TextView
+                        android:id="@+id/edit_profile_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Edit Profile"
+                        android:textColor="#FF5722"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <!-- Resident Name -->
+                <TextView
+                    android:id="@+id/resident_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Resident Name"
+                    android:textSize="24sp"
+                    android:textColor="#333333"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Verified Status -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
+
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/green_dot"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Account Verified"
+                        android:textSize="14sp"
+                        android:textColor="#4CAF50" />
+
+                </LinearLayout>
+
+                <!-- Created Date -->
+                <TextView
+                    android:id="@+id/created_date_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Created on June 14, 2025"
+                    android:textColor="#999999"
+                    android:textSize="14sp" />
+
+            </LinearLayout>
+
+            <!-- Invite Friends Section -->
+            <LinearLayout
+                android:id="@+id/invite_friends_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="@drawable/edi_text_bg"
+                android:padding="16dp"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/accizard_logo_svg"
+                    android:tint="#FF5722"
+                    android:layout_marginEnd="16dp"
+                    android:contentDescription="Shield icon" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Invite friends to Accizard"
+                        android:textSize="16sp"
+                        android:textColor="#333333"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="accizardlink.com"
+                        android:textSize="14sp"
+                        android:textColor="#666666"
+                        android:layout_marginTop="4dp" />
+
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_share"
+                    android:tint="#FF5722"
+                    android:contentDescription="Share icon" />
+
+            </LinearLayout>
+
+            <!-- Your Info Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp">
+
+                <!-- Section Header -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Your Info"
+                    android:textSize="18sp"
+                    android:textColor="#333333"
+                    android:textStyle="bold"
+                    android:padding="16dp"
+                    android:paddingBottom="8dp" />
+
+                <!-- Resident Name Info -->
+                <LinearLayout
+                    android:id="@+id/resident_name_info_layout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:padding="16dp"
                     android:gravity="center_vertical"
-                    android:background="@android:color/white"
-                    android:layout_marginBottom="1dp">
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_person"
+                        android:tint="#FF5722"
+                        android:layout_marginEnd="16dp"
+                        android:contentDescription="Person icon" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Sofiah Marquez"
+                        android:textSize="16sp"
+                        android:textColor="#333333" />
+
+                </LinearLayout>
+
+                <!-- Mobile Number Info -->
+                <LinearLayout
+                    android:id="@+id/mobile_number_info_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_phone"
+                        android:tint="#FF5722"
+                        android:layout_marginEnd="16dp"
+                        android:contentDescription="Phone icon" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="09103801620"
+                        android:textSize="16sp"
+                        android:textColor="#333333" />
+
+                </LinearLayout>
+
+                <!-- Email Address Info -->
+                <LinearLayout
+                    android:id="@+id/email_address_info_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_email"
+                        android:tint="#FF5722"
+                        android:layout_marginEnd="16dp"
+                        android:contentDescription="Email icon" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="sofiahillyzahm22@gmail.com"
+                        android:textSize="16sp"
+                        android:textColor="#333333" />
+
+                </LinearLayout>
+
+                <!-- Mailing Address Info -->
+                <LinearLayout
+                    android:id="@+id/mailing_address_info_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/vector"
+                        android:tint="#FF5722"
+                        android:layout_marginEnd="16dp"
+                        android:contentDescription="Location icon" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Brgy. Tinamnan, Lucban, Quezon"
+                        android:textSize="16sp"
+                        android:textColor="#333333" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- App Permissions Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp">
+
+                <!-- Section Header -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="App Permissions"
+                    android:textSize="18sp"
+                    android:textColor="#333333"
+                    android:textStyle="bold"
+                    android:padding="16dp"
+                    android:paddingBottom="8dp" />
+
+                <!-- Location Permission -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
 
                     <ImageView
                         android:layout_width="24dp"
@@ -184,20 +444,18 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:checked="true"
-                        android:thumbTint="#FF5722"
-                        android:trackTint="#FFCCBC" />
+                        android:thumb="@drawable/toggle_thumb_selector"
+                        android:track="@drawable/toggle_selector" />
 
                 </LinearLayout>
 
-                <!-- Push Notifications -->
+                <!-- Notification Permission -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:padding="16dp"
-                    android:gravity="center_vertical"
-                    android:background="@android:color/white"
-                    android:layout_marginBottom="1dp">
+                    android:gravity="center_vertical">
 
                     <ImageView
                         android:layout_width="24dp"
@@ -216,7 +474,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Push and In-App Notifs"
+                            android:text="In-App and Push Notifications"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textStyle="bold" />
@@ -224,7 +482,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Receive alerts and updates from LDRRMO"
+                            android:text="Receive alerts and updates from MDRRMO"
                             android:textSize="12sp"
                             android:textColor="#666666"
                             android:layout_marginTop="4dp" />
@@ -236,10 +494,30 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:checked="true"
-                        android:thumbTint="#FF5722"
-                        android:trackTint="#FFCCBC" />
+                        android:thumb="@drawable/toggle_thumb_selector"
+                        android:track="@drawable/toggle_selector" />
 
                 </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Others Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp">
+
+                <!-- Section Header -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Others"
+                    android:textSize="18sp"
+                    android:textColor="#333333"
+                    android:textStyle="bold"
+                    android:padding="16dp"
+                    android:paddingBottom="8dp" />
 
                 <!-- Terms and Conditions -->
                 <LinearLayout
@@ -250,14 +528,13 @@
                     android:padding="16dp"
                     android:gravity="center_vertical"
                     android:background="?android:attr/selectableItemBackground"
-                    android:layout_marginBottom="1dp"
                     android:clickable="true"
                     android:focusable="true">
 
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:src="@drawable/ic_document"
+                        android:src="@drawable/vector__1_"
                         android:tint="#FF5722"
                         android:layout_marginEnd="16dp"
                         android:contentDescription="Document icon" />
@@ -270,13 +547,6 @@
                         android:textSize="16sp"
                         android:textColor="#333333"
                         android:textStyle="bold" />
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_arrow_right"
-                        android:tint="#FF5722"
-                        android:contentDescription="Arrow right" />
 
                 </LinearLayout>
 
@@ -295,7 +565,7 @@
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:src="@drawable/ic_delete"
+                        android:src="@drawable/vector__2_"
                         android:tint="#FF5722"
                         android:layout_marginEnd="16dp"
                         android:contentDescription="Delete icon" />
@@ -304,17 +574,10 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Delete Account"
+                        android:text="Delete account"
                         android:textSize="16sp"
                         android:textColor="#333333"
                         android:textStyle="bold" />
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_arrow_right"
-                        android:tint="#FF5722"
-                        android:contentDescription="Arrow right" />
 
                 </LinearLayout>
 
@@ -324,4 +587,4 @@
 
     </ScrollView>
 
-</RelativeLayout>
+</LinearLayout>

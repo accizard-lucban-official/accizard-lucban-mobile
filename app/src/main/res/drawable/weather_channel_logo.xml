@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="60dp"
+    android:height="20dp"
+    android:viewportWidth="60"
+    android:viewportHeight="20">
+    
+    <!-- Simple weather channel logo representation -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M5,5L15,5L15,15L5,15Z"/>
+    
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M20,5L30,5L30,15L20,15Z"/>
+    
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M35,5L45,5L45,15L35,15Z"/>
+    
+    <path
+        android:fillColor="#666666"
+        android:pathData="M50,8L55,8L55,10L50,10Z"/>
+    <path
+        android:fillColor="#666666"
+        android:pathData="M50,11L55,11L55,13L50,13Z"/>
+    <path
+        android:fillColor="#666666"
+        android:pathData="M50,14L55,14L55,16L50,16Z"/>
+</vector>

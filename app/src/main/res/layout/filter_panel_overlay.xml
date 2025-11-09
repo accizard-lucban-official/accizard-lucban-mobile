@@ -1,0 +1,723 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
+
+    <!-- Main Map Container (takes remaining space) -->
+    <FrameLayout
+        android:id="@+id/mainMapContainer"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1">
+
+        <!-- Your existing map content will be placed here -->
+        
+    </FrameLayout>
+
+    <!-- Sliding Filter Panel -->
+    <LinearLayout
+        android:id="@+id/filterPanel"
+        android:layout_width="320dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@drawable/panel_background"
+        android:elevation="8dp"
+        android:visibility="gone"
+        android:translationX="320dp">
+
+        <!-- Filter Panel Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="16dp"
+            android:background="@color/primary_color">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Map Filters"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/white" />
+
+            <ImageView
+                android:id="@+id/closeFilterPanel"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_close"
+                android:tint="@android:color/white"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:padding="4dp"
+                android:contentDescription="Close Filter Panel" />
+        </LinearLayout>
+
+        <!-- Filter Content Container -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- Timeline Section -->
+                <LinearLayout
+                    android:id="@+id/timelineSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/section_background"
+                    android:padding="16dp"
+                    android:layout_marginBottom="8dp">
+
+                    <LinearLayout
+                        android:id="@+id/timelineHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?android:attr/selectableItemBackground"
+                        android:padding="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Timeline"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="#333333" />
+
+                        <ImageView
+                            android:id="@+id/timelineArrow"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_arrow_drop_down"
+                            android:tint="#666666"
+                            android:contentDescription="Expand/Collapse Timeline" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/timelineContent"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="16dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/todayOption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Today"
+                            android:textSize="14sp"
+                            android:textColor="#333333"
+                            android:padding="12dp"
+                            android:background="?android:attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:id="@+id/thisWeekOption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="This Week"
+                            android:textSize="14sp"
+                            android:textColor="#333333"
+                            android:padding="12dp"
+                            android:background="?android:attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:id="@+id/thisMonthOption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="This Month"
+                            android:textSize="14sp"
+                            android:textColor="#333333"
+                            android:padding="12dp"
+                            android:background="?android:attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:id="@+id/thisYearOption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="This Year"
+                            android:textSize="14sp"
+                            android:textColor="#333333"
+                            android:padding="12dp"
+                            android:background="?android:attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Incident Types Section -->
+                <LinearLayout
+                    android:id="@+id/incidentTypesSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/section_background"
+                    android:padding="16dp"
+                    android:layout_marginBottom="8dp">
+
+                    <LinearLayout
+                        android:id="@+id/incidentTypesHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?android:attr/selectableItemBackground"
+                        android:padding="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Incident Types"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="#333333" />
+
+                        <ImageView
+                            android:id="@+id/incidentTypesArrow"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_arrow_drop_down"
+                            android:tint="#666666"
+                            android:contentDescription="Expand/Collapse Incident Types" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Select any type if you want to toggle certain map view or all incident"
+                        android:textSize="12sp"
+                        android:textColor="#666666"
+                        android:layout_marginTop="8dp" />
+
+                    <LinearLayout
+                        android:id="@+id/incidentTypesContent"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="16dp"
+                        android:visibility="gone">
+
+                        <!-- Heatmap View Toggle -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <Switch
+                                android:id="@+id/heatmapSwitch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="false"
+                                android:thumbTint="#FF5722"
+                                android:trackTint="#FFCCBC" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🔥 Heatmap View"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="12dp" />
+                        </LinearLayout>
+
+                        <!-- Road Accident -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/roadAccidentCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🚗 Road Accident"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Fire -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/fireCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🔥 Fire"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Medical Emergency -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/medicalEmergencyCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🏥 Medical Emergency"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Flooding -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/floodingCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🌊 Flooding"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Volcanic Activity -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/volcanicActivityCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🌋 Volcanic Activity"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Landslide -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/landslideCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="⛰️ Landslide"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Earthquake -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/earthquakeCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🏚️ Earthquake"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Civil Disturbance -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/civilDisturbanceCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="⚠️ Civil Disturbance"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Armed Conflict -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/armedConflictCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🔴 Armed Conflict"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Infectious Disease -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/infectiousDiseaseCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🦠 Infectious Disease"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Report Section (Always Visible) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/section_background"
+                    android:padding="16dp"
+                    android:layout_marginBottom="8dp">
+
+                    <CheckBox
+                        android:id="@+id/reportCheck"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:buttonTint="#FF5722" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📋 Report"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#333333"
+                        android:layout_marginStart="12dp" />
+                </LinearLayout>
+
+                <!-- Emergency Support Facilities Section -->
+                <LinearLayout
+                    android:id="@+id/emergencySupportSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/section_background"
+                    android:padding="16dp"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:id="@+id/emergencySupportHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?android:attr/selectableItemBackground"
+                        android:padding="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Emergency Support Facilities"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="#333333" />
+
+                        <ImageView
+                            android:id="@+id/emergencySupportArrow"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_arrow_drop_down"
+                            android:tint="#666666"
+                            android:contentDescription="Expand/Collapse Emergency Support" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/emergencySupportContent"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="16dp"
+                        android:visibility="gone">
+
+                        <!-- Evacuation Centers -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/evacuationCentersCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🏠 Evacuation Centers"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Health Facilities -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/healthFacilitiesCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🏥 Health Facilities"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Police Stations -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/policeStationsCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="👮 Police Stations"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Fire Stations -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/fireStationsCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🚒 Fire Stations"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Government Offices -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/governmentOfficesCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🏛️ Government Offices"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- Filter Panel Bottom Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:background="#FFFFFF"
+            android:elevation="4dp">
+
+            <Button
+                android:id="@+id/clearFiltersButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Clear All"
+                android:textColor="#666666"
+                android:background="@drawable/button_outline"
+                android:layout_marginEnd="8dp"
+                style="?android:attr/borderlessButtonStyle" />
+
+            <Button
+                android:id="@+id/applyFiltersButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Apply Filters"
+                android:textColor="#FFFFFF"
+                android:background="@drawable/button_primary"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

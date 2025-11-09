@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/color">
+    android:background="@color/color"
+    android:fitsSystemWindows="true">
 
     <!-- Header Section with Image Background -->
     <FrameLayout
@@ -13,7 +14,8 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHeight_percent="0.25">
+        app:layout_constraintHeight_percent="0.25"
+        app:layout_constraintWidth_percent="1.0">
 
         <!-- Background Image -->
         <ImageView
@@ -26,26 +28,30 @@
         <!-- Header Content -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="200dp"
+            android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:padding="@dimen/padding_xxlarge"
+            android:layout_gravity="center">
 
             <!-- Logo Image -->
             <ImageView
-                android:layout_width="120dp"
-                android:layout_height="80dp"
+                android:layout_width="@dimen/logo_size_large"
+                android:layout_height="wrap_content"
                 android:src="@drawable/accizard_logotype_svg"
-                android:contentDescription="App Logo" />
+                android:contentDescription="App Logo"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter" />
 
             <!-- Header Text -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="@dimen/margin_small"
                 android:text="REPORT PROTECT PREVENT"
+                android:fontFamily="@font/dmsans"
                 android:textColor="@android:color/white"
-                android:textSize="10sp"
+                android:textSize="@dimen/text_size_tiny"
                 android:letterSpacing="0.1"
                 android:textStyle="bold"
                 android:shadowColor="#80000000"
@@ -57,23 +63,34 @@
     </FrameLayout>
 
     <!-- Content Section -->
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:background="@drawable/buttom_sheet_background"
-        android:orientation="vertical"
-        android:padding="24dp"
-        app:layout_constraintTop_toBottomOf="@id/header_frame"
+        android:fillViewport="true"
+        android:scrollbars="none"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toBottomOf="@id/header_frame">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/buttom_sheet_background"
+            android:orientation="vertical"
+            android:paddingLeft="32dp"
+            android:paddingRight="32dp"
+            android:paddingTop="32dp"
+            android:paddingBottom="@dimen/padding_xxlarge">
 
         <!-- Logo -->
         <ImageView
-            android:layout_width="60dp"
-            android:layout_height="60dp"
+            android:layout_width="@dimen/main_logo_size"
+            android:layout_height="@dimen/main_logo_size"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="@dimen/margin_large"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
             android:src="@drawable/accizard_logo_svg" />
 
         <!-- Welcome Text -->
@@ -81,89 +98,94 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="4dp"
+            android:layout_marginBottom="@dimen/margin_tiny"
+            android:fontFamily="@font/dmsans"
             android:text="Welcome Back"
-            android:fontFamily="@font/poppinsbold"
             android:textColor="@color/dark_gray"
-            android:textSize="20sp"
+            android:textSize="@dimen/text_size_xxlarge"
             android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="@dimen/margin_xxlarge"
             android:text="Sign in to continue"
+            android:fontFamily="@font/dmsans"
             android:textColor="@color/medium_gray"
-            android:textSize="14sp" />
+            android:textSize="@dimen/text_size_medium" />
 
         <!-- Email Input -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
+            android:layout_marginBottom="@dimen/margin_tiny"
             android:text="Email"
+            android:fontFamily="@font/dmsans"
             android:textColor="@color/dark_gray"
-            android:textSize="14sp" />
+            android:textSize="@dimen/text_size_medium" />
 
         <EditText
             android:id="@+id/email_edit_text"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginBottom="12dp"
+            android:layout_height="@dimen/input_height_large"
+            android:layout_marginBottom="@dimen/margin_large"
             android:background="@drawable/edittext_background"
+            android:gravity="center_vertical"
             android:hint="Your@email.com"
+            android:fontFamily="@font/dmsans"
             android:inputType="textEmailAddress"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="16dp"
+            android:paddingHorizontal="@dimen/padding_large"
+            android:paddingVertical="@dimen/padding_small"
+            android:scrollbars="none"
+            android:scrollHorizontally="false"
             android:textColor="@color/dark_gray"
             android:textColorHint="@color/light_gray"
-            android:textSize="16sp"
-            android:gravity="center_vertical"
-            android:scrollHorizontally="false"
-            android:scrollbars="none" />
+            android:textSize="@dimen/text_size_large" />
 
         <!-- Password Input -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
+            android:layout_marginBottom="@dimen/margin_tiny"
             android:text="Password"
+            android:fontFamily="@font/dmsans"
             android:textColor="@color/dark_gray"
-            android:textSize="14sp" />
+            android:textSize="@dimen/text_size_medium" />
 
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginBottom="8dp">
+            android:layout_height="@dimen/input_height_large"
+            android:layout_marginBottom="@dimen/margin_small">
 
             <EditText
                 android:id="@+id/password_edit_text"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="@drawable/edittext_background"
+                android:gravity="center_vertical"
                 android:hint="Password"
+                android:fontFamily="@font/dmsans"
                 android:inputType="textPassword"
-                android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp"
-                android:paddingEnd="48dp"
+                android:paddingHorizontal="@dimen/padding_large"
+                android:paddingVertical="@dimen/padding_small"
+                android:paddingEnd="@dimen/padding_xxlarge"
+                android:scrollbars="none"
+                android:scrollHorizontally="false"
                 android:textColor="@color/dark_gray"
                 android:textColorHint="@color/light_gray"
-                android:textSize="16sp"
-                android:gravity="center_vertical"
-                android:scrollHorizontally="false"
-                android:scrollbars="none" />
+                android:textSize="@dimen/text_size_large" />
 
             <ImageView
                 android:id="@+id/ivTogglePassword"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="@dimen/icon_size_medium"
+                android:layout_height="@dimen/icon_size_medium"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_eye_off"
+                android:layout_marginEnd="@dimen/margin_medium"
                 android:alpha="0.5"
-                android:contentDescription="Toggle password visibility" />
+                android:contentDescription="Toggle password visibility"
+                android:src="@drawable/ic_eye_off" />
 
         </RelativeLayout>
 
@@ -173,50 +195,58 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="@dimen/margin_xxlarge"
             android:text="Forgot Password?"
+            android:fontFamily="@font/dmsans_semibold"
+            android:fontWeight="600"
             android:textColor="@color/orange_primary"
-            android:textSize="14sp" />
+            android:textSize="@dimen/text_size_medium" />
 
         <!-- Sign In Button -->
-
-        <!-- Sign Up Link -->
-
         <Button
             android:id="@+id/sign_in_button"
-            android:layout_width="210dp"
-            android:layout_height="48dp"
-            android:layout_marginBottom="12dp"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/button_height_medium"
             android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="@dimen/margin_small"
             android:background="@drawable/button_background"
             android:text="Login"
+            android:fontFamily="@font/dmsans"
             android:textColor="@android:color/white"
-            android:textSize="14sp"
+            android:textSize="@dimen/text_size_medium"
             android:textStyle="bold" />
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="128dp"
+            android:layout_marginBottom="@dimen/margin_xxlarge"
             android:orientation="horizontal">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Don't have an account? "
+                android:text="Don't have an account?"
+                android:fontFamily="@font/dmsans"
                 android:textColor="@color/medium_gray"
-                android:textSize="14sp" />
+                android:textSize="@dimen/text_size_medium" />
 
             <TextView
                 android:id="@+id/sign_up_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Sign up"
+                android:fontFamily="@font/dmsans_semibold"
+                android:fontWeight="600"
                 android:textColor="@color/orange_primary"
-                android:textSize="14sp" />
+                android:textSize="@dimen/text_size_medium" />
 
         </LinearLayout>
+
+        <!-- Spacer to push emergency section lower -->
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/main_emergency_margin_top" />
 
         <!-- Emergency -->
         <TextView
@@ -224,36 +254,50 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="@dimen/margin_small"
             android:text="Emergency?"
+            android:fontFamily="@font/dmsans"
             android:textColor="@color/medium_gray"
-            android:textSize="14sp" />
+            android:textSize="@dimen/text_size_medium" />
 
         <!-- Call Lucban -->
         <LinearLayout
             android:id="@+id/call_lucban_text"
             android:layout_width="match_parent"
-            android:layout_height="40dp"
+            android:layout_height="@dimen/button_height_medium"
+            android:layout_marginBottom="@dimen/margin_medium"
             android:background="@drawable/call_button_background"
-            android:gravity="center"
-            android:orientation="horizontal">
+            android:gravity="center_vertical|start"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/padding_medium"
+            android:paddingEnd="@dimen/padding_medium">
 
             <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginEnd="6dp"
+                android:id="@+id/phoneIconMain"
+                android:layout_width="@dimen/icon_size_xlarge"
+                android:layout_height="@dimen/icon_size_xlarge"
                 android:src="@drawable/phone_call"
-                android:tint="@color/orange_primary" />
+                android:tint="@color/orange_primary"
+                android:scaleType="fitCenter"
+                android:padding="@dimen/spacing_medium"
+                android:contentDescription="Call Lucban LDRRMO" />
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Swipe to Call Lucban LDRRMO"
+                android:layout_weight="1"
+                android:layout_marginStart="@dimen/margin_small"
+                android:fontFamily="@font/dmsans"
+                android:text="Swipe right to Call Lucban LDRRMO"
                 android:textColor="@color/medium_gray"
-                android:textSize="14sp" />
+                android:textSize="@dimen/text_size_medium"
+                android:gravity="center_vertical"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
         </LinearLayout>
 
-    </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    android:padding="24dp">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Type in your password to confirm account deletion"
+        android:textSize="16sp"
+        android:textColor="#333333"
+        android:textStyle="bold"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Password Input Field -->
+    <EditText
+        android:id="@+id/et_password_confirm"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:hint="Your Current Password"
+        android:background="@drawable/edittext_background"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="16dp"
+        android:textSize="16sp"
+        android:textColor="#333333"
+        android:textColorHint="#999999"
+        android:inputType="textPassword"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Delete Account Button -->
+    <Button
+        android:id="@+id/btn_delete_account"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Delete Account"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="@drawable/delete_button_bg"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Cancel Button -->
+    <Button
+        android:id="@+id/btn_cancel_delete"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Cancel"
+        android:textColor="#666666"
+        android:textSize="14sp"
+        android:background="@android:color/transparent"
+        android:layout_marginBottom="8dp" />
+
+</LinearLayout>
+

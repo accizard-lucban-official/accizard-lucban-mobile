@@ -112,34 +112,59 @@ public class FirestoreHelper {
                 .addOnFailureListener(failureListener);
     }
     
-    // Create report with auto-incremented reportId (RID-X)
+    // Create report with auto-incremented reportId (RID-X) using atomic counter
     public static void createReportWithAutoId(final Map<String, Object> reportData,
                                               final OnSuccessListener<DocumentReference> successListener,
                                               final OnFailureListener failureListener) {
-        // Query for the highest reportId
+        // Use a counter document to ensure atomic increment
+        final DocumentReference counterRef = getInstance().collection("counters").document("reportCounter");
+        
+        getInstance().runTransaction(transaction -> {
+            DocumentSnapshot counterSnapshot = transaction.get(counterRef);
+            
+            // Calculate nextId in a single assignment
+            final long nextId = counterSnapshot.exists() ? 
+                (counterSnapshot.getLong("count") + 1) : 1;
+            
+            // Update the counter
+            Map<String, Object> counterData = new HashMap<>();
+            counterData.put("count", nextId);
+            counterData.put("lastUpdated", System.currentTimeMillis());
+            transaction.set(counterRef, counterData);
+            
+            // Set the reportId in the report data
+            String newReportId = "RID-" + nextId;
+            reportData.put("reportId", newReportId);
+            
+            return null; // Transaction doesn't need to return anything
+        }).addOnSuccessListener(aVoid -> {
+            // Transaction successful, now create the report
+            createReport(reportData, successListener, failureListener);
+        }).addOnFailureListener(e -> {
+            // If transaction fails, try fallback method
+            android.util.Log.w(TAG, "Transaction failed, trying fallback method", e);
+            createReportWithAutoIdFallback(reportData, successListener, failureListener);
+        });
+    }
+    
+    // Fallback method for report ID generation (less reliable but works as backup)
+    private static void createReportWithAutoIdFallback(final Map<String, Object> reportData,
+                                                       final OnSuccessListener<DocumentReference> successListener,
+                                                       final OnFailureListener failureListener) {
+        // Query for the highest reportId as fallback
         getInstance().collection(COLLECTION_REPORTS)
             .orderBy("reportId", Query.Direction.DESCENDING)
             .limit(1)
             .get()
             .addOnCompleteListener(task -> {
-                int nextId = 1;
-                if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                    String lastReportId = null;
-                    try {
-                        Object ridObj = task.getResult().getDocuments().get(0).get("reportId");
-                        if (ridObj != null) {
-                            lastReportId = ridObj.toString();
-                        }
-                    } catch (Exception ignored) {}
-                    if (lastReportId != null && lastReportId.startsWith("RID-")) {
-                        try {
-                            int lastNum = Integer.parseInt(lastReportId.replace("RID-", ""));
-                            nextId = lastNum + 1;
-                        } catch (NumberFormatException ignored) {}
-                    }
-                }
-                String newReportId = "RID-" + nextId;
+                // Calculate nextId in a single assignment using helper method
+                final int nextId = calculateNextIdFromTask(task);
+                
+                // Add timestamp to make it more unique in case of race condition
+                String timestamp = String.valueOf(System.currentTimeMillis());
+                String newReportId = "RID-" + nextId + "-" + timestamp.substring(timestamp.length() - 4);
                 reportData.put("reportId", newReportId);
+                
                 // Now create the report
                 createReport(reportData, successListener, failureListener);
             })
@@ -240,5 +265,66 @@ public class FirestoreHelper {
         messageData.put("isAdmin", isAdmin);
         messageData.put("timestamp", System.currentTimeMillis());
         return messageData;
+    }
+    
+    // Initialize the report counter (call this once during app setup)
+    public static void initializeReportCounter(OnSuccessListener<Void> successListener,
+                                              OnFailureListener failureListener) {
+        DocumentReference counterRef = getInstance().collection("counters").document("reportCounter");
+        
+        counterRef.get().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                DocumentSnapshot snapshot = task.getResult();
+                if (!snapshot.exists()) {
+                    // Counter doesn't exist, create it
+                    Map<String, Object> counterData = new HashMap<>();
+                    counterData.put("count", 0L);
+                    counterData.put("lastUpdated", System.currentTimeMillis());
+                    counterData.put("createdAt", System.currentTimeMillis());
+                    
+                    counterRef.set(counterData)
+                        .addOnSuccessListener(successListener)
+                        .addOnFailureListener(failureListener);
+                } else {
+                    // Counter already exists
+                    if (successListener != null) {
+                        successListener.onSuccess(null);
+                    }
+                }
+            } else {
+                if (failureListener != null) {
+                    failureListener.onFailure(task.getException());
+                }
+            }
+        });
+    }
+    
+    // Get current report counter value
+    public static void getReportCounterValue(OnCompleteListener<DocumentSnapshot> completeListener) {
+        DocumentReference counterRef = getInstance().collection("counters").document("reportCounter");
+        counterRef.get().addOnCompleteListener(completeListener);
+    }
+    
+    // Helper method to calculate next ID from task result
+    private static int calculateNextIdFromTask(com.google.android.gms.tasks.Task<QuerySnapshot> task) {
+        if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+            String lastReportId = null;
+            try {
+                Object ridObj = task.getResult().getDocuments().get(0).get("reportId");
+                if (ridObj != null) {
+                    lastReportId = ridObj.toString();
+                }
+            } catch (Exception ignored) {}
+            
+            if (lastReportId != null && lastReportId.startsWith("RID-")) {
+                try {
+                    int lastNum = Integer.parseInt(lastReportId.replace("RID-", ""));
+                    return lastNum + 1;
+                } catch (NumberFormatException ignored) {
+                    return 1;
+                }
+            }
+        }
+        return 1;
     }
 } 

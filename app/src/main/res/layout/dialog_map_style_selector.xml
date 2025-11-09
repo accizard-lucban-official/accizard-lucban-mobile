@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    android:padding="24dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="24dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Map Settings"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#333333" />
+
+        <ImageView
+            android:id="@+id/closeButton"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_close"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:padding="4dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="Close" />
+
+    </LinearLayout>
+
+    <!-- Map Style (Street - Always Active) -->
+    <LinearLayout
+        android:id="@+id/streetMapStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/map_style_card_background"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:layout_width="60dp"
+            android:layout_height="40dp"
+            android:src="@drawable/map_style_explore_thumbnail"
+            android:scaleType="centerCrop"
+            android:background="@drawable/map_style_thumbnail_background"
+            android:layout_marginEnd="16dp"
+            android:contentDescription="Street map style" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Street Map"
+            android:textSize="16sp"
+            android:textColor="#333333" />
+
+        <ImageView
+            android:id="@+id/streetCheckIcon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_check_circle"
+            android:visibility="visible"
+            android:tint="#2196F3"
+            android:contentDescription="Selected" />
+
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E0E0E0"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Map Layers Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Map Layers"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Barangay Boundaries -->
+    <LinearLayout
+        android:id="@+id/barangayBoundariesLayer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/map_style_card_background"
+        android:padding="16dp"
+        android:layout_marginBottom="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Barangay Boundaries"
+            android:textSize="16sp"
+            android:textColor="#333333" />
+
+        <CheckBox
+            android:id="@+id/barangayBoundariesCheck"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:button="@null"
+            android:background="@drawable/checkbox_selector" />
+
+    </LinearLayout>
+
+    <!-- Road Network -->
+    <LinearLayout
+        android:id="@+id/roadNetworkLayer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/map_style_card_background"
+        android:padding="16dp"
+        android:layout_marginBottom="12dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Road Network"
+            android:textSize="16sp"
+            android:textColor="#333333" />
+
+        <CheckBox
+            android:id="@+id/roadNetworkCheck"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:button="@null"
+            android:background="@drawable/checkbox_selector" />
+
+    </LinearLayout>
+
+    <!-- Waterways -->
+    <LinearLayout
+        android:id="@+id/waterwaysLayer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/map_style_card_background"
+        android:padding="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Waterways"
+            android:textSize="16sp"
+            android:textColor="#333333" />
+
+        <CheckBox
+            android:id="@+id/waterwaysCheck"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:button="@null"
+            android:background="@drawable/checkbox_selector" />
+
+    </LinearLayout>
+
+</LinearLayout>

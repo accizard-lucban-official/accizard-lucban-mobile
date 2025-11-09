@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/padding_large">
+
+        <!-- Report ID -->
+        <TextView
+            android:id="@+id/tvReportId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Report ID: RID-001"
+            android:textSize="@dimen/text_size_medium"
+            android:textColor="@color/gray_medium"
+            android:layout_marginBottom="@dimen/margin_medium" />
+
+        <!-- Report Type -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Report Type"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@color/gray_medium"
+            android:textStyle="bold"
+            android:layout_marginBottom="@dimen/margin_tiny" />
+
+        <TextView
+            android:id="@+id/tvReportType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Road Crash"
+            android:textSize="@dimen/text_size_large"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="@dimen/margin_medium" />
+
+        <!-- Reporter Name -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Reporter Name"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@color/gray_medium"
+            android:textStyle="bold"
+            android:layout_marginBottom="@dimen/margin_tiny" />
+
+        <TextView
+            android:id="@+id/tvReporterName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Juan Dela Cruz"
+            android:textSize="@dimen/text_size_medium"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="@dimen/margin_medium" />
+
+        <!-- Reporter Mobile -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Contact Number"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@color/gray_medium"
+            android:textStyle="bold"
+            android:layout_marginBottom="@dimen/margin_tiny" />
+
+        <TextView
+            android:id="@+id/tvReporterMobile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="09123456789"
+            android:textSize="@dimen/text_size_medium"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="@dimen/margin_medium" />
+
+        <!-- Location -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Location"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@color/gray_medium"
+            android:textStyle="bold"
+            android:layout_marginBottom="@dimen/margin_tiny" />
+
+        <TextView
+            android:id="@+id/tvLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Brgy. Tinamnan"
+            android:textSize="@dimen/text_size_medium"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="@dimen/margin_small" />
+
+        <!-- Coordinates -->
+        <TextView
+            android:id="@+id/tvCoordinates"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="14.123456, 121.567890"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@color/gray_medium"
+            android:layout_marginBottom="@dimen/margin_medium" />
+
+        <!-- Description -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Description"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@color/gray_medium"
+            android:textStyle="bold"
+            android:layout_marginBottom="@dimen/margin_tiny" />
+
+        <TextView
+            android:id="@+id/tvDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Vehicle collision on Main Street"
+            android:textSize="@dimen/text_size_medium"
+            android:textColor="@color/text_primary"
+            android:lineSpacingExtra="4dp"
+            android:layout_marginBottom="@dimen/margin_medium" />
+
+        <!-- Status and Date/Time Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="@dimen/margin_medium">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginEnd="@dimen/margin_small">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Status"
+                    android:textSize="@dimen/text_size_small"
+                    android:textColor="@color/gray_medium"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="@dimen/margin_tiny" />
+
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pending"
+                    android:textSize="@dimen/text_size_medium"
+                    android:textColor="@color/status_pending"
+                    android:textStyle="bold"
+                    android:background="@drawable/status_badge_background"
+                    android:padding="@dimen/padding_small" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Date &amp; Time"
+                    android:textSize="@dimen/text_size_small"
+                    android:textColor="@color/gray_medium"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="@dimen/margin_tiny" />
+
+                <TextView
+                    android:id="@+id/tvDateTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Dec 25, 2024 10:30 AM"
+                    android:textSize="@dimen/text_size_small"
+                    android:textColor="@color/text_primary" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Attachments -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Attachments"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="@color/gray_medium"
+            android:textStyle="bold"
+            android:layout_marginBottom="@dimen/margin_tiny" />
+
+        <TextView
+            android:id="@+id/tvAttachmentCount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="3 attachment(s)"
+            android:textSize="@dimen/text_size_medium"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="@dimen/margin_small" />
+
+        <!-- View Attachments Button -->
+        <Button
+            android:id="@+id/btnViewAttachments"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/button_height_medium"
+            android:text="View Attachments"
+            android:textColor="@color/colorPrimary"
+            android:background="@drawable/button_secondary_background"
+            android:layout_marginBottom="@dimen/margin_medium" />
+
+        <!-- Close Button -->
+        <Button
+            android:id="@+id/btnClose"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/button_height_medium"
+            android:text="Close"
+            android:textColor="@android:color/white"
+            android:background="@drawable/button_primary_background" />
+
+    </LinearLayout>
+
+</ScrollView>

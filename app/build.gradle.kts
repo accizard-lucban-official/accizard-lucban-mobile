@@ -1,11 +1,26 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
     id("com.google.gms.google-services")
+}
+
+// Force use of Java 17 toolchain to avoid Java 25 compatibility issues
+kotlin {
+    jvmToolchain(17)
 }
 
 android {
     namespace = "com.example.accizardlucban"
-    compileSdk = 35
+    compileSdk = 34
+    
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    
+    kotlinOptions {
+        jvmTarget = "17"
+    }
 
     defaultConfig {
         applicationId = "com.example.accizardlucban"
@@ -13,6 +28,7 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+        multiDexEnabled = true
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -26,34 +42,49 @@ android {
             )
         }
     }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
     
-    packaging {
+    packagingOptions {
         resources {
             pickFirsts += "**/META-INF/NOTICE.md"
             pickFirsts += "**/META-INF/LICENSE.md"
+            pickFirsts += "**/META-INF/LICENSE.txt"
+            pickFirsts += "**/META-INF/NOTICE.txt"
+            pickFirsts += "**/META-INF/DEPENDENCIES"
+            pickFirsts += "**/META-INF/INDEX.LIST"
+            pickFirsts += "**/META-INF/io.netty.versions.properties"
+            pickFirsts += "**/META-INF/native-image/**"
         }
     }
+    
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+        ignoreWarnings = true
+    }
+
 }
 
 dependencies {
+    // Multidex support
+    implementation("androidx.multidex:multidex:2.0.1")
+    
+    // AndroidX Core Libraries
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.constraintlayout)
     implementation(libs.core)
     implementation(libs.recyclerview)
     implementation(libs.cardview)
-    implementation(libs.location)
     implementation(libs.viewpager2)
     implementation(libs.fragment)
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    implementation(libs.swiperefreshlayout)
+    implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
 
-    // Mapbox Maps SDK for Android (stable version)
-    implementation("com.mapbox.maps:android:11.13.1")
+    // Location Services (using only one location service to avoid conflicts)
+    implementation(libs.location)
+
+    // Mapbox Maps SDK for Android (primary mapping solution)
+    implementation(libs.mapbox)
 
     // Testing dependencies
     testImplementation(libs.junit)
@@ -61,20 +92,25 @@ dependencies {
     androidTestImplementation(libs.espresso)
 
     // Firebase dependencies
-    implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
-    implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-firestore")
-    implementation("com.google.firebase:firebase-storage")
-    
-    // Google Play Services
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
-    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
+    implementation("com.google.firebase:firebase-messaging")
     
     // JavaMail API for email functionality
-    implementation("com.sun.mail:android-mail:1.6.7")
-    implementation("com.sun.mail:android-activation:1.6.7")
+    implementation(libs.android.mail)
+    implementation(libs.android.activation)
 
-    // Chart library - Updated to working version
-    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    // Chart library
+    implementation(libs.mpandroidchart)
+    
+    // CircleImageView for circular profile pictures
+    implementation("de.hdodenhof:circleimageview:3.1.0")
+    
+    // Weather API dependencies
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 }

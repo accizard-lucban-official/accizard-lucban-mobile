@@ -10,11 +10,25 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 import android.text.method.PasswordTransformationMethod;
 import android.widget.ImageView;
+import android.view.MotionEvent;
+import android.view.ViewGroup;
+import android.animation.ObjectAnimator;
+import android.animation.AnimatorSet;
+import android.view.animation.DecelerateInterpolator;
+import android.net.Uri;
+import android.os.Build;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.AuthResult;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import androidx.annotation.NonNull;
 import android.content.SharedPreferences;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -22,10 +36,21 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "MainActivity";
+    private static final int CALL_PERMISSION_REQUEST_CODE = 101;
+    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 102;
+    
+    // Swipe to call variables
+    private float initialX = 0f;
+    private float initialTouchX = 0f;
+    private boolean isSwiping = false;
+    private static final float SWIPE_THRESHOLD = 0.7f; // 70% of the width
+
     private EditText emailEditText, passwordEditText;
     private Button signInButton;
     private TextView forgotPasswordText, signUpText, emergencyText;
     private LinearLayout callLucbanLayout; // Changed from TextView to LinearLayout
+    private ImageView phoneIconMain;
     private ImageView ivTogglePassword;
     private static final String PREFS_NAME = "user_profile_prefs";
     private static final String KEY_EMAIL = "email";
@@ -33,6 +58,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // ✅ FORCE LIGHT MODE - Disable dark mode globally for the entire app
+        // This ensures the app maintains its original color scheme regardless of system dark mode
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        
         super.onCreate(savedInstanceState);
         FirebaseApp.initializeApp(this);
 
@@ -43,9 +72,24 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             setContentView(R.layout.activity_main);
+            
+            // Clear all registration data when returning to MainActivity
+            clearAllRegistrationData();
+            
             initializeViews();
             loadSavedCredentials();
             setupClickListeners(mAuth);
+            
+            // Initialize report counter for unique report IDs
+            initializeReportCounter();
+            
+            // Initialize push notification channels
+            initializeNotificationChannels();
+            
+            // Initialize FCM token if user is already logged in
+            if (mAuth.getCurrentUser() != null) {
+                initializeFCMToken();
+            }
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error loading main activity: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -61,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
             signUpText = findViewById(R.id.sign_up_text);
             emergencyText = findViewById(R.id.emergency_text);
             callLucbanLayout = findViewById(R.id.call_lucban_text); // Changed to LinearLayout
+            phoneIconMain = findViewById(R.id.phoneIconMain);
             ivTogglePassword = findViewById(R.id.ivTogglePassword);
             
             // Setup password visibility toggle
@@ -73,6 +118,24 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadSavedCredentials() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+    }
+    
+    private void initializeReportCounter() {
+        FirestoreHelper.initializeReportCounter(
+            new com.google.android.gms.tasks.OnSuccessListener<Void>() {
+                @Override
+                public void onSuccess(Void aVoid) {
+                    android.util.Log.d("MainActivity", "Report counter initialized successfully");
+                }
+            },
+            new com.google.android.gms.tasks.OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception e) {
+                    android.util.Log.w("MainActivity", "Failed to initialize report counter", e);
+                    // Don't show error to user as this is background initialization
+                }
+            }
+        );
     }
 
     // Update setupClickListeners to accept FirebaseAuth
@@ -100,9 +163,27 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onComplete(@NonNull com.google.android.gms.tasks.Task<AuthResult> task) {
                                 if (task.isSuccessful()) {
-                                    Toast.makeText(MainActivity.this, "Signed in successfully", Toast.LENGTH_SHORT).show();
-                                    // Fetch user profile from Firestore and save to SharedPreferences
-                                    fetchAndSaveUserProfile(email);
+                                    // Check if email is verified
+                                    FirebaseAuth auth = FirebaseAuth.getInstance();
+                                    if (auth.getCurrentUser() != null) {
+                                        if (auth.getCurrentUser().isEmailVerified()) {
+                                            // Email is verified, proceed with login
+                                            Log.d(TAG, "✅ Login successful - email verified");
+                                            Toast.makeText(MainActivity.this, "Login successful!", Toast.LENGTH_SHORT).show();
+                                            saveCredentials(email, password);
+                                            
+                                            // Initialize FCM token for push notifications
+                                            initializeFCMToken();
+                                            
+                                            // Navigate immediately to avoid white screen
+                                            // Data will be loaded in the background in the target activity
+                                            navigateAfterLoginFast(email);
+                                        } else {
+                                            // Email not verified, show verification dialog
+                                            Log.w(TAG, "Email not verified");
+                                            showEmailVerificationDialog(email, password);
+                                        }
+                                    }
                                 } else {
                                     Toast.makeText(MainActivity.this, "Firebase Auth failed: " + (task.getException() != null ? task.getException().getMessage() : "Username or Password did not match"), Toast.LENGTH_SHORT).show();
                                 }
@@ -151,19 +232,9 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        // Changed to use LinearLayout instead of TextView
-        if (callLucbanLayout != null) {
-            callLucbanLayout.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Toast.makeText(MainActivity.this, "Calling Lucban LDRRMO...", Toast.LENGTH_SHORT).show();
-                    // You can add actual calling functionality here
-                    // For example:
-                    // Intent callIntent = new Intent(Intent.ACTION_CALL);
-                    // callIntent.setData(Uri.parse("tel:+1234567890"));
-                    // startActivity(callIntent);
-                }
-            });
+        // Phone icon swipe functionality
+        if (phoneIconMain != null && callLucbanLayout != null) {
+            setupSwipeToCall();
         }
     }
 
@@ -196,25 +267,130 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            // Check if account needs verification
-            if (email.equals("unverified@example.com")) {
-                Intent intent = new Intent(MainActivity.this, AccountVerificationActivity.class);
-                startActivity(intent);
-            } else {
-                // Successful login - navigate to MainDashboard
-                Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();
-                Intent intent = new Intent(MainActivity.this, MainDashboard.class);
-                startActivity(intent);
-                // Optional: finish current activity so user can't go back to login with back button
-                finish();
+            // Make variables final for inner class access
+            final String finalEmail = email;
+            final String finalPassword = password;
+
+            // Show loading state
+            if (signInButton != null) {
+                signInButton.setEnabled(false);
+                signInButton.setText("Signing in...");
             }
+
+            // Authenticate with Firebase
+            FirebaseAuth mAuth = FirebaseAuth.getInstance();
+            mAuth.signInWithEmailAndPassword(finalEmail, finalPassword)
+                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        // Reset button state
+                        if (signInButton != null) {
+                            signInButton.setEnabled(true);
+                            signInButton.setText("Sign In");
+                        }
+
+                        if (task.isSuccessful()) {
+                            // Sign in success
+                            FirebaseAuth auth = FirebaseAuth.getInstance();
+                            if (auth.getCurrentUser() != null) {
+                                // Check if email is verified
+                                if (auth.getCurrentUser().isEmailVerified()) {
+                                    // Email is verified, proceed with login
+                                    Log.d(TAG, "✅ Login successful - email verified");
+                                    Toast.makeText(MainActivity.this, "Login successful!", Toast.LENGTH_SHORT).show();
+                                    saveCredentials(finalEmail, finalPassword);
+                                    
+                                    // Initialize FCM token for push notifications
+                                    initializeFCMToken();
+                                    
+                                    // Navigate immediately to avoid white screen
+                                    // Data will be loaded in the background in the target activity
+                                    navigateAfterLoginFast(finalEmail);
+                                } else {
+                                    // Email not verified, show verification dialog
+                                    Log.w(TAG, "Email not verified");
+                                    showEmailVerificationDialog(finalEmail, finalPassword);
+                                }
+                            }
+                        } else {
+                            // Sign in failed
+                            Log.w(TAG, "signInWithEmail:failure", task.getException());
+                            String errorMessage = "Authentication failed.";
+                            if (task.getException() != null) {
+                                String errorCode = task.getException().getMessage();
+                                if (errorCode != null) {
+                                    if (errorCode.contains("user-not-found")) {
+                                        errorMessage = "No account found with this email address.";
+                                    } else if (errorCode.contains("wrong-password")) {
+                                        errorMessage = "Incorrect password.";
+                                    } else if (errorCode.contains("invalid-email")) {
+                                        errorMessage = "Invalid email address.";
+                                    } else if (errorCode.contains("too-many-requests")) {
+                                        errorMessage = "Too many failed attempts. Please try again later.";
+                                    } else {
+                                        errorMessage = errorCode;
+                                    }
+                                }
+                            }
+                            Toast.makeText(MainActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
+
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error during sign in: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            // Reset button state
+            if (signInButton != null) {
+                signInButton.setEnabled(true);
+                signInButton.setText("Sign In");
+            }
         }
     }
 
-    private void fetchAndSaveUserProfile(String email) {
+    private void showEmailVerificationDialog(String email, String password) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Email Verification Required")
+            .setMessage("Please verify your email address before signing in. Check your email for a verification link or click 'Resend Email' to send a new verification email.")
+            .setPositiveButton("Resend Email", (dialog, which) -> {
+                resendVerificationEmail(email, password);
+            })
+            .setNegativeButton("Cancel", (dialog, which) -> {
+                // Sign out the user since email is not verified
+                FirebaseAuth.getInstance().signOut();
+            })
+            .setCancelable(false)
+            .show();
+    }
+
+    private void resendVerificationEmail(String email, String password) {
+        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        if (mAuth.getCurrentUser() != null) {
+            mAuth.getCurrentUser().sendEmailVerification()
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        if (task.isSuccessful()) {
+                            Toast.makeText(MainActivity.this, 
+                                "Verification email sent to " + email, Toast.LENGTH_LONG).show();
+                        } else {
+                            Log.e(TAG, "Failed to send verification email", task.getException());
+                            Toast.makeText(MainActivity.this,
+                                "Failed to send verification email: " + task.getException().getMessage(),
+                                Toast.LENGTH_LONG).show();
+                        }
+                        // Sign out the user since email is not verified
+                        FirebaseAuth.getInstance().signOut();
+                    }
+                });
+        }
+    }
+
+    /**
+     * Fetches user profile and determines whether to show onboarding or go directly to dashboard
+     * DEPRECATED: Use navigateAfterLoginFast() instead to avoid white screen delay
+     */
+    private void fetchAndSaveUserProfileWithOnboarding(String email) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         db.collection("users")
             .whereEqualTo("email", email)
@@ -236,11 +412,162 @@ public class MainActivity extends AppCompatActivity {
                         break;
                     }
                 }
-                // Navigate to MainDashboard after saving user data
+                
+                // Check if this is the first login
+                navigateAfterLogin();
+            });
+    }
+    
+    /**
+     * Fast navigation after login - navigates immediately without waiting for Firestore
+     * This prevents white screen delay and provides instant feedback to user
+     * User data will be loaded in background by the target activity
+     */
+    private void navigateAfterLoginFast(String email) {
+        try {
+            Log.d(TAG, "Fast navigation initiated for email: " + email);
+            
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            boolean hasSeenOnboarding = prefs.getBoolean("has_seen_onboarding", false);
+            
+            // Start data fetch in background (non-blocking)
+            fetchUserDataInBackground(email);
+            
+            if (!hasSeenOnboarding) {
+                // First time login - show onboarding
+                Log.d(TAG, "First time login detected - showing onboarding immediately");
+                Intent intent = new Intent(MainActivity.this, OnBoardingActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                // Add smooth transition
+                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+                finish();
+            } else {
+                // Returning user - go directly to dashboard
+                Log.d(TAG, "Returning user - going to dashboard immediately");
                 Intent intent = new Intent(MainActivity.this, MainDashboard.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                // Add smooth transition
+                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+                finish();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error in fast navigation", e);
+            // Fallback to dashboard
+            Intent intent = new Intent(MainActivity.this, MainDashboard.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+            finish();
+        }
+    }
+    
+    /**
+     * Fetches user data in background without blocking navigation
+     * Data is saved to SharedPreferences for use by other activities
+     */
+    private void fetchUserDataInBackground(String email) {
+        try {
+            Log.d(TAG, "Starting background data fetch for: " + email);
+            
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            db.collection("users")
+                .whereEqualTo("email", email)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                            SharedPreferences.Editor editor = prefs.edit();
+                            
+                            // Save all user data
+                            String firstName = doc.getString("firstName");
+                            String lastName = doc.getString("lastName");
+                            String phoneNumber = doc.getString("phoneNumber");
+                            String emailAddr = doc.getString("email");
+                            String province = doc.getString("province");
+                            String cityTown = doc.getString("cityTown");
+                            String barangay = doc.getString("barangay");
+                            
+                            if (firstName != null) editor.putString("first_name", firstName);
+                            if (lastName != null) editor.putString("last_name", lastName);
+                            if (phoneNumber != null) editor.putString("mobile_number", phoneNumber);
+                            if (emailAddr != null) editor.putString("email", emailAddr);
+                            if (province != null) editor.putString("province", province);
+                            if (cityTown != null) {
+                                editor.putString("city", cityTown);
+                                editor.putString("cityTown", cityTown);
+                            }
+                            if (barangay != null) editor.putString("barangay", barangay);
+                            
+                            // Construct and save location display
+                            if (cityTown != null && barangay != null) {
+                                String fullLocation = cityTown + ", " + barangay;
+                                editor.putString("location_text", fullLocation);
+                                Log.d(TAG, "Saved location: " + fullLocation);
+                            }
+                            
+                            editor.apply();
+                            Log.d(TAG, "✅ User data saved in background successfully");
+                            break;
+                        }
+                    } else {
+                        Log.w(TAG, "No user document found for email: " + email);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error fetching user data in background: " + e.getMessage(), e);
+                });
+                
+        } catch (Exception e) {
+            Log.e(TAG, "Error in fetchUserDataInBackground: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Determines navigation after login - OnBoarding for first-time users, MainDashboard for returning users
+     */
+    private void navigateAfterLogin() {
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            boolean hasSeenOnboarding = prefs.getBoolean("has_seen_onboarding", false);
+            
+            if (!hasSeenOnboarding) {
+                // First time login - show onboarding
+                Log.d(TAG, "First time login detected - showing onboarding");
+                Intent intent = new Intent(MainActivity.this, OnBoardingActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(intent);
                 finish();
-            });
+            } else {
+                // Returning user - go directly to dashboard
+                Log.d(TAG, "Returning user - going to dashboard");
+                Intent intent = new Intent(MainActivity.this, MainDashboard.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error navigating after login", e);
+            // Fallback to dashboard
+            Intent intent = new Intent(MainActivity.this, MainDashboard.class);
+            startActivity(intent);
+            finish();
+        }
+    }
+
+    private void saveCredentials(String email, String password) {
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString(KEY_EMAIL, email);
+            editor.putString(KEY_PASSWORD, password);
+            editor.apply();
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving credentials: " + e.getMessage(), e);
+        }
     }
 
     private void setupPasswordToggle() {
@@ -262,6 +589,341 @@ public class MainActivity extends AppCompatActivity {
                     passwordEditText.setSelection(passwordEditText.getText().length());
                 }
             });
+        }
+    }
+    
+    private void setupSwipeToCall() {
+        try {
+            if (phoneIconMain == null || callLucbanLayout == null) return;
+            
+            // Store the initial position
+            phoneIconMain.post(() -> {
+                initialX = phoneIconMain.getX();
+            });
+            
+            phoneIconMain.setOnTouchListener((v, event) -> {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        // Record the initial touch position
+                        initialTouchX = event.getRawX();
+                        isSwiping = false;
+                        
+                        // Visual feedback: scale down slightly
+                        v.animate()
+                            .scaleX(0.95f)
+                            .scaleY(0.95f)
+                            .setDuration(100)
+                            .start();
+                        return true;
+
+                    case MotionEvent.ACTION_MOVE:
+                        // Calculate the distance moved
+                        float deltaX = event.getRawX() - initialTouchX;
+                        
+                        // Only allow swiping to the right
+                        if (deltaX > 0) {
+                            isSwiping = true;
+                            
+                            // Calculate max swipe distance based on callLucbanLayout (parent) width
+                            float maxSwipeDistance = callLucbanLayout.getWidth() - v.getWidth() - 40; // 40 for padding
+                            
+                            // Limit the movement to not go beyond the parent
+                            float newX = Math.min(deltaX, maxSwipeDistance);
+                            v.setTranslationX(newX);
+                            
+                            // Calculate swipe progress
+                            float progress = newX / maxSwipeDistance;
+                            
+                            // Change icon alpha based on swipe progress
+                            v.setAlpha(0.6f + (0.4f * progress));
+                            
+                            // Scale up as user swipes for emphasis
+                            float scale = 1.0f + (0.2f * progress); // Scale from 1.0 to 1.2
+                            v.setScaleX(scale);
+                            v.setScaleY(scale);
+                            
+                            // Enhanced dim effect on background button (0.5 = 50% dimming)
+                            callLucbanLayout.setAlpha(1.0f - (0.5f * progress));
+                            
+                            // Add visual feedback as swipe progresses for "go" feedback
+                            if (progress >= SWIPE_THRESHOLD) {
+                                // Near completion - brighten the icon
+                                v.setAlpha(1.0f);
+                                // Dim the background more
+                                callLucbanLayout.setAlpha(0.4f);
+                            }
+                        }
+                        return true;
+
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (isSwiping) {
+                            // Calculate swipe progress
+                            float maxSwipeDistance = callLucbanLayout.getWidth() - v.getWidth() - 40;
+                            float progress = v.getTranslationX() / maxSwipeDistance;
+                            
+                            if (progress >= SWIPE_THRESHOLD) {
+                                // Swipe completed - make the call
+                                animatePhoneIconComplete(v);
+                            } else {
+                                // Swipe not completed - reset position
+                                animatePhoneIconReset(v);
+                            }
+                        } else {
+                            // Just a tap - show swipe instruction
+                            Toast.makeText(MainActivity.this, 
+                                "Swipe right to call LDRRMO", 
+                                Toast.LENGTH_SHORT).show();
+                            animatePhoneIconReset(v);
+                        }
+                        
+                        isSwiping = false;
+                        return true;
+
+                    default:
+                        return false;
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up swipe to call: " + e.getMessage(), e);
+        }
+    }
+    
+    private void animatePhoneIconComplete(View v) {
+        try {
+            // Animate to completion - slide all the way to the right
+            float maxDistance = callLucbanLayout.getWidth() - v.getWidth();
+            ObjectAnimator slideOut = ObjectAnimator.ofFloat(v, "translationX", maxDistance);
+            slideOut.setDuration(200);
+            slideOut.setInterpolator(new DecelerateInterpolator());
+            
+            ObjectAnimator fadeOut = ObjectAnimator.ofFloat(v, "alpha", 0f);
+            fadeOut.setDuration(200);
+            
+            ObjectAnimator scaleUpX = ObjectAnimator.ofFloat(v, "scaleX", 1.3f);
+            scaleUpX.setDuration(200);
+            
+            ObjectAnimator scaleUpY = ObjectAnimator.ofFloat(v, "scaleY", 1.3f);
+            scaleUpY.setDuration(200);
+            
+            AnimatorSet animatorSet = new AnimatorSet();
+            animatorSet.playTogether(slideOut, fadeOut, scaleUpX, scaleUpY);
+            animatorSet.start();
+            
+            // Make the call after animation
+            v.postDelayed(() -> {
+                makeEmergencyCall();
+                // Reset icon position after call is initiated
+                v.postDelayed(() -> animatePhoneIconReset(v), 500);
+            }, 250);
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error animating phone icon complete: " + e.getMessage(), e);
+            makeEmergencyCall();
+            animatePhoneIconReset(v);
+        }
+    }
+    
+    private void animatePhoneIconReset(View v) {
+        try {
+            // Animate back to original position
+            ObjectAnimator slideBack = ObjectAnimator.ofFloat(v, "translationX", 0f);
+            slideBack.setDuration(300);
+            slideBack.setInterpolator(new DecelerateInterpolator());
+            
+            ObjectAnimator fadeIn = ObjectAnimator.ofFloat(v, "alpha", 1.0f);
+            fadeIn.setDuration(300);
+            
+            ObjectAnimator scaleResetX = ObjectAnimator.ofFloat(v, "scaleX", 1.0f);
+            scaleResetX.setDuration(300);
+            
+            ObjectAnimator scaleResetY = ObjectAnimator.ofFloat(v, "scaleY", 1.0f);
+            scaleResetY.setDuration(300);
+            
+            // Reset callLucbanLayout alpha too
+            ObjectAnimator resetButtonAlpha = ObjectAnimator.ofFloat(callLucbanLayout, "alpha", 1.0f);
+            resetButtonAlpha.setDuration(300);
+            
+            AnimatorSet animatorSet = new AnimatorSet();
+            animatorSet.playTogether(slideBack, fadeIn, scaleResetX, scaleResetY, resetButtonAlpha);
+            animatorSet.start();
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error animating phone icon reset: " + e.getMessage(), e);
+            v.setTranslationX(0f);
+            v.setAlpha(1.0f);
+            v.setScaleX(1.0f);
+            v.setScaleY(1.0f);
+            if (callLucbanLayout != null) {
+                callLucbanLayout.setAlpha(1.0f);
+            }
+        }
+    }
+    
+    private void makeEmergencyCall() {
+        try {
+            String emergencyNumber = "tel:09175204211"; // LDRRMO Lucban: 0917 520 4211
+
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                // Request permission
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.CALL_PHONE},
+                        CALL_PERMISSION_REQUEST_CODE);
+            } else {
+                // Permission already granted, make the call
+                makeCall(emergencyNumber);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error making emergency call: " + e.getMessage(), e);
+            Toast.makeText(this, "Error making emergency call", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void makeCall(String phoneNumber) {
+        try {
+            Intent callIntent = new Intent(Intent.ACTION_CALL);
+            callIntent.setData(Uri.parse(phoneNumber));
+            startActivity(callIntent);
+        } catch (SecurityException e) {
+            // If permission denied or other security issue, show dial pad
+            Intent dialIntent = new Intent(Intent.ACTION_DIAL);
+            dialIntent.setData(Uri.parse(phoneNumber));
+            startActivity(dialIntent);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        try {
+            if (requestCode == CALL_PERMISSION_REQUEST_CODE) {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    makeCall("tel:09175204211"); // LDRRMO Lucban: 0917 520 4211
+                } else {
+                    // Permission denied, show dial pad instead
+                    Intent dialIntent = new Intent(Intent.ACTION_DIAL);
+                    dialIntent.setData(Uri.parse("tel:09175204211")); // LDRRMO Lucban: 0917 520 4211
+                    startActivity(dialIntent);
+                    Toast.makeText(this, "Permission denied. Opening dial pad instead.",
+                            Toast.LENGTH_SHORT).show();
+                }
+            } else if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE) {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.d(TAG, "✅ Notification permission granted");
+                    Toast.makeText(this, "Notifications enabled", Toast.LENGTH_SHORT).show();
+                } else {
+                    Log.w(TAG, "❌ Notification permission denied");
+                    Toast.makeText(this, "Notifications disabled. You won't receive emergency alerts.", 
+                            Toast.LENGTH_LONG).show();
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error handling permission result: " + e.getMessage(), e);
+            Toast.makeText(this, "Error handling permission", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * Initialize notification channels for push notifications
+     * Creates all required channels: report_updates, announcements, high_priority_announcements, chat_messages
+     */
+    private void initializeNotificationChannels() {
+        try {
+            NotificationChannelManager channelManager = new NotificationChannelManager(this);
+            channelManager.createAllChannels();
+            Log.d(TAG, "✅ Notification channels initialized");
+        } catch (Exception e) {
+            Log.e(TAG, "Error initializing notification channels: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Initialize FCM token and save to Firestore
+     * This enables the user to receive push notifications
+     */
+    private void initializeFCMToken() {
+        try {
+            // Request notification permission first (Android 13+)
+            requestNotificationPermission();
+            
+            FCMTokenManager tokenManager = new FCMTokenManager(this);
+            tokenManager.initializeFCMToken();
+            Log.d(TAG, "✅ FCM token initialization started");
+        } catch (Exception e) {
+            Log.e(TAG, "Error initializing FCM token: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Request notification permission for Android 13+ (API 33+)
+     */
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
+                    != PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "Requesting notification permission");
+                ActivityCompat.requestPermissions(this, 
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, 
+                    NOTIFICATION_PERMISSION_REQUEST_CODE);
+            } else {
+                Log.d(TAG, "Notification permission already granted");
+            }
+        } else {
+            Log.d(TAG, "Android version < 13, notification permission not required");
+        }
+    }
+    
+    /**
+     * Clears all registration data from SharedPreferences when returning to MainActivity
+     * This ensures a clean slate for new registration attempts
+     */
+    private void clearAllRegistrationData() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("registration_data", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            
+            // Clear registration activity data
+            editor.remove("saved_first_name");
+            editor.remove("saved_last_name");
+            editor.remove("saved_mobile_number");
+            editor.remove("saved_email");
+            editor.remove("saved_password");
+            editor.remove("saved_terms");
+            
+            // Clear personal info data
+            editor.remove("saved_birthday");
+            editor.remove("saved_gender");
+            editor.remove("saved_civil_status");
+            editor.remove("saved_religion");
+            editor.remove("saved_blood_type");
+            editor.remove("saved_pwd");
+            
+            // Clear address data
+            editor.remove("saved_province");
+            editor.remove("saved_city_town");
+            editor.remove("saved_barangay");
+            editor.remove("saved_street_address");
+            
+            // Clear profile picture data
+            editor.remove("has_profile_picture");
+            editor.remove("profile_picture_base64");
+            
+            // Clear valid ID data
+            editor.remove("has_valid_id");
+            editor.remove("valid_id_count");
+            
+            // Clear all valid ID images
+            for (int i = 0; i < 10; i++) { // Clear up to 10 images
+                editor.remove("valid_id_image_" + i);
+            }
+            
+            editor.apply();
+            Log.d(TAG, "✅ All registration data cleared from SharedPreferences");
+        } catch (Exception e) {
+            Log.e(TAG, "Error clearing registration data", e);
         }
     }
 }

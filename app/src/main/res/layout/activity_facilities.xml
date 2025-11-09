@@ -6,6 +6,7 @@
     android:orientation="vertical"
     android:background="#FFFFFF">
 
+    <!-- Bottom Buttons -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -21,37 +22,25 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="24dp"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
                 <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/ic_shield_logo"
-                    android:layout_marginEnd="12dp"
-                    android:contentDescription="ACCIZARD Logo" />
+                    android:layout_width="80dp"
+                    android:layout_height="70dp"
+                    android:layout_marginRight="150dp"
+                    android:layout_marginBottom="8dp"
+                    android:contentDescription="ACCIZARD Logo"
+                    android:src="@drawable/accizard_logo_svg" />
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="ACCIZARD"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="#333333" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="LUZON"
-                        android:textSize="12sp"
-                        android:textColor="#666666" />
-                </LinearLayout>
+                <ImageView
+                    android:layout_width="90dp"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="-20dp"
+                    android:layout_marginRight="150dp"
+                    android:contentDescription="ACCIZARD Logo"
+                    android:src="@drawable/accizard_black" />
             </LinearLayout>
 
             <!-- Timeline Section -->
@@ -59,20 +48,20 @@
                 android:id="@+id/timelineSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:layout_marginBottom="8dp"
                 android:background="@drawable/section_background"
-                android:padding="16dp"
-                android:layout_marginBottom="8dp">
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <LinearLayout
                     android:id="@+id/timelineHeader"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
+                    android:background="?android:attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
                     android:padding="8dp">
 
                     <TextView
@@ -80,77 +69,77 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Timeline"
+                        android:textColor="#333333"
                         android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="#333333" />
+                        android:textStyle="bold" />
 
                     <ImageView
                         android:id="@+id/timelineArrow"
                         android:layout_width="24dp"
                         android:layout_height="24dp"
+                        android:contentDescription="Expand/Collapse Timeline"
                         android:src="@drawable/ic_arrow_drop_down"
-                        android:tint="#666666"
-                        android:contentDescription="Expand/Collapse Timeline" />
+                        android:tint="#666666" />
                 </LinearLayout>
 
                 <LinearLayout
                     android:id="@+id/timelineContent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
                     android:layout_marginTop="16dp"
+                    android:orientation="vertical"
                     android:visibility="gone">
 
                     <TextView
                         android:id="@+id/todayOption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Today"
-                        android:textSize="14sp"
-                        android:textColor="#333333"
-                        android:padding="12dp"
+                        android:layout_marginBottom="4dp"
                         android:background="?android:attr/selectableItemBackground"
                         android:clickable="true"
                         android:focusable="true"
-                        android:layout_marginBottom="4dp" />
+                        android:padding="12dp"
+                        android:text="Today"
+                        android:textColor="#333333"
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/thisWeekOption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="This Week"
-                        android:textSize="14sp"
-                        android:textColor="#333333"
-                        android:padding="12dp"
+                        android:layout_marginBottom="4dp"
                         android:background="?android:attr/selectableItemBackground"
                         android:clickable="true"
                         android:focusable="true"
-                        android:layout_marginBottom="4dp" />
+                        android:padding="12dp"
+                        android:text="This Week"
+                        android:textColor="#333333"
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/thisMonthOption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="This Month"
-                        android:textSize="14sp"
-                        android:textColor="#333333"
-                        android:padding="12dp"
+                        android:layout_marginBottom="4dp"
                         android:background="?android:attr/selectableItemBackground"
                         android:clickable="true"
                         android:focusable="true"
-                        android:layout_marginBottom="4dp" />
+                        android:padding="12dp"
+                        android:text="This Month"
+                        android:textColor="#333333"
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/thisYearOption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="This Year"
-                        android:textSize="14sp"
-                        android:textColor="#333333"
-                        android:padding="12dp"
                         android:background="?android:attr/selectableItemBackground"
                         android:clickable="true"
-                        android:focusable="true" />
+                        android:focusable="true"
+                        android:padding="12dp"
+                        android:text="This Year"
+                        android:textColor="#333333"
+                        android:textSize="14sp" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -159,20 +148,20 @@
                 android:id="@+id/incidentTypesSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:layout_marginBottom="8dp"
                 android:background="@drawable/section_background"
-                android:padding="16dp"
-                android:layout_marginBottom="8dp">
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <LinearLayout
                     android:id="@+id/incidentTypesHeader"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
+                    android:background="?android:attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
                     android:padding="8dp">
 
                     <TextView
@@ -180,41 +169,41 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Incident Types"
+                        android:textColor="#333333"
                         android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="#333333" />
+                        android:textStyle="bold" />
 
                     <ImageView
                         android:id="@+id/incidentTypesArrow"
                         android:layout_width="24dp"
                         android:layout_height="24dp"
+                        android:contentDescription="Expand/Collapse Incident Types"
                         android:src="@drawable/ic_arrow_drop_down"
-                        android:tint="#666666"
-                        android:contentDescription="Expand/Collapse Incident Types" />
+                        android:tint="#666666" />
                 </LinearLayout>
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:text="Select any type if you want to toggle certain map view or all incident"
-                    android:textSize="12sp"
                     android:textColor="#666666"
-                    android:layout_marginTop="8dp" />
+                    android:textSize="12sp" />
 
                 <LinearLayout
                     android:id="@+id/incidentTypesContent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
                     android:layout_marginTop="16dp"
+                    android:orientation="vertical"
                     android:visibility="gone">
 
                     <!-- Heatmap View Toggle -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <Switch
@@ -228,250 +217,250 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
                             android:text="🔥 Heatmap View"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="12dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Road Accident -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/roadAccidentCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="🚗 Road Accident"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Fire -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/fireCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="🔥 Fire"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Medical Emergency -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/medicalEmergencyCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="🏥 Medical Emergency"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Flooding -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/floodingCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="🌊 Flooding"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Volcanic Activity -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/volcanicActivityCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="🌋 Volcanic Activity"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Landslide -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/landslideCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="⛰️ Landslide"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Earthquake -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/earthquakeCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="🏚️ Earthquake"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Civil Disturbance -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/civilDisturbanceCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="⚠️ Civil Disturbance"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Armed Conflict -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/armedConflictCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="🔴 Armed Conflict"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Infectious Disease -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/infectiousDiseaseCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="🦠 Infectious Disease"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
@@ -481,20 +470,20 @@
                 android:id="@+id/emergencySupportSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:layout_marginBottom="16dp"
                 android:background="@drawable/section_background"
-                android:padding="16dp"
-                android:layout_marginBottom="16dp">
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <LinearLayout
                     android:id="@+id/emergencySupportHeader"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
+                    android:background="?android:attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
                     android:padding="8dp">
 
                     <TextView
@@ -502,152 +491,151 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Emergency Support Facilities"
+                        android:textColor="#333333"
                         android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="#333333" />
+                        android:textStyle="bold" />
 
                     <ImageView
                         android:id="@+id/emergencySupportArrow"
                         android:layout_width="24dp"
                         android:layout_height="24dp"
+                        android:contentDescription="Expand/Collapse Emergency Support"
                         android:src="@drawable/ic_arrow_drop_down"
-                        android:tint="#666666"
-                        android:contentDescription="Expand/Collapse Emergency Support" />
+                        android:tint="#666666" />
                 </LinearLayout>
 
                 <LinearLayout
                     android:id="@+id/emergencySupportContent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
                     android:layout_marginTop="16dp"
+                    android:orientation="vertical"
                     android:visibility="gone">
 
                     <!-- Evacuation Centers -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/evacuationCentersCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="🏠 Evacuation Centers"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Health Facilities -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/healthFacilitiesCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="🏥 Health Facilities"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Police Stations -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/policeStationsCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="👮 Police Stations"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Fire Stations -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/fireStationsCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="🚒 Fire Stations"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
 
                     <!-- Government Offices -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
                         android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:padding="8dp">
 
                         <CheckBox
                             android:id="@+id/governmentOfficesCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:buttonTint="#FF5722" />
+                            android:buttonTint="#FF5722"
+                            android:checked="true" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
                             android:text="🏛️ Government Offices"
-                            android:textSize="14sp"
                             android:textColor="#333333"
-                            android:layout_marginStart="8dp" />
+                            android:textSize="14sp" />
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
 
-    <!-- Bottom Buttons -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

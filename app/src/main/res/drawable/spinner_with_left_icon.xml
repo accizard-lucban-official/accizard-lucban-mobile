@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/white" />
+            <stroke
+                android:width="1dp"
+                android:color="#CCCCCC" />
+            <corners android:radius="8dp" />
+            <padding
+                android:left="36dp"
+                android:top="8dp"
+                android:right="12dp"
+                android:bottom="8dp" />
+        </shape>
+    </item>
+    
+    <!-- Filter Icon on the left -->
+    <item
+        android:left="8dp"
+        android:top="0dp"
+        android:bottom="0dp"
+        android:width="20dp"
+        android:gravity="center">
+        <vector
+            android:width="20dp"
+            android:height="20dp"
+            android:viewportWidth="24"
+            android:viewportHeight="24">
+            <path
+                android:fillColor="#666666"
+                android:pathData="M10,18h4v-2h-4V18zM3,6v2h18V6H3zM6,13h12v-2H6V13z" />
+        </vector>
+    </item>
+</layer-list>
+

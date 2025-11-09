@@ -1,107 +1,122 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/color"
-    android:fillViewport="true">
+    android:fitsSystemWindows="true">
 
-    <LinearLayout
+    <!-- Header Section with Image Background -->
+    <FrameLayout
+        android:id="@+id/header_frame"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.25"
+        app:layout_constraintWidth_percent="1.0">
 
-        <!-- Header Section -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="0dp">
-
-            <!-- Header Section with Image Background -->
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="200dp">
-
-                <!-- Background Image -->
-                <ImageView
-                    android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:src="@drawable/header_background"
-                    android:scaleType="centerCrop"
-                    android:contentDescription="Header Background" />
-
-                <!-- Header Content -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="24dp">
-
-                    <!-- Logo Image -->
-                    <ImageView
-                        android:layout_width="100dp"
-                        android:layout_height="70dp"
-                        android:layout_marginRight="135dp"
-                        android:layout_marginTop="-70dp"
-                        android:contentDescription="App Logo"
-                        android:src="@drawable/accizard_logotype_logomark_svg" />
-
-                    <!-- Header Text -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="35dp"
-                        android:text="Welcome, New User!"
-                        android:layout_marginTop="25dp"
-                        android:layout_marginRight="55dp"
-                        android:textColor="@android:color/white"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="0dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="55dp"
-                        android:layout_marginRight="110dp"
-                        android:layout_marginBottom="-155dp"
-                        android:text="Sign up to continue"
-                        android:textColor="@android:color/white"
-                        android:textSize="16sp" />
-                </LinearLayout>
-
-            </FrameLayout>
-
-        </LinearLayout>
-
-        <!-- Form Section -->
-        <LinearLayout
+        <!-- Background Image -->
+        <ImageView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:src="@drawable/header_background"
+            android:scaleType="centerCrop"
+            android:contentDescription="Header Background" />
+
+        <!-- Header Content -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="@dimen/padding_xxlarge">
+
+            <!-- Logo Image - Top Left -->
+            <ImageView
+                android:id="@+id/ivLogo"
+                android:layout_width="140dp"
+                android:layout_height="62dp"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentStart="true"
+                android:contentDescription="App Logo"
+                android:src="@drawable/accizard_logotype_logomark_svg"
+                android:adjustViewBounds="true"
+                android:scaleType="fitStart" />
+
+            <!-- Header Text - Aligned with Logo Left -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="8dp"
+                android:orientation="vertical"
+                android:gravity="start">
+
+                <TextView
+                    android:id="@+id/tvHeaderTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Welcome, New User!"
+                    android:textColor="@android:color/white"
+                    android:textSize="25sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/tvHeaderSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sign up to continue"
+                    android:textColor="@android:color/white"
+                    android:textSize="20sp" />
+            </LinearLayout>
+
+        </RelativeLayout>
+
+    </FrameLayout>
+
+    <!-- Form Section -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="@drawable/rounded_top_background"
+        android:fillViewport="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/header_frame"
+        app:layout_constraintVertical_bias="0.0"
+        app:layout_constraintWidth_percent="1.0">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="@drawable/rounded_top_background"
-            android:padding="24dp">
+            android:paddingLeft="32dp"
+            android:paddingRight="32dp"
+            android:paddingTop="32dp"
+            android:paddingBottom="@dimen/registration_form_padding_vertical">
 
             <!-- Progress Title -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Complete Your Profile"
+                android:fontFamily="@font/dmsans"
                 android:textColor="@color/text_dark"
-                android:textSize="24sp"
+                android:textSize="@dimen/text_size_title"
                 android:textStyle="bold"
                 android:layout_gravity="center"
-                android:layout_marginBottom="8dp" />
+                android:layout_marginBottom="@dimen/margin_small" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Step 3 of 4: Profile Picture"
                 android:textColor="@color/text_hint"
-                android:textSize="14sp"
+                android:textSize="@dimen/text_size_medium"
                 android:layout_gravity="center"
-                android:layout_marginBottom="32dp" />
+                android:layout_marginBottom="@dimen/registration_step_margin_bottom" />
 
             <!-- Progress Indicator -->
             <LinearLayout
@@ -109,64 +124,64 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:layout_gravity="center"
-                android:layout_marginBottom="40dp">
+                android:layout_marginBottom="@dimen/spacing_xxxlarge">
 
                 <TextView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="@dimen/registration_step_circle_size"
+                    android:layout_height="@dimen/registration_step_circle_size"
                     android:text="1"
                     android:textColor="@android:color/white"
                     android:textStyle="bold"
                     android:background="@drawable/step_completed_background"
                     android:gravity="center"
-                    android:textSize="16sp" />
+                    android:textSize="@dimen/registration_step_text_size" />
 
                 <View
-                    android:layout_width="40dp"
-                    android:layout_height="2dp"
+                    android:layout_width="@dimen/registration_step_line_width"
+                    android:layout_height="@dimen/registration_step_line_height"
                     android:background="@color/orange_primary"
                     android:layout_gravity="center_vertical" />
 
                 <TextView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="@dimen/registration_step_circle_size"
+                    android:layout_height="@dimen/registration_step_circle_size"
                     android:text="2"
                     android:textColor="@android:color/white"
                     android:textStyle="bold"
                     android:background="@drawable/step_completed_background"
                     android:gravity="center"
-                    android:textSize="16sp" />
+                    android:textSize="@dimen/registration_step_text_size" />
 
                 <View
-                    android:layout_width="40dp"
-                    android:layout_height="2dp"
+                    android:layout_width="@dimen/registration_step_line_width"
+                    android:layout_height="@dimen/registration_step_line_height"
                     android:background="@color/orange_primary"
                     android:layout_gravity="center_vertical" />
 
                 <TextView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="@dimen/registration_step_circle_size"
+                    android:layout_height="@dimen/registration_step_circle_size"
                     android:text="3"
                     android:textColor="@android:color/white"
                     android:textStyle="bold"
                     android:background="@drawable/step_active_background"
                     android:gravity="center"
-                    android:textSize="16sp" />
+                    android:textSize="@dimen/registration_step_text_size" />
 
                 <View
-                    android:layout_width="40dp"
-                    android:layout_height="2dp"
+                    android:layout_width="@dimen/registration_step_line_width"
+                    android:layout_height="@dimen/registration_step_line_height"
                     android:background="@color/background_gray"
                     android:layout_gravity="center_vertical" />
 
                 <TextView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="@dimen/registration_step_circle_size"
+                    android:layout_height="@dimen/registration_step_circle_size"
                     android:text="4"
                     android:textColor="@color/text_hint"
                     android:background="@drawable/inactive_step"
                     android:gravity="center"
-                    android:textSize="16sp" />
+                    android:textSize="@dimen/registration_step_text_size" />
 
             </LinearLayout>
 
@@ -176,47 +191,132 @@
                 android:layout_height="wrap_content"
                 android:text="Upload Profile Picture"
                 android:textColor="@color/text_dark"
-                android:textSize="16sp"
+                android:textSize="@dimen/text_size_large"
                 android:textStyle="bold"
-                android:layout_marginBottom="24dp" />
+                android:layout_marginBottom="@dimen/margin_medium" />
 
             <!-- Profile Picture Upload Area -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="200dp"
+                android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="@dimen/spacing_xxlarge">
 
-                <ImageView
+                <!-- Profile Picture Display Area -->
+                <de.hdodenhof.circleimageview.CircleImageView
                     android:id="@+id/ivProfilePicture"
+                    android:layout_width="200dp"
+                    android:layout_height="200dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="@dimen/margin_medium"
+                    android:src="@android:color/transparent"
+                    app:civ_border_width="0dp"
+                    app:civ_border_color="#00000000"
+                    android:visibility="gone"
+                    android:contentDescription="Profile Picture" />
+                
+                <!-- Dotted Border Placeholder Area -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/profilePicturePlaceholder"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/ic_profile_placeholder"
-                    android:adjustViewBounds="true"
-                    android:scaleType="fitCenter" />
+                    android:layout_height="200dp"
+                    android:layout_marginBottom="@dimen/margin_medium"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@android:color/transparent">
 
-                <Button
-                    android:id="@+id/btnTakePhoto"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="📷 Take a Photo"
-                    android:textColor="@color/text_hint"
-                    android:textSize="14sp"
-                    android:background="@android:color/transparent" />
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/dashed_border_background"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?android:attr/selectableItemBackground">
+
+                        <!-- Placeholder Content (when no image) -->
+                        <LinearLayout
+                            android:id="@+id/placeholderContent"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <!-- Person Icon -->
+                            <ImageView
+                                android:layout_width="60dp"
+                                android:layout_height="60dp"
+                                android:src="@drawable/frame__15_"
+                                android:layout_marginBottom="@dimen/margin_medium"
+                                android:contentDescription="Person Icon" />
+
+                            <!-- Take Photo Text with Camera Icon -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ic_camera"
+                                    android:layout_marginEnd="@dimen/margin_tiny"
+                                    android:contentDescription="Camera Icon" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Take a Photo"
+                                    android:textColor="@color/text_hint"
+                                    android:textSize="@dimen/text_size_medium" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                    </FrameLayout>
+
+                </androidx.cardview.widget.CardView>
+
+                <!-- Upload from Gallery Button -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/btnUploadFromGallery"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/registration_button_height"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="0dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:background="@drawable/back_button_background">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="12dp"
+                            android:contentDescription="Gallery Icon"
+                            android:src="@drawable/gallery"
+                            android:tint="@color/text_hint" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Upload from Gallery"
+                            android:textColor="@color/text_hint"
+                            android:textSize="@dimen/registration_button_text_size" />
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
 
             </LinearLayout>
-
-            <!-- Upload from Gallery Button -->
-            <Button
-                android:id="@+id/btnUploadFromGallery"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/button_outline_background"
-                android:text="📁 Upload from Gallery"
-                android:textColor="@color/text_dark"
-                android:textSize="14sp"
-                android:layout_marginBottom="40dp" />
 
             <View
                 android:layout_width="match_parent"
@@ -230,14 +330,14 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <Button
+                <ImageButton
                     android:id="@+id/btnBack"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@drawable/back_icon"
-                    android:textColor="@color/text_dark"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:layout_width="@dimen/registration_back_button_size"
+                    android:layout_height="@dimen/registration_back_button_size"
+                    android:background="@drawable/back_button_background"
+                    android:src="@drawable/ic_chevron_back_gray"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="Back" />
 
                 <View
                     android:layout_width="0dp"
@@ -247,17 +347,17 @@
                 <Button
                     android:id="@+id/btnNext"
                     android:layout_width="120dp"
-                    android:layout_height="56dp"
+                    android:layout_height="@dimen/registration_button_height"
                     android:background="@drawable/button_primary_background"
                     android:text="Next"
                     android:textColor="@android:color/white"
-                    android:textSize="16sp"
+                    android:textSize="@dimen/registration_button_text_size"
                     android:textStyle="bold" />
 
             </LinearLayout>
 
         </LinearLayout>
 
-    </LinearLayout>
+    </ScrollView>
 
-</ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

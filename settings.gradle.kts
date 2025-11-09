@@ -23,5 +23,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Accizard Lucban"
+rootProject.name = "accizard-lucban"
 include(":app")

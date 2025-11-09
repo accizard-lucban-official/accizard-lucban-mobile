@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Large tablets (960dp and above) -->
+    
+    <!-- Text sizes - largest for tablets -->
+    <dimen name="text_size_tiny">12sp</dimen>
+    <dimen name="text_size_small">14sp</dimen>
+    <dimen name="text_size_medium">16sp</dimen>
+    <dimen name="text_size_large">18sp</dimen>
+    <dimen name="text_size_xlarge">20sp</dimen>
+    <dimen name="text_size_xxlarge">24sp</dimen>
+    <dimen name="text_size_title">28sp</dimen>
+    <dimen name="text_size_header">32sp</dimen>
+    
+    <!-- Spacing - most generous -->
+    <dimen name="spacing_tiny">8dp</dimen>
+    <dimen name="spacing_small">12dp</dimen>
+    <dimen name="spacing_medium">16dp</dimen>
+    <dimen name="spacing_large">20dp</dimen>
+    <dimen name="spacing_xlarge">24dp</dimen>
+    <dimen name="spacing_xxlarge">32dp</dimen>
+    <dimen name="spacing_xxxlarge">40dp</dimen>
+    
+    <!-- Padding - most generous -->
+    <dimen name="padding_tiny">8dp</dimen>
+    <dimen name="padding_small">12dp</dimen>
+    <dimen name="padding_medium">16dp</dimen>
+    <dimen name="padding_large">20dp</dimen>
+    <dimen name="padding_xlarge">24dp</dimen>
+    <dimen name="padding_xxlarge">32dp</dimen>
+    <dimen name="padding_xxxlarge">40dp</dimen>
+    
+    <!-- Margins - most generous -->
+    <dimen name="margin_tiny">8dp</dimen>
+    <dimen name="margin_small">12dp</dimen>
+    <dimen name="margin_medium">16dp</dimen>
+    <dimen name="margin_large">20dp</dimen>
+    <dimen name="margin_xlarge">24dp</dimen>
+    <dimen name="margin_xxlarge">32dp</dimen>
+    <dimen name="margin_xxxlarge">40dp</dimen>
+    
+    <!-- Component sizes - largest -->
+    <dimen name="button_height_small">48dp</dimen>
+    <dimen name="button_height_medium">56dp</dimen>
+    <dimen name="button_height_large">64dp</dimen>
+    
+    <dimen name="input_height_small">52dp</dimen>
+    <dimen name="input_height_medium">56dp</dimen>
+    <dimen name="input_height_large">64dp</dimen>
+    
+    <dimen name="icon_size_small">20dp</dimen>
+    <dimen name="icon_size_medium">28dp</dimen>
+    <dimen name="icon_size_large">36dp</dimen>
+    <dimen name="icon_size_xlarge">44dp</dimen>
+    <dimen name="icon_size_xxlarge">52dp</dimen>
+    
+    <!-- Logo sizes - largest -->
+    <dimen name="logo_size_small">80dp</dimen>
+    <dimen name="logo_size_medium">100dp</dimen>
+    <dimen name="logo_size_large">160dp</dimen>
+    
+    <!-- Header heights - largest -->
+    <dimen name="header_height_small">72dp</dimen>
+    <dimen name="header_height_medium">96dp</dimen>
+    <dimen name="header_height_large">120dp</dimen>
+    
+    <!-- Bottom navigation - largest -->
+    <dimen name="bottom_nav_height_small">72dp</dimen>
+    <dimen name="bottom_nav_height_medium">84dp</dimen>
+    <dimen name="bottom_nav_height_large">96dp</dimen>
+    
+    <!-- Chat specific - largest -->
+    <dimen name="chat_bubble_max_width">400dp</dimen>
+    <dimen name="chat_message_padding">16dp</dimen>
+    
+    <!-- Profile picture sizes - largest -->
+    <dimen name="profile_picture_small">48dp</dimen>
+    <dimen name="profile_picture_medium">62dp</dimen>
+    <dimen name="profile_picture_large">76dp</dimen>
+    
+    <!-- List item heights - largest -->
+    <dimen name="list_item_height_small">56dp</dimen>
+    <dimen name="list_item_height_medium">64dp</dimen>
+    <dimen name="list_item_height_large">72dp</dimen>
+    
+    <!-- Registration Flow Specific Dimensions - Largest for large tablets -->
+    <!-- Header -->
+    <dimen name="registration_header_height">260dp</dimen>
+    <dimen name="registration_header_padding">40dp</dimen>
+    <dimen name="registration_logo_width">120dp</dimen>
+    <dimen name="registration_logo_height">90dp</dimen>
+    <dimen name="registration_title_text_size">32sp</dimen>
+    <dimen name="registration_subtitle_text_size">18sp</dimen>
+    
+    <!-- Form Container -->
+    <dimen name="registration_form_padding">36dp</dimen>
+    <dimen name="registration_form_padding_horizontal">40dp</dimen>
+    <dimen name="registration_form_padding_vertical">36dp</dimen>
+    
+    <!-- Form Fields -->
+    <dimen name="registration_field_height">64dp</dimen>
+    <dimen name="registration_field_padding">24dp</dimen>
+    <dimen name="registration_field_margin_bottom">20dp</dimen>
+    <dimen name="registration_label_text_size">18sp</dimen>
+    <dimen name="registration_label_margin_bottom">12dp</dimen>
+    
+    <!-- Stepper -->
+    <dimen name="registration_step_circle_size">52dp</dimen>
+    <dimen name="registration_step_line_width">52dp</dimen>
+    <dimen name="registration_step_line_height">4dp</dimen>
+    <dimen name="registration_step_text_size">18sp</dimen>
+    <dimen name="registration_step_margin_bottom">48dp</dimen>
+    
+    <!-- Buttons -->
+    <dimen name="registration_button_height">64dp</dimen>
+    <dimen name="registration_button_text_size">18sp</dimen>
+    <dimen name="registration_back_button_size">64dp</dimen>
+    
+    <!-- Profile Picture Upload -->
+    <dimen name="registration_profile_picture_size">260dp</dimen>
+    <dimen name="registration_upload_card_height">260dp</dimen>
+    
+    <!-- Valid ID Upload -->
+    <dimen name="registration_valid_id_card_height">260dp</dimen>
+    <dimen name="registration_upload_icon_size">56dp</dimen>
+    
+    <!-- Success Activity Specific Dimensions - Largest for large tablets -->
+    <!-- Header -->
+    <dimen name="success_header_height">260dp</dimen>
+    <dimen name="success_header_padding">40dp</dimen>
+    <dimen name="success_header_logo_width">260dp</dimen>
+    <dimen name="success_header_logo_height">160dp</dimen>
+    <dimen name="success_tagline_text_size">16sp</dimen>
+    
+    <!-- Content -->
+    <dimen name="success_content_padding">44dp</dimen>
+    <dimen name="success_shield_logo_size">140dp</dimen>
+    <dimen name="success_shield_margin_top">28dp</dimen>
+    <dimen name="success_shield_margin_bottom">28dp</dimen>
+    <dimen name="success_title_text_size">30sp</dimen>
+    <dimen name="success_message_text_size">20sp</dimen>
+    <dimen name="success_verification_text_size">18sp</dimen>
+    <dimen name="success_tip_text_size">16sp</dimen>
+    <dimen name="success_button_padding_horizontal">48dp</dimen>
+    <dimen name="success_button_min_height">64dp</dimen>
+    
+    <!-- Dashboard Activity Specific Dimensions - Largest for large tablets -->
+    <!-- Header Section -->
+    <dimen name="dashboard_header_logo_height">40dp</dimen>
+    <dimen name="dashboard_header_help_button_size">44dp</dimen>
+    <dimen name="dashboard_welcome_text_size">24sp</dimen>
+    
+    <!-- Profile Section -->
+    <dimen name="dashboard_profile_size">56dp</dimen>
+    <dimen name="dashboard_location_text_size">16sp</dimen>
+    
+    <!-- Call Button -->
+    <dimen name="dashboard_call_button_height">60dp</dimen>
+    <dimen name="dashboard_call_button_text_size">18sp</dimen>
+    <dimen name="dashboard_phone_icon_size">48dp</dimen>
+    
+    <!-- Weather Section -->
+    <dimen name="dashboard_weather_card_padding">28dp</dimen>
+    <dimen name="dashboard_temperature_text_size">60sp</dimen>
+    <dimen name="dashboard_weather_icon_size">60dp</dimen>
+    <dimen name="dashboard_weather_description_size">14sp</dimen>
+    <dimen name="dashboard_weather_location_size">18sp</dimen>
+    <dimen name="dashboard_weather_detail_text_size">16sp</dimen>
+    <dimen name="dashboard_weather_detail_label_size">14sp</dimen>
+    
+    <!-- Forecast Section -->
+    <dimen name="dashboard_forecast_title_size">20sp</dimen>
+    <dimen name="dashboard_forecast_day_padding">20dp</dimen>
+    <dimen name="dashboard_forecast_icon_size">40dp</dimen>
+    <dimen name="dashboard_forecast_temp_size">18sp</dimen>
+    <dimen name="dashboard_forecast_day_name_size">16sp</dimen>
+    <dimen name="dashboard_forecast_description_size">12sp</dimen>
+    
+    <!-- Emergency Contacts -->
+    <dimen name="dashboard_emergency_contact_size">64dp</dimen>
+    <dimen name="dashboard_emergency_label_size">14sp</dimen>
+    
+    <!-- Safety Tips -->
+    <dimen name="dashboard_safety_card_width">130dp</dimen>
+    <dimen name="dashboard_safety_card_height">180dp</dimen>
+    
+    <!-- Statistics -->
+    <dimen name="dashboard_stat_card_min_width">180dp</dimen>
+    <dimen name="dashboard_stat_icon_size">36dp</dimen>
+    <dimen name="dashboard_stat_label_size">14sp</dimen>
+    <dimen name="dashboard_stat_value_size">24sp</dimen>
+    <dimen name="dashboard_chart_height">280dp</dimen>
+    
+    <!-- Section Titles -->
+    <dimen name="dashboard_section_title_size">20sp</dimen>
+    
+    <!-- Bottom Navigation -->
+    <dimen name="dashboard_bottom_nav_height">84dp</dimen>
+    <dimen name="dashboard_bottom_nav_icon_size">28dp</dimen>
+    <dimen name="dashboard_bottom_nav_text_size">14sp</dimen>
+
+    <!-- Activity Main (Login) specific dimensions for very large devices/tablets -->
+    <dimen name="main_logo_size">90dp</dimen>
+    <dimen name="main_emergency_margin_top">240dp</dimen>
+    <dimen name="main_input_height">56dp</dimen>
+    <dimen name="main_button_height">52dp</dimen>
+</resources>

@@ -1,115 +1,167 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/color"
-    android:gravity="center_horizontal"
     android:fitsSystemWindows="true">
 
-    <!-- Header Section -->
-    <LinearLayout
+    <!-- Header Section with Image Background -->
+    <FrameLayout
+        android:id="@+id/header_frame"
         android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="0dp">
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.25"
+        app:layout_constraintWidth_percent="1.0">
 
-        <!-- Header Section with Image Background -->
-        <FrameLayout
+        <!-- Background Image -->
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:src="@drawable/header_background"
+            android:scaleType="centerCrop"
+            android:contentDescription="Header Background" />
+
+        <!-- Header Content (centered like activity_main.xml) -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="200dp">
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="@dimen/success_header_padding"
+            android:layout_gravity="center">
 
-            <!-- Background Image -->
+            <!-- Logo Image -->
             <ImageView
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:src="@drawable/header_background"
-                android:scaleType="centerCrop"
-                android:contentDescription="Header Background" />
+                android:layout_width="@dimen/success_header_logo_width"
+                android:layout_height="@dimen/success_header_logo_height"
+                android:src="@drawable/accizard_logotype_svg"
+                android:contentDescription="App Logo"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter" />
 
-            <!-- Header Content -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="24dp">
+            <!-- Header Text -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/margin_large"
+                android:text="REPORT PROTECT PREVENT"
+                android:textColor="@android:color/white"
+                android:textSize="@dimen/success_tagline_text_size"
+                android:letterSpacing="0.1"
+                android:textStyle="bold"
+                android:shadowColor="#80000000"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="4" />
+        </LinearLayout>
 
-                <!-- Logo Image -->
-                <ImageView
-                    android:layout_width="200dp"
-                    android:layout_height="120dp"
-                    android:src="@drawable/accizard_logotype_svg"
-                    android:contentDescription="App Logo" />
+    </FrameLayout>
 
-                <!-- Header Text -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:text="REPORT PROTECT PREVENT"
-                    android:textColor="@android:color/white"
-                    android:textSize="12sp"
-                    android:letterSpacing="0.1"
-                    android:textStyle="bold"
-                    android:shadowColor="#80000000"
-                    android:shadowDx="2"
-                    android:shadowDy="2"
-                    android:shadowRadius="4" />
-            </LinearLayout>
-
-        </FrameLayout>
-
-    </LinearLayout>
-
-    <!-- White Rounded Card Overlay -->
+    <!-- Content Section (rounded sheet like activity_main.xml) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="2"
         android:background="@drawable/buttom_sheet_background"
         android:orientation="vertical"
-        android:padding="32dp"
+        android:paddingLeft="24dp"
+        android:paddingRight="24dp"
+        android:paddingTop="@dimen/success_content_padding"
+        android:paddingBottom="@dimen/success_content_padding"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/header_frame"
+        app:layout_constraintVertical_bias="0.0"
+        app:layout_constraintWidth_percent="1.0"
         android:gravity="center_horizontal">
 
+        <!-- Logo (KEPT) -->
         <ImageView
-            android:layout_width="100dp"
-            android:layout_height="100dp"
+            android:layout_width="@dimen/success_shield_logo_size"
+            android:layout_height="@dimen/success_shield_logo_size"
             android:src="@drawable/accizard_logo_svg"
             android:contentDescription="Shield Logo"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginTop="@dimen/success_shield_margin_top"
+            android:layout_marginBottom="@dimen/success_shield_margin_bottom" />
 
+        <!-- Registration Complete Text (KEPT) -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Congratulations!"
-            android:textSize="22sp"
+            android:text="Registration Complete!"
+            android:textSize="@dimen/success_title_text_size"
             android:textStyle="bold"
             android:textColor="@color/text_dark"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="@dimen/margin_medium" />
 
-        <TextView
+        <!-- Success Message Box (KEPT) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginHorizontal="24dp"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:background="@drawable/success_message_box_background">
+
+            <!-- Checkmark Icon -->
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_checkmark_circle"
+                android:layout_marginEnd="12dp"
+                android:contentDescription="Success Checkmark" />
+
+            <!-- Success Message Text -->
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Please check your email and click the verification link to activate your account. Once activated, you can login on the app. Thank you!"
+                android:textColor="#2E7D32"
+                android:textSize="14sp"
+                android:lineSpacingExtra="2dp"
+                android:fontFamily="sans-serif" />
+
+        </LinearLayout>
+
+        <!-- Back to Login Link (KEPT) -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="You have successfully created an account.\nPlease wait until your account is verified to\nlogin on the app."
-            android:textColor="@color/text_hint"
-            android:textSize="14sp"
-            android:gravity="center"
-            android:layout_marginBottom="32dp" />
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground"
+            android:id="@+id/btnGoBackToLogin">
 
-        <Button
-            android:id="@+id/btnGoBackToLogin"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Go Back to Login"
-            android:textColor="@color/white"
-            android:textStyle="bold"
-            android:background="@drawable/outlined_button"
-            android:paddingLeft="32dp"
-            android:paddingRight="32dp"
-            android:minHeight="48dp" />
+            <!-- Back Arrow Icon -->
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_arrow_back"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="Back Arrow" />
+
+            <!-- Back to Login Text -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Back to Login"
+                android:textColor="#FF9800"
+                android:textSize="16sp"
+                android:fontFamily="sans-serif" />
+
+        </LinearLayout>
+
     </LinearLayout>
-</LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -2,23 +2,30 @@ package com.example.accizardlucban;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Toast;
+import androidx.cardview.widget.CardView;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
+import de.hdodenhof.circleimageview.CircleImageView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -47,9 +54,13 @@ public class ProfilePictureActivity extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_CODE = 102;
     private static final int STORAGE_PERMISSION_CODE = 103;
 
-    private ImageView ivProfilePicture;
-    private Button btnTakePhoto, btnUploadFromGallery, btnNext, btnBack;
-    private String firstName, lastName, mobileNumber, email, password, province, cityTown, barangay;
+    private CircleImageView ivProfilePicture;
+    private CardView btnUploadFromGallery;
+    private Button btnNext;
+    private ImageButton btnBack;
+    private CardView profilePicturePlaceholder;
+    private LinearLayout placeholderContent;
+    private String firstName, lastName, mobileNumber, email, password, province, cityTown, barangay, streetAddress;
     private Uri profileImageUri;
     private boolean hasProfilePicture = false;
     private Bitmap profileBitmap;
@@ -72,12 +83,14 @@ public class ProfilePictureActivity extends AppCompatActivity {
             storageRef = storage.getReference();
             
             initializeViews();
-            // Disable Next until a profile picture is provided
-            if (btnNext != null) {
-                btnNext.setEnabled(false);
-            }
             getIntentData();
+            restoreProfilePictureData(); // Restore previously saved profile picture
             setupClickListeners();
+            
+            // Enable Next button if profile picture exists
+            if (hasProfilePicture && btnNext != null) {
+                btnNext.setEnabled(true);
+            }
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error loading profile picture activity: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -87,10 +100,11 @@ public class ProfilePictureActivity extends AppCompatActivity {
     private void initializeViews() {
         try {
             ivProfilePicture = findViewById(R.id.ivProfilePicture);
-            btnTakePhoto = findViewById(R.id.btnTakePhoto);
             btnUploadFromGallery = findViewById(R.id.btnUploadFromGallery);
             btnNext = findViewById(R.id.btnNext);
             btnBack = findViewById(R.id.btnBack);
+            profilePicturePlaceholder = findViewById(R.id.profilePicturePlaceholder);
+            placeholderContent = findViewById(R.id.placeholderContent);
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error initializing views: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -108,6 +122,7 @@ public class ProfilePictureActivity extends AppCompatActivity {
             province = intent.getStringExtra("province");
             cityTown = intent.getStringExtra("cityTown");
             barangay = intent.getStringExtra("barangay");
+            streetAddress = intent.getStringExtra("streetAddress");
 
             // Debug: Check if data is received
             if (firstName == null || lastName == null) {
@@ -120,11 +135,29 @@ public class ProfilePictureActivity extends AppCompatActivity {
     }
 
     private void setupClickListeners() {
-        if (btnTakePhoto != null) {
-            btnTakePhoto.setOnClickListener(new View.OnClickListener() {
+        // Placeholder area click listener - shows dialog to choose between Camera and Gallery
+        if (profilePicturePlaceholder != null) {
+            profilePicturePlaceholder.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     try {
+                        // Show dialog to choose between Camera and Gallery
+                        showImageSourceDialog();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Toast.makeText(ProfilePictureActivity.this, "Error accessing image sources", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
+
+        // PlaceholderContent click listener - directly opens camera
+        if (placeholderContent != null) {
+            placeholderContent.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try {
+                        // Directly open camera
                         if (checkCameraPermission()) {
                             openCamera();
                         } else {
@@ -138,11 +171,13 @@ public class ProfilePictureActivity extends AppCompatActivity {
             });
         }
 
+        // Upload from Gallery button - directly opens gallery
         if (btnUploadFromGallery != null) {
             btnUploadFromGallery.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     try {
+                        // Directly open gallery
                         if (checkStoragePermission()) {
                             openGallery();
                         } else {
@@ -156,6 +191,7 @@ public class ProfilePictureActivity extends AppCompatActivity {
             });
         }
 
+        // Next button
         if (btnNext != null) {
             btnNext.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -176,11 +212,13 @@ public class ProfilePictureActivity extends AppCompatActivity {
             });
         }
 
+        // Back button
         if (btnBack != null) {
             btnBack.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     try {
+                        saveProfilePictureData(); // Save current data before going back
                         finish();
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -273,55 +311,239 @@ public class ProfilePictureActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         try {
-            if (resultCode == RESULT_OK && data != null) {
+            Log.d(TAG, "onActivityResult - requestCode: " + requestCode + ", resultCode: " + resultCode);
+            
+            if (resultCode == RESULT_OK) {
                 if (requestCode == CAMERA_REQUEST_CODE) {
-                    Bitmap bitmap = (Bitmap) data.getExtras().get("data");
-                    if (bitmap != null && ivProfilePicture != null) {
-                        // Create circular bitmap for display
-                        Bitmap circularBitmap = createCircularBitmap(bitmap);
-                        ivProfilePicture.setImageBitmap(circularBitmap);
-                        profileBitmap = bitmap; // Store original bitmap for upload
-                        hasProfilePicture = true;
-                        uploadedImageUrl = null; // Clear previous URL
-                        uploadProfilePictureToFirebase(bitmap, true);
-                        if (btnNext != null) {
-                            btnNext.setEnabled(true);
+                    if (data != null && data.getExtras() != null) {
+                        Bitmap bitmap = (Bitmap) data.getExtras().get("data");
+                        if (bitmap != null && ivProfilePicture != null) {
+                            Log.d(TAG, "Camera bitmap received, size: " + bitmap.getWidth() + "x" + bitmap.getHeight());
+                            
+                            // Create circular bitmap and display directly
+                            Bitmap circularBitmap = createCircularBitmap(bitmap);
+                            showProfilePicture(circularBitmap);
+                            
+                            // Store bitmap for upload
+                            profileBitmap = circularBitmap;
+                            hasProfilePicture = true;
+                            uploadedImageUrl = null;
+                            uploadProfilePictureToFirebase(circularBitmap, true);
+                            saveProfilePictureData();
+                            
+                            if (btnNext != null) {
+                                btnNext.setEnabled(true);
+                            }
+                        } else {
+                            Log.w(TAG, "Camera bitmap is null");
+                            Toast.makeText(this, "Failed to capture image", Toast.LENGTH_SHORT).show();
                         }
-                        Toast.makeText(this, "Profile picture captured successfully", Toast.LENGTH_SHORT).show();
                     }
                 } else if (requestCode == GALLERY_REQUEST_CODE) {
-                    profileImageUri = data.getData();
-                    if (profileImageUri != null && ivProfilePicture != null) {
-                        try {
-                            // Load bitmap from URI and create circular version
-                            InputStream inputStream = getContentResolver().openInputStream(profileImageUri);
-                            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                            if (bitmap != null) {
-                                Bitmap circularBitmap = createCircularBitmap(bitmap);
-                                ivProfilePicture.setImageBitmap(circularBitmap);
-                                hasProfilePicture = true;
-                                uploadedImageUrl = null; // Clear previous URL
-                                uploadProfilePictureToFirebase(profileImageUri, false);
-                                if (btnNext != null) {
-                                    btnNext.setEnabled(true);
+                    if (data != null) {
+                        profileImageUri = data.getData();
+                        Log.d(TAG, "Gallery URI received: " + profileImageUri);
+                        
+                        if (profileImageUri != null && ivProfilePicture != null) {
+                            try {
+                                // Load the bitmap from URI
+                                InputStream inputStream = getContentResolver().openInputStream(profileImageUri);
+                                Bitmap galleryBitmap = BitmapFactory.decodeStream(inputStream);
+                                
+                                if (galleryBitmap != null) {
+                                    Log.d(TAG, "Gallery bitmap loaded successfully, size: " + 
+                                          galleryBitmap.getWidth() + "x" + galleryBitmap.getHeight());
+                                    
+                                    // Create circular bitmap and display directly
+                                    Bitmap circularBitmap = createCircularBitmap(galleryBitmap);
+                                    showProfilePicture(circularBitmap);
+                                    
+                                    // Store bitmap for upload
+                                    profileBitmap = circularBitmap;
+                                    hasProfilePicture = true;
+                                    uploadedImageUrl = null;
+                                    uploadProfilePictureToFirebase(circularBitmap, true);
+                                    saveProfilePictureData();
+                                    
+                                    if (btnNext != null) {
+                                        btnNext.setEnabled(true);
+                                    }
+                                } else {
+                                    Log.e(TAG, "Failed to decode bitmap from gallery URI");
+                                    Toast.makeText(this, "Failed to load image", Toast.LENGTH_SHORT).show();
                                 }
-                                Toast.makeText(this, "Profile picture selected successfully", Toast.LENGTH_SHORT).show();
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error processing gallery image", e);
+                                Toast.makeText(this, "Error processing image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                             }
-                        } catch (Exception e) {
-                            Log.e(TAG, "Error processing gallery image", e);
-                            Toast.makeText(this, "Error processing image", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Log.w(TAG, "Gallery URI is null or ivProfilePicture is null");
                         }
+                    } else {
+                        Log.w(TAG, "Gallery data is null");
                     }
                 }
+            } else if (resultCode == RESULT_CANCELED) {
+                Log.d(TAG, "Activity result cancelled for requestCode: " + requestCode);
+            } else {
+                Log.w(TAG, "Activity result failed with code: " + resultCode);
             }
         } catch (Exception e) {
+            Log.e(TAG, "Error in onActivityResult", e);
             e.printStackTrace();
-            Toast.makeText(this, "Error processing image", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Error processing image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
+    /**
+     * Shows dialog to choose between Camera and Gallery
+     */
+    private void showImageSourceDialog() {
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
+        builder.setTitle("Choose Image Source");
+        
+        String[] options = {"Take Photo", "Choose from Gallery"};
+        builder.setItems(options, (dialog, which) -> {
+            if (which == 0) {
+                // Take Photo option
+                if (checkCameraPermission()) {
+                    openCamera();
+                } else {
+                    requestCameraPermission();
+                }
+            } else if (which == 1) {
+                // Choose from Gallery option
+                if (checkStoragePermission()) {
+                    openGallery();
+                } else {
+                    requestStoragePermission();
+                }
+            }
+        });
+        
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+    
+    /**
+     * Shows the profile picture and hides the placeholder content
+     */
+    private void showProfilePicture(Bitmap bitmap) {
+        try {
+            if (ivProfilePicture != null) {
+                // Set the image to CircleImageView (automatically makes it circular)
+                ivProfilePicture.setImageBitmap(bitmap);
+                ivProfilePicture.setVisibility(View.VISIBLE);
+                
+                // Hide the dotted border background by hiding the entire placeholder container
+                if (profilePicturePlaceholder != null) {
+                    profilePicturePlaceholder.setVisibility(View.GONE);
+                }
+                
+                // Make the image clickable to take another photo
+                ivProfilePicture.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        try {
+                            // Directly open camera to take another photo
+                            if (checkCameraPermission()) {
+                                openCamera();
+                            } else {
+                                requestCameraPermission();
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Toast.makeText(ProfilePictureActivity.this, "Error accessing camera", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+                
+                Log.d(TAG, "Profile picture displayed successfully as full circle and made clickable");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing profile picture", e);
+        }
+    }
+
+    /**
+     * Saves profile picture data to SharedPreferences for data retention
+     */
+    private void saveProfilePictureData() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("registration_data", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            
+            Log.d(TAG, "Saving profile picture data. Has picture: " + hasProfilePicture + ", Bitmap null: " + (profileBitmap == null));
+            
+            if (hasProfilePicture && profileBitmap != null) {
+                // Save bitmap as byte array
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                profileBitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
+                byte[] byteArray = stream.toByteArray();
+                
+                // Convert to Base64 string for storage
+                String base64Image = android.util.Base64.encodeToString(byteArray, android.util.Base64.DEFAULT);
+                editor.putString("profile_picture_base64", base64Image);
+                editor.putBoolean("has_profile_picture", true);
+                
+                Log.d(TAG, "✅ Profile picture data saved to SharedPreferences. Base64 length: " + base64Image.length());
+            } else {
+                editor.putBoolean("has_profile_picture", false);
+                editor.remove("profile_picture_base64");
+                Log.d(TAG, "Profile picture flags cleared from SharedPreferences");
+            }
+            
+            editor.apply();
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving profile picture data", e);
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Restores profile picture data from SharedPreferences
+     */
+    private void restoreProfilePictureData() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("registration_data", MODE_PRIVATE);
+            boolean hasSavedProfilePicture = prefs.getBoolean("has_profile_picture", false);
+            
+            Log.d(TAG, "Attempting to restore profile picture data. Has saved: " + hasSavedProfilePicture);
+            
+            if (hasSavedProfilePicture) {
+                String base64Image = prefs.getString("profile_picture_base64", null);
+                if (base64Image != null && !base64Image.isEmpty()) {
+                    Log.d(TAG, "Base64 image data found, decoding...");
+                    // Convert Base64 back to bitmap
+                    byte[] byteArray = android.util.Base64.decode(base64Image, android.util.Base64.DEFAULT);
+                    profileBitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
+                    
+                    if (profileBitmap != null) {
+                        hasProfilePicture = true;
+                        Log.d(TAG, "Bitmap decoded successfully, size: " + profileBitmap.getWidth() + "x" + profileBitmap.getHeight());
+                        showProfilePicture(profileBitmap);
+                        Log.d(TAG, "✅ Profile picture data restored from SharedPreferences");
+                    } else {
+                        Log.w(TAG, "Failed to decode bitmap from Base64");
+                    }
+                } else {
+                    Log.w(TAG, "Base64 image data is null or empty");
+                }
+            } else {
+                Log.d(TAG, "No saved profile picture found");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error restoring profile picture data", e);
+            e.printStackTrace();
+        }
+    }
+
+    // Cropping functionality removed - images are now displayed directly in circular form
+
     private void proceedToValidId() {
         try {
+            saveProfilePictureData(); // Save current data before proceeding
+            
             Intent intent = new Intent(ProfilePictureActivity.this, ValidIdActivity.class);
 
             // Pass all the data to ValidIdActivity
@@ -333,6 +555,7 @@ public class ProfilePictureActivity extends AppCompatActivity {
             intent.putExtra("province", province != null ? province : "");
             intent.putExtra("cityTown", cityTown != null ? cityTown : "");
             intent.putExtra("barangay", barangay != null ? barangay : "");
+            intent.putExtra("streetAddress", streetAddress != null ? streetAddress : "");
             
             // Pass profile picture data if exists
             if (hasProfilePicture) {
@@ -351,7 +574,6 @@ public class ProfilePictureActivity extends AppCompatActivity {
             }
 
             startActivity(intent);
-            Toast.makeText(this, "Proceeding to Valid ID verification", Toast.LENGTH_SHORT).show();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -365,11 +587,9 @@ public class ProfilePictureActivity extends AppCompatActivity {
         if (isFromCamera && imageData instanceof Bitmap) {
             profileBitmap = (Bitmap) imageData;
             uploadedImageUrl = null; // Will be set after account creation
-            Toast.makeText(ProfilePictureActivity.this, "Profile picture captured successfully", Toast.LENGTH_SHORT).show();
         } else if (!isFromCamera && imageData instanceof Uri) {
             profileImageUri = (Uri) imageData;
             uploadedImageUrl = null; // Will be set after account creation
-            Toast.makeText(ProfilePictureActivity.this, "Profile picture selected successfully", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -383,31 +603,17 @@ public class ProfilePictureActivity extends AppCompatActivity {
 
         Bitmap squareCropped = Bitmap.createBitmap(bitmap, xOffset, yOffset, squareSize, squareSize);
 
-        // Optionally scale to a consistent size (keeps aspect since it's square)
-        int targetSize = 300;
+        // Scale to a consistent size (keeps aspect since it's square)
+        int targetSize = 400; // Increased size for better quality
         Bitmap scaledSquare = squareSize == targetSize
                 ? squareCropped
                 : Bitmap.createScaledBitmap(squareCropped, targetSize, targetSize, true);
 
-        // Create circular bitmap mask
-        Bitmap circularBitmap = Bitmap.createBitmap(targetSize, targetSize, Bitmap.Config.ARGB_8888);
-        android.graphics.Canvas canvas = new android.graphics.Canvas(circularBitmap);
-
-        android.graphics.Paint paint = new android.graphics.Paint();
-        paint.setAntiAlias(true);
-        paint.setFilterBitmap(true);
-
-        android.graphics.Path path = new android.graphics.Path();
-        path.addCircle(targetSize / 2f, targetSize / 2f, targetSize / 2f, android.graphics.Path.Direction.CW);
-        canvas.clipPath(path);
-
-        canvas.drawBitmap(scaledSquare, 0, 0, paint);
-
+        // Recycle the intermediate bitmap if different
         if (scaledSquare != squareCropped) {
-            scaledSquare.recycle();
+            squareCropped.recycle();
         }
-        squareCropped.recycle();
 
-        return circularBitmap;
+        return scaledSquare;
     }
 }

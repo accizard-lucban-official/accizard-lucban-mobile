@@ -1,0 +1,223 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is Super Admin (using exists for reliability)
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/superAdmin/$(request.auth.uid));
+    }
+    
+    // Check if user is LDRRMO Admin
+    function isLDRRMOAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Check if user is any type of admin (Super Admin OR LDRRMO Admin)
+    function isAdmin() {
+      return isSuperAdmin() || isLDRRMOAdmin();
+    }
+    
+    // Check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Check if user owns document by firebaseUid field
+    function isDocumentOwner() {
+      return isAuthenticated() && 
+             resource.data.firebaseUid == request.auth.uid;
+    }
+    
+    // ========================================
+    // COLLECTIONS
+    // ========================================
+    
+    // Super Admin collection (REQUIRED FOR LOGIN)
+    match /superAdmin/{superAdminId} {
+      // Anyone authenticated can read (needed for login verification and isAdmin checks)
+      allow read: if isAuthenticated();
+      
+      // Only super admins can modify super admin list
+      allow write: if isSuperAdmin();
+    }
+    
+    // Admin collection (list of LDRRMO admin users)
+    match /admins/{adminId} {
+      // Allow public read access (needed for login verification and regular admin access)
+      allow read: if true;
+      
+      // Only admins can modify admin list
+      allow write: if isAdmin();
+    }
+    
+    // Users collection - UPDATED FOR FCM TOKEN SUPPORT
+    match /users/{userId} {
+      // Allow public read access (needed for regular Admins who don't have Firebase Auth)
+      // Profile information is not highly sensitive and is needed for display purposes
+      allow read: if true;
+      
+      // Users can create their own profile
+      allow create: if isAuthenticated() && 
+                       request.auth.uid == request.resource.data.firebaseUid;
+      
+      // ✅ UPDATED: Allow users to update their own document
+      // Supports both document ID matching AND firebaseUid field matching
+      // This is crucial for FCM token updates
+      allow update: if isAuthenticated() && 
+                       (request.auth.uid == userId ||  // Document ID matches auth UID
+                        resource.data.firebaseUid == request.auth.uid ||  // firebaseUid field matches
+                        isAdmin());  // Or user is admin
+      
+      // Users can delete their own account, admins can delete any
+      allow delete: if isDocumentOwner() || 
+                       isOwner(userId) || 
+                       isAdmin();
+    }
+    
+    // ========================================
+    // ✅ REPORTS COLLECTION - UPDATED FOR USER PRIVACY
+    // ========================================
+    match /reports/{reportId} {
+      // ✅ UPDATED: Users can only read their own reports
+      // Admins can read all reports for management purposes
+      allow read: if isAuthenticated() && 
+                     (resource.data.userId == request.auth.uid ||  // User's own report
+                      isAdmin());  // Or user is admin
+      
+      // ✅ Users can create reports ONLY with their own userId
+      // This prevents users from creating reports under someone else's name
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // ✅ Users can update their own reports (before admin processes them)
+      // Admins can update any report (to change status, priority, etc.)
+      allow update: if isAuthenticated() && 
+                       (resource.data.userId == request.auth.uid ||  // User's own report
+                        isAdmin());  // Or user is admin
+      
+      // ✅ Users can delete their own reports
+      // Admins can delete any report
+      allow delete: if isAuthenticated() && 
+                       (resource.data.userId == request.auth.uid ||  // User's own report
+                        isAdmin());  // Or user is admin
+    }
+    
+    // Announcements collection
+    match /announcements/{announcementId} {
+      // Allow public read access (needed for regular Admins who don't have Firebase Auth)
+      allow read: if true;
+      
+      // Allow public write (for regular admins to manage announcements)
+      allow create, update, delete: if true;
+    }
+    
+    // Announcement Types collection
+    match /announcementTypes/{typeId} {
+      // Allow public read access (needed for regular Admins who don't have Firebase Auth)
+      allow read: if true;
+      
+      // Allow public write (for regular admins to manage announcement types)
+      allow create, update, delete: if true;
+    }
+    
+    // ========================================
+    // CHAT MESSAGES COLLECTION (FLAT STRUCTURE)
+    // ========================================
+    match /chat_messages/{messageId} {
+      // Allow public read access (needed for regular Admins who don't have Firebase Auth)
+      allow read: if true;
+      
+      // Allow public write for chat messages (admins and users both need to send messages)
+      allow write: if true;
+    }
+    
+    // ========================================
+    // CHAT ROOM METADATA (Optional - for tracking)
+    // ========================================
+    match /chats/{chatRoomId} {
+      // Allow public read access (needed for regular Admins who don't have Firebase Auth)
+      allow read: if true;
+      
+      // Admins can write all chat rooms
+      allow write: if isAdmin();
+      
+      // Users can write their own chat room metadata
+      allow write: if isAuthenticated() && chatRoomId == request.auth.uid;
+    }
+    
+    // Report counter (for auto-incrementing report IDs)
+    match /counters/{counterId} {
+      // Allow public read/write (needed for regular Admins and report creation)
+      allow read, write: if true;
+    }
+    
+    // Activity Logs collection
+    match /activityLogs/{logId} {
+      // Allow public read/write (needed for regular Admins to view and create logs)
+      allow read, write: if true;
+    }
+    
+    // Team Members collection
+    match /teamMembers/{teamId} {
+      // Allow public read/write (needed for regular Admins to manage teams)
+      allow read, write: if true;
+    }
+    
+    // Pins collection (Map Markers)
+    match /pins/{pinId} {
+      // Public read access (mobile app + web app + anyone can view pins)
+      allow read: if true;
+      
+      // Allow public write (for regular LDRRMO admins who use localStorage auth, not Firebase Auth)
+      // Super admins (Firebase Auth) also have access
+      // This follows the same pattern as reports, announcements, and other admin-managed collections
+      allow create, update, delete: if true;
+    }
+    
+    // ========================================
+    // DEFAULT: DENY ALL OTHER ACCESS
+    // ========================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

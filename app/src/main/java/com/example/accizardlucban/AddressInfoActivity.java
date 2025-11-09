@@ -11,7 +11,6 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,14 +25,15 @@ import java.util.Map;
 
 public class AddressInfoActivity extends AppCompatActivity {
 
-    private AutoCompleteTextView actvProvince, actvCityTown;
-    private Spinner spinnerBarangay;
-    private EditText etBarangayOther;
-    private Button btnNext, btnBack;
+    private AutoCompleteTextView actvProvince, actvCityTown, actvBarangay;
+    private EditText etStreetAddress;
+    private Button btnNext;
+    private ImageButton btnBack;
     private String firstName, lastName, mobileNumber, email, password;
-    private View layoutBarangay;
+    private View layoutBarangay, layoutBarangayOther;
 
-    private static final String PREFS_NAME = "user_profile_prefs";
+    // Use separate SharedPreferences for registration process (don't mix with user profile!)
+    private static final String PREFS_NAME = "registration_data";
     private static final String KEY_BARANGAY = "barangay";
 
     @Override
@@ -46,17 +46,21 @@ public class AddressInfoActivity extends AppCompatActivity {
         setupBarangaySpinner();
         getIntentData();
         setupFieldWatchers();
+        updateBarangayAdapter(); // Initialize barangay adapter
+        updateBarangayVisibility(); // Initialize visibility state
+        restoreAddressData(); // Restore previously saved address data (after field watchers)
         setupClickListeners();
     }
 
     private void initializeViews() {
         actvProvince = findViewById(R.id.actvProvince);
         actvCityTown = findViewById(R.id.actvCityTown);
-        etBarangayOther = findViewById(R.id.etBarangayOther);
-        spinnerBarangay = findViewById(R.id.spinnerBarangay);
+        actvBarangay = findViewById(R.id.spinnerBarangay);
+        etStreetAddress = findViewById(R.id.etStreetAddress);
         btnNext = findViewById(R.id.btnNext);
         btnBack = findViewById(R.id.btnBack);
         layoutBarangay = findViewById(R.id.layoutBarangay);
+        layoutBarangayOther = findViewById(R.id.layoutBarangayOther);
     }
 
     private void setupAutoCompleteFields() {
@@ -69,11 +73,10 @@ public class AddressInfoActivity extends AppCompatActivity {
     }
 
     private void setupBarangaySpinner() {
-        String[] lucbanBarangays = {
-                "Choose a barangay", "Abang", "Aliliw", "Atulinao", "Ayuti (Poblacion)", "Barangay 1 (Poblacion)", "Barangay 2 (Poblacion)", "Barangay 3 (Poblacion)", "Barangay 4 (Poblacion)", "Barangay 5 (Poblacion)", "Barangay 6 (Poblacion)", "Barangay 7 (Poblacion)", "Barangay 8 (Poblacion)", "Barangay 9 (Poblacion)", "Barangay 10 (Poblacion)", "Igang", "Kabatete", "Kakawit", "Kalangay", "Kalyaat", "Kilib", "Kulapi", "Mahabang Parang", "Malupak", "Manasa", "May-It", "Nagsinamo", "Nalunao", "Palola", "Piis", "Samil", "Tiawe", "Tinamnan"
-        };
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, lucbanBarangays);
-        spinnerBarangay.setAdapter(adapter);
+        actvBarangay.setThreshold(1); // Show suggestions from the first letter
+        
+        // Default: no adapter (free text input for non-Lucban users)
+        actvBarangay.setAdapter(null);
     }
 
     private void getIntentData() {
@@ -115,32 +118,72 @@ public class AddressInfoActivity extends AppCompatActivity {
             @Override
             public void afterTextChanged(Editable s) {}
         });
+        
+        // Add watcher to city/town to update barangay adapter
+        actvCityTown.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                updateBarangayAdapter();
+            }
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
     }
 
-    private void updateBarangayVisibility() {
+    private void updateBarangayAdapter() {
         String selectedProvince = actvProvince.getText().toString().trim();
         String cityTown = actvCityTown.getText().toString().trim();
-        if (cityTown.isEmpty()) {
-            layoutBarangay.setVisibility(View.GONE);
-            spinnerBarangay.setVisibility(View.GONE);
-            etBarangayOther.setVisibility(View.GONE);
-        } else if ("Quezon".equalsIgnoreCase(selectedProvince) && "Lucban".equalsIgnoreCase(cityTown)) {
-            layoutBarangay.setVisibility(View.VISIBLE);
-            spinnerBarangay.setVisibility(View.VISIBLE);
-            etBarangayOther.setVisibility(View.GONE);
+        
+        android.util.Log.d("AddressInfo", "Updating barangay adapter - Province: " + selectedProvince + ", City: " + cityTown);
+        
+        if ("Quezon".equalsIgnoreCase(selectedProvince) && "Lucban".equalsIgnoreCase(cityTown)) {
+            // Set up Lucban barangays for Autocomplete
+            String[] lucbanBarangays = {
+                    "Abang", "Aliliw", "Atulinao", "Ayuti (Poblacion)", "Barangay 1 (Poblacion)", "Barangay 2 (Poblacion)", 
+                    "Barangay 3 (Poblacion)", "Barangay 4 (Poblacion)", "Barangay 5 (Poblacion)", "Barangay 6 (Poblacion)", 
+                    "Barangay 7 (Poblacion)", "Barangay 8 (Poblacion)", "Barangay 9 (Poblacion)", "Barangay 10 (Poblacion)", 
+                    "Igang", "Kabatete", "Kakawit", "Kalangay", "Kalyaat", "Kilib", "Kulapi", "Mahabang Parang", 
+                    "Malupak", "Manasa", "May-It", "Nagsinamo", "Nalunao", "Palola", "Piis", "Samil", "Tiawe", "Tinamnan"
+            };
+            InitialLetterAutoCompleteAdapter adapter = new InitialLetterAutoCompleteAdapter(this, lucbanBarangays);
+            actvBarangay.setAdapter(adapter);
+            android.util.Log.d("AddressInfo", "Lucban barangay adapter set");
         } else {
-            layoutBarangay.setVisibility(View.GONE);
-            spinnerBarangay.setVisibility(View.GONE);
-            etBarangayOther.setVisibility(View.VISIBLE);
+            // Allow free text input for other locations
+            actvBarangay.setAdapter(null);
+            android.util.Log.d("AddressInfo", "Free text input enabled for other locations");
         }
+    }
+    
+    private void updateBarangayVisibility() {
+        android.util.Log.d("AddressInfo", "Updating barangay visibility");
+        
+        // Always show barangay layout
+        layoutBarangay.setVisibility(View.VISIBLE);
+        layoutBarangayOther.setVisibility(View.GONE);
+        
+        android.util.Log.d("AddressInfo", "Barangay layout always visible");
     }
 
     private void setupClickListeners() {
         btnNext.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (validateInputs()) {
-                    proceedToProfilePicture();
+                android.util.Log.d("AddressInfo", "Next button clicked");
+                try {
+                    if (validateInputs()) {
+                        android.util.Log.d("AddressInfo", "Validation passed, proceeding...");
+                        saveAddressData(); // Save current data before proceeding
+                        proceedToProfilePicture();
+                    } else {
+                        android.util.Log.w("AddressInfo", "Validation failed");
+                    }
+                } catch (Exception e) {
+                    android.util.Log.e("AddressInfo", "Error in Next button click", e);
+                    e.printStackTrace();
+                    Toast.makeText(AddressInfoActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 }
             }
         });
@@ -148,7 +191,14 @@ public class AddressInfoActivity extends AppCompatActivity {
         btnBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                finish();
+                android.util.Log.d("AddressInfo", "Back button clicked");
+                try {
+                    saveAddressData(); // Save current data before going back
+                    finish();
+                } catch (Exception e) {
+                    android.util.Log.e("AddressInfo", "Error in Back button click", e);
+                    e.printStackTrace();
+                }
             }
         });
     }
@@ -164,78 +214,175 @@ public class AddressInfoActivity extends AppCompatActivity {
             actvCityTown.requestFocus();
             return false;
         }
-        String selectedProvince = actvProvince.getText().toString().trim();
-        String cityTown = actvCityTown.getText().toString().trim();
-        if ("Quezon".equalsIgnoreCase(selectedProvince) && "Lucban".equalsIgnoreCase(cityTown)) {
-            int barangayPos = spinnerBarangay.getSelectedItemPosition();
-            if (barangayPos == 0) {
-                Toast.makeText(this, "Please select a barangay", Toast.LENGTH_SHORT).show();
-                return false;
-            }
-        } else {
-            if (etBarangayOther.getText().toString().trim().isEmpty()) {
-                etBarangayOther.setError("Barangay is required");
-                etBarangayOther.requestFocus();
-                return false;
-            }
+        
+        // Validate barangay field
+        if (TextUtils.isEmpty(actvBarangay.getText().toString().trim())) {
+            actvBarangay.setError("Barangay is required");
+            actvBarangay.requestFocus();
+            return false;
         }
+        
         return true;
     }
 
     private void proceedToProfilePicture() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        String selectedProvince = actvProvince.getText().toString().trim();
-        String cityTown = actvCityTown.getText().toString().trim();
-        String barangay = "";
-        if ("Quezon".equalsIgnoreCase(selectedProvince) && "Lucban".equalsIgnoreCase(cityTown)) {
-            barangay = spinnerBarangay.getSelectedItem().toString();
-            editor.putString(KEY_BARANGAY, barangay);
-        } else {
-            barangay = etBarangayOther.getText().toString().trim();
-            editor.putString(KEY_BARANGAY, barangay);
+        try {
+            android.util.Log.d("AddressInfo", "proceedToProfilePicture() started");
+            
+            String selectedProvince = actvProvince.getText().toString().trim();
+            String cityTown = actvCityTown.getText().toString().trim();
+            String barangay = actvBarangay.getText().toString().trim();
+            String streetAddress = etStreetAddress.getText().toString().trim();
+            
+            android.util.Log.d("AddressInfo", "Selected - Province: " + selectedProvince + ", City: " + cityTown + ", Barangay: " + barangay + ", Street: " + streetAddress);
+            
+            // Format barangay for display (add "Brgy." prefix if not present)
+            String formattedBarangay = barangay;
+            if (!barangay.toLowerCase().startsWith("brgy") && !barangay.toLowerCase().startsWith("barangay")) {
+                formattedBarangay = "Brgy. " + barangay;
+            }
+            
+            // Build complete mailing address
+            // Format: Street Address (if provided), Barangay, Town, Province
+            String mailingAddress;
+            if (!streetAddress.isEmpty()) {
+                mailingAddress = streetAddress + ", " + formattedBarangay + ", " + cityTown + ", " + selectedProvince;
+            } else {
+                mailingAddress = formattedBarangay + ", " + cityTown + ", " + selectedProvince;
+            }
+            
+            android.util.Log.d("AddressInfo", "Formatted address - Street: " + streetAddress + ", Barangay: " + formattedBarangay + ", Mailing: " + mailingAddress);
+
+            // ⚠️ DO NOT save to user_profile_prefs during registration!
+            // This is just registration data - only save to registration_data for data retention
+            // The actual user profile will be created in ValidIdActivity after successful registration
+
+            android.util.Log.d("AddressInfo", "Creating intent for ProfilePictureActivity");
+            Intent intent = new Intent(AddressInfoActivity.this, ProfilePictureActivity.class);
+            intent.putExtra("firstName", firstName);
+            intent.putExtra("lastName", lastName);
+            intent.putExtra("mobileNumber", mobileNumber);
+            intent.putExtra("email", email);
+            intent.putExtra("password", password);
+            intent.putExtra("province", selectedProvince);
+            intent.putExtra("cityTown", cityTown);
+            intent.putExtra("barangay", formattedBarangay);
+            intent.putExtra("streetAddress", streetAddress);
+            intent.putExtra("mailingAddress", mailingAddress);
+            
+            android.util.Log.d("AddressInfo", "Starting ProfilePictureActivity...");
+            startActivity(intent);
+            android.util.Log.d("AddressInfo", "✅ ProfilePictureActivity started successfully");
+        } catch (Exception e) {
+            android.util.Log.e("AddressInfo", "Error in proceedToProfilePicture", e);
+            e.printStackTrace();
+            Toast.makeText(this, "Error proceeding: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
-        editor.apply();
-
-        // Persist to Firestore under current user's document as well
-        updateFirestoreAddressInfo(selectedProvince, cityTown, barangay);
-
-        Intent intent = new Intent(AddressInfoActivity.this, ProfilePictureActivity.class);
-        intent.putExtra("firstName", firstName);
-        intent.putExtra("lastName", lastName);
-        intent.putExtra("mobileNumber", mobileNumber);
-        intent.putExtra("email", email);
-        intent.putExtra("password", password);
-        intent.putExtra("province", selectedProvince);
-        intent.putExtra("cityTown", cityTown);
-        intent.putExtra("barangay", barangay);
-        startActivity(intent);
     }
 
-    private void updateFirestoreAddressInfo(String province, String cityTown, String barangay) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
-            return;
-        }
+    /**
+     * ⚠️ REMOVED: Do not update Firestore during registration process
+     * The user account doesn't exist yet - this will be handled in ValidIdActivity
+     * after successful account creation.
+     */
+    // private void updateFirestoreAddressInfo(...) { ... }
 
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        db.collection("users")
-                .whereEqualTo("firebaseUid", user.getUid())
-                .limit(1)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (!queryDocumentSnapshots.isEmpty()) {
-                        QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
-                        String docId = doc.getId();
-
-                        Map<String, Object> updates = new HashMap<>();
-                        updates.put("province", province);
-                        updates.put("cityTown", cityTown);
-                        updates.put("barangay", barangay);
-                        updates.put("address", province + ", " + cityTown + ", " + barangay);
-
-                        db.collection("users").document(docId).update(updates);
+    /**
+     * Restores address data from SharedPreferences
+     */
+    private void restoreAddressData() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("registration_data", MODE_PRIVATE);
+            
+            android.util.Log.d("AddressInfo", "Attempting to restore address data...");
+            
+            // Restore province
+            String savedProvince = prefs.getString("saved_province", null);
+            if (savedProvince != null && !savedProvince.isEmpty()) {
+                actvProvince.setText(savedProvince);
+                android.util.Log.d("AddressInfo", "Province restored: " + savedProvince);
+            }
+            
+            // Restore city/town (this will trigger the text watcher to update city adapter)
+            String savedCityTown = prefs.getString("saved_city_town", null);
+            if (savedCityTown != null && !savedCityTown.isEmpty()) {
+                actvCityTown.setText(savedCityTown);
+                android.util.Log.d("AddressInfo", "City/Town restored: " + savedCityTown);
+            }
+            
+            // Restore street address
+            String savedStreetAddress = prefs.getString("saved_street_address", null);
+            if (savedStreetAddress != null && !savedStreetAddress.isEmpty()) {
+                etStreetAddress.setText(savedStreetAddress);
+                android.util.Log.d("AddressInfo", "Street address restored: " + savedStreetAddress);
+            } else {
+                // Explicitly clear field if no saved data
+                etStreetAddress.setText("");
+                android.util.Log.d("AddressInfo", "No saved street address found, field cleared");
+            }
+            
+            // Restore barangay (delayed to ensure visibility is set correctly)
+            String savedBarangay = prefs.getString("saved_barangay", null);
+            if (savedBarangay != null && !savedBarangay.isEmpty()) {
+                // Post to ensure text watchers have completed
+                final String barangayToRestore = savedBarangay;
+                actvCityTown.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        restoreBarangaySelection(barangayToRestore);
                     }
                 });
+                android.util.Log.d("AddressInfo", "Barangay will be restored: " + savedBarangay);
+            }
+            
+            // Update visibility based on restored data
+            updateBarangayVisibility();
+            
+            android.util.Log.d("AddressInfo", "✅ Address data restored from SharedPreferences");
+        } catch (Exception e) {
+            android.util.Log.e("AddressInfo", "Error restoring address data", e);
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Helper method to restore barangay selection
+     */
+    private void restoreBarangaySelection(String savedBarangay) {
+        try {
+            // Simply set the text in the AutoCompleteTextView
+            actvBarangay.setText(savedBarangay);
+            android.util.Log.d("AddressInfo", "Barangay restored: " + savedBarangay);
+        } catch (Exception e) {
+            android.util.Log.e("AddressInfo", "Error restoring barangay selection", e);
+        }
+    }
+
+    /**
+     * Saves address data to SharedPreferences for data retention
+     */
+    private void saveAddressData() {
+        try {
+            SharedPreferences prefs = getSharedPreferences("registration_data", MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            
+            // Save current form data
+            String province = actvProvince.getText().toString().trim();
+            String cityTown = actvCityTown.getText().toString().trim();
+            String barangay = actvBarangay.getText().toString().trim();
+            String streetAddress = etStreetAddress.getText().toString().trim();
+            
+            editor.putString("saved_province", province);
+            editor.putString("saved_city_town", cityTown);
+            editor.putString("saved_barangay", barangay);
+            editor.putString("saved_street_address", streetAddress);
+            
+            editor.apply();
+            android.util.Log.d("AddressInfo", "✅ Address data saved to SharedPreferences");
+            android.util.Log.d("AddressInfo", "Province: " + province + ", City: " + cityTown + ", Barangay: " + barangay + ", Street: " + streetAddress);
+        } catch (Exception e) {
+            android.util.Log.e("AddressInfo", "Error saving address data", e);
+            e.printStackTrace();
+        }
     }
 }

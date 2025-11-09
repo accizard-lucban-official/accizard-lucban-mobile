@@ -1,0 +1,225 @@
+// ========================================
+// FIRESTORE SECURITY RULES - FLAT STRUCTURE
+// ========================================
+// Copy and paste this into:
+// Firebase Console > Firestore Database > Rules > Edit Rules > Publish
+// ========================================
+// This is the SIMPLER structure with less clicking in Firebase Console!
+// All messages in ONE collection: chat_messages
+// ========================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    // ========================================
+    // CHAT MESSAGES (FLAT STRUCTURE)
+    // ========================================
+    // All messages in ONE collection!
+    // Just go to: Firestore > chat_messages (1 click!)
+    match /chat_messages/{messageId} {
+      
+      // Users can read ONLY their own messages
+      // Filters by userId field in the message
+      allow read: if isSignedIn() && 
+                    resource.data.userId == request.auth.uid;
+      
+      // Users can create messages with their own userId
+      allow create: if isSignedIn() && 
+                      request.resource.data.userId == request.auth.uid &&
+                      request.resource.data.senderId == request.auth.uid;
+      
+      // Users can update/delete ONLY their own messages
+      allow update, delete: if isSignedIn() && 
+                               resource.data.userId == request.auth.uid &&
+                               resource.data.senderId == request.auth.uid;
+      
+      // ===== ADMIN ACCESS =====
+      // Admins can read ALL messages (for all users)
+      allow read: if isAdmin();
+      
+      // Admins can create messages for any user (to respond)
+      allow create: if isAdmin();
+      
+      // Admins can update any message (mark as read, etc.)
+      allow update: if isAdmin();
+      
+      // Admins can delete any message
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // CHAT ROOM METADATA (Optional - for tracking)
+    // ========================================
+    match /chats/{chatRoomId} {
+      allow read: if isOwner(chatRoomId) || isAdmin();
+      allow write: if isOwner(chatRoomId) || isAdmin();
+    }
+    
+    // ========================================
+    // USERS COLLECTION
+    // ========================================
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId);
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // ANNOUNCEMENTS COLLECTION
+    // ========================================
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ========================================
+    // REPORTS COLLECTION
+    // ========================================
+    match /reports/{reportId} {
+      allow read: if isSignedIn() && 
+                    (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && 
+                      request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && 
+                      (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+    
+    // ========================================
+    // EMERGENCY CONTACTS
+    // ========================================
+    match /emergency_contacts/{contactId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // ========================================
+    // NOTIFICATIONS
+    // ========================================
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && 
+                    resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && 
+                      resource.data.userId == request.auth.uid;
+      allow create: if isAdmin();
+      allow delete: if isSignedIn() && 
+                      resource.data.userId == request.auth.uid;
+    }
+    
+    // ========================================
+    // DEFAULT RULE - DENY ALL
+    // ========================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// ========================================
+// WHAT'S DIFFERENT? (Flat vs Nested)
+// ========================================
+//
+// FLAT STRUCTURE (NEW - What you have now):
+// ✅ Firestore Console: chat_messages (1 click to see all messages!)
+// ✅ Filter by userId to see specific user's messages
+// ✅ Easier to manually add admin responses
+// ✅ Simpler for small to medium scale
+//
+// Message structure:
+// chat_messages/
+//   ├── msg_abc123
+//   │   ├── userId: "user1_uid"
+//   │   ├── content: "Hello from User 1"
+//   │   ├── senderId: "user1_uid"
+//   │   └── timestamp: 1234567890
+//   ├── msg_def456
+//   │   ├── userId: "user1_uid"
+//   │   └── content: "Another message from User 1"
+//   └── msg_xyz789
+//       ├── userId: "user2_uid"
+//       └── content: "Hello from User 2"
+//
+// HOW TO VIEW USER'S MESSAGES IN CONSOLE:
+// 1. Go to: Firestore > chat_messages
+// 2. Click "Filter" icon
+// 3. Field: "userId", Operator: "==", Value: [paste user's UID]
+// 4. All messages from that user appear!
+//
+// HOW TO ADD ADMIN RESPONSE:
+// 1. Go to: Firestore > chat_messages
+// 2. Click "Add document"
+// 3. Fill fields:
+//    userId: [user's UID who you're responding to]
+//    content: "Hello! How can I help?"
+//    senderId: "admin_support"
+//    senderName: "LDRRMO Support"
+//    timestamp: [current timestamp in milliseconds]
+//    isUser: false
+//    read: false
+//    imageUrl: null
+// 4. Click Save
+// 5. Message appears instantly in user's app!
+//
+// ========================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

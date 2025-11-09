@@ -1,0 +1,176 @@
+// Firebase Firestore Security Rules
+// Copy and paste this into your Firebase Console > Firestore Database > Rules
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================
+    // USERS COLLECTION
+    // ========================================
+    match /users/{userId} {
+      // Users can read their own data
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Users can create/update their own profile
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      
+      // Only admins can delete users (you can modify this based on your needs)
+      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // ========================================
+    // ANNOUNCEMENTS COLLECTION
+    // ========================================
+    match /announcements/{announcementId} {
+      // Anyone authenticated can read announcements
+      allow read: if request.auth != null;
+      
+      // Only admins can create, update, or delete announcements
+      allow create, update, delete: if request.auth != null && 
+                                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // ========================================
+    // REPORTS COLLECTION
+    // ========================================
+    match /reports/{reportId} {
+      // Users can read their own reports
+      allow read: if request.auth != null && 
+                    (resource.data.userId == request.auth.uid || 
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      
+      // Users can create reports
+      allow create: if request.auth != null && 
+                      request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own reports, admins can update any
+      allow update: if request.auth != null && 
+                      (resource.data.userId == request.auth.uid || 
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      
+      // Only admins can delete reports
+      allow delete: if request.auth != null && 
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // ========================================
+    // CHAT MESSAGES COLLECTION
+    // ========================================
+    match /chats/{chatRoomId}/messages/{messageId} {
+      // Authenticated users can read all messages in their chat room
+      allow read: if request.auth != null;
+      
+      // Users can create messages with their own senderId
+      allow create: if request.auth != null && 
+                      request.resource.data.senderId == request.auth.uid;
+      
+      // Users can update/delete their own messages
+      allow update, delete: if request.auth != null && 
+                               resource.data.senderId == request.auth.uid;
+    }
+    
+    // Admin messages in chat (for admin panel)
+    match /chats/{chatRoomId}/messages/{messageId} {
+      // Admins can create messages on behalf of the system
+      allow create: if request.auth != null && 
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // ========================================
+    // EMERGENCY CONTACTS COLLECTION
+    // ========================================
+    match /emergency_contacts/{contactId} {
+      // Anyone authenticated can read emergency contacts
+      allow read: if request.auth != null;
+      
+      // Only admins can create, update, or delete contacts
+      allow create, update, delete: if request.auth != null && 
+                                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // ========================================
+    // NOTIFICATIONS COLLECTION
+    // ========================================
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if request.auth != null && 
+                    resource.data.userId == request.auth.uid;
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if request.auth != null && 
+                      resource.data.userId == request.auth.uid;
+      
+      // Only system/admins can create notifications
+      allow create: if request.auth != null && 
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      
+      // Users can delete their own notifications
+      allow delete: if request.auth != null && 
+                      resource.data.userId == request.auth.uid;
+    }
+    
+    // ========================================
+    // DEFAULT RULE (for backwards compatibility during development)
+    // ========================================
+    // WARNING: Remove or restrict this in production!
+    match /{document=**} {
+      // Temporary: Allow all authenticated users to read/write
+      // Replace with specific rules for each collection
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+
+// ========================================
+// NOTES:
+// ========================================
+// 1. These rules assume you have a 'role' field in user documents
+// 2. For admin access, add role: 'admin' to admin user documents
+// 3. The default rule at the end should be removed in production
+// 4. Test these rules thoroughly before deploying to production
+// 5. You can simulate rules in Firebase Console before publishing
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

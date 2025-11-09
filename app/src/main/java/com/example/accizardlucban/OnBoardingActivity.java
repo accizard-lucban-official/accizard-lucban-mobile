@@ -1,7 +1,9 @@
 package com.example.accizardlucban;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -14,6 +16,9 @@ import androidx.viewpager2.widget.ViewPager2;
 
 public class OnBoardingActivity extends AppCompatActivity {
 
+    private static final String TAG = "OnBoardingActivity";
+    private static final String PREFS_NAME = "user_profile_prefs";
+    
     private ViewPager2 viewPager;
     private Button actionButton;
     private TextView titleText, descriptionText;
@@ -26,7 +31,8 @@ public class OnBoardingActivity extends AppCompatActivity {
             "Quick Reporting",
             "Chat Support",
             "Interactive Safety Map",
-            "Community Insights"
+            "Community Insights",
+            "android:fontFamily=\"@font/poppinsbold\""
     };
 
     private String[] descriptions = {
@@ -74,12 +80,14 @@ public class OnBoardingActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (currentPage < 4) {
+                    // Go to next page
                     viewPager.setCurrentItem(currentPage + 1);
+                    Log.d(TAG, "Moving to page " + (currentPage + 1));
                 } else {
-                    // Navigate to main activity
-                    Intent intent = new Intent(OnBoardingActivity.this, MainDashboard.class);
-                    startActivity(intent);
-                    finish();
+                    // Last page - mark onboarding as seen and navigate to dashboard
+                    Log.d(TAG, "Onboarding completed - navigating to MainDashboard");
+                    markOnboardingAsSeen();
+                    navigateToMainDashboard();
                 }
             }
         });
@@ -133,6 +141,56 @@ public class OnBoardingActivity extends AppCompatActivity {
         @Override
         public int getItemCount() {
             return 5;
+        }
+    }
+
+    /**
+     * Marks that the user has seen the onboarding screens
+     */
+    private void markOnboardingAsSeen() {
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putBoolean("has_seen_onboarding", true);
+            editor.apply();
+            Log.d(TAG, "✅ Onboarding marked as seen");
+        } catch (Exception e) {
+            Log.e(TAG, "Error marking onboarding as seen", e);
+        }
+    }
+
+    /**
+     * Navigates to MainDashboard after onboarding is complete
+     */
+    private void navigateToMainDashboard() {
+        try {
+            Intent intent = new Intent(OnBoardingActivity.this, MainDashboard.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            Log.d(TAG, "✅ Navigated to MainDashboard");
+        } catch (Exception e) {
+            Log.e(TAG, "Error navigating to MainDashboard", e);
+            android.widget.Toast.makeText(this, "Error navigating to dashboard", android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (currentPage > 0) {
+            // Go to previous page
+            viewPager.setCurrentItem(currentPage - 1);
+        } else {
+            // On first page - show exit confirmation
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Exit Onboarding?")
+                .setMessage("Are you sure you want to skip the tutorial?")
+                .setPositiveButton("Skip", (dialog, which) -> {
+                    markOnboardingAsSeen();
+                    navigateToMainDashboard();
+                })
+                .setNegativeButton("Continue Tutorial", null)
+                .show();
         }
     }
 }
