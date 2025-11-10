@@ -98,6 +98,8 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
     implementation("com.google.firebase:firebase-messaging")
+
+    implementation("com.google.firebase:firebase-bom:34.5.0")
     
     // JavaMail API for email functionality
     implementation(libs.android.mail)

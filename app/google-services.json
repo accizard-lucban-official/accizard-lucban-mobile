@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "967856342376",
-    "project_id": "accizard-lucban",
-    "storage_bucket": "accizard-lucban.firebasestorage.app"
+    "project_number": "138181798297",
+    "project_id": "accizard-lucban-official-65ba3",
+    "storage_bucket": "accizard-lucban-official-65ba3.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:967856342376:android:d7083a39121337b01802dd",
+        "mobilesdk_app_id": "1:138181798297:android:766e05dc55e26ba67ccb08",
         "android_client_info": {
           "package_name": "com.example.accizardlucban"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyD7fdyvOavfSAnrjuHLj8V6lt5PNrhXlh8"
+          "current_key": "AIzaSyCzkYtregefTLHJTs6yMcpzGol6nmolT7A"
         }
       ],
       "services": {
