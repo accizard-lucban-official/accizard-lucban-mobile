@@ -48,6 +48,7 @@ import com.mapbox.maps.plugin.gestures.OnMapClickListener;
 import com.mapbox.maps.plugin.gestures.GesturesPlugin;
 import com.mapbox.maps.plugin.gestures.GesturesUtils;
 import com.mapbox.maps.ScreenCoordinate;
+import com.mapbox.maps.StyleObjectInfo;
 
 import android.location.Address;
 import android.location.Geocoder;
@@ -60,6 +61,9 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 // Location services imports
 import android.Manifest;
@@ -452,14 +456,19 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
 
             // Ensure Lucban boundary is visible on initial load
             ensureLucbanBoundaryVisible(style);
+            showOnlyLucbanBoundary(style);
             
             // Retry with delays to ensure the layer is accessible
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                ensureLucbanBoundaryVisible(mapboxMap.getStyle());
+                Style reloadedStyle = mapboxMap.getStyle();
+                ensureLucbanBoundaryVisible(reloadedStyle);
+                showOnlyLucbanBoundary(reloadedStyle);
             }, 300);
             
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                ensureLucbanBoundaryVisible(mapboxMap.getStyle());
+                Style reloadedStyle = mapboxMap.getStyle();
+                ensureLucbanBoundaryVisible(reloadedStyle);
+                showOnlyLucbanBoundary(reloadedStyle);
             }, 800);
 
             // Add map click listener - must be added after style is loaded
@@ -488,6 +497,32 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
         } catch (Exception e) {
             // Layer might not exist in the style yet, will retry
             Log.w(TAG, "Lucban boundary layer not accessible yet (will retry): " + e.getMessage());
+        }
+    }
+
+    /**
+     * Hide all layers except the Lucban boundary and background to ensure only the boundary is visible.
+     */
+    private void showOnlyLucbanBoundary(Style style) {
+        if (style == null) return;
+
+        final Set<String> allowedLayers = new HashSet<>(Arrays.asList(
+                "background",
+                "lucban-boundary"
+        ));
+
+        try {
+            List<StyleObjectInfo> layerInfos = style.getStyleLayers();
+            for (StyleObjectInfo layerInfo : layerInfos) {
+                String layerId = layerInfo.getId();
+                com.mapbox.bindgen.Value visibilityValue = allowedLayers.contains(layerId)
+                        ? com.mapbox.bindgen.Value.valueOf("visible")
+                        : com.mapbox.bindgen.Value.valueOf("none");
+                style.setStyleLayerProperty(layerId, "visibility", visibilityValue);
+            }
+            Log.d(TAG, "Map layers updated to show only Lucban boundary.");
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to update map layers for boundary-only view: " + e.getMessage());
         }
     }
 
