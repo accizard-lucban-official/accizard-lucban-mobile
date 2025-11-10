@@ -37,6 +37,7 @@ import android.widget.TextView;
 import android.view.Window;
 import android.view.ViewGroup;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -96,6 +97,7 @@ public class MapViewActivity extends AppCompatActivity {
     private ImageView clearSearchButton;
     private FloatingActionButton alertFab;
     private FloatingActionButton pinLocationFab;
+    private FloatingActionButton helpFab;
     private ImageView filterButton;
     private ImageButton profile;
     private RecyclerView searchResultsRecyclerView;
@@ -118,6 +120,7 @@ public class MapViewActivity extends AppCompatActivity {
     // Search functionality
     private SimpleSearchAdapter simpleSearchAdapter;
     private List<SimpleSearchAdapter.SearchPlace> searchPlaces = new ArrayList<>();
+    private List<SimpleSearchAdapter.SearchPlace> currentAutocompleteResults = new ArrayList<>();
     private android.os.Handler searchHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable searchRunnable;
 
@@ -203,10 +206,10 @@ public class MapViewActivity extends AppCompatActivity {
     private String activeFacilityFilter = null;
     
     private boolean isUpdatingHeatmapSwitch = false;
-    private static final float PIN_WIDTH_DP = 44f;
-    private static final float PIN_HEIGHT_DP = 60f;
-    private static final float PIN_OFFSET_DP = 3f;
-    private static final float CURRENT_LOCATION_PIN_OFFSET_DP = 4f;
+    private static final float PIN_WIDTH_DP = 56f;
+    private static final float PIN_HEIGHT_DP = 76f;
+    private static final float PIN_OFFSET_DP = 4f;
+    private static final float CURRENT_LOCATION_PIN_OFFSET_DP = 6f;
     private int pinWidthPx;
     private int pinHeightPx;
     private int pinOffsetPx;
@@ -245,6 +248,18 @@ public class MapViewActivity extends AppCompatActivity {
             this.title = title;
             this.pinData = pinData;
             this.markerId = markerId;
+        }
+    }
+
+    private static class HotspotTutorialStep {
+        final int iconResId;
+        final int titleResId;
+        final int descriptionResId;
+
+        HotspotTutorialStep(int iconResId, int titleResId, int descriptionResId) {
+            this.iconResId = iconResId;
+            this.titleResId = titleResId;
+            this.descriptionResId = descriptionResId;
         }
     }
 
@@ -491,6 +506,7 @@ public class MapViewActivity extends AppCompatActivity {
         clearSearchButton = findViewById(R.id.clearSearchButton);
         alertFab = findViewById(R.id.alertFab);
         pinLocationFab = findViewById(R.id.pinLocationFab);
+        helpFab = findViewById(R.id.helpFab);
         filterButton = findViewById(R.id.filterButton);
         profile = findViewById(R.id.profile);
         searchResultsRecyclerView = findViewById(R.id.searchResultsRecyclerView);
@@ -913,6 +929,7 @@ public class MapViewActivity extends AppCompatActivity {
         clearSearchButton.setOnClickListener(v -> {
             searchLocationEditText.setText("");
             hideSearchResults();
+            currentAutocompleteResults.clear();
             clearSearchButton.setVisibility(View.GONE);
             searchLocationEditText.requestFocus();
             
@@ -934,8 +951,8 @@ public class MapViewActivity extends AppCompatActivity {
                 }
                 
                 // If there are search results, select the first one
-                if (simpleSearchAdapter != null && simpleSearchAdapter.getItemCount() > 0) {
-                    SimpleSearchAdapter.SearchPlace firstResult = searchPlaces.get(0);
+                if (!currentAutocompleteResults.isEmpty()) {
+                    SimpleSearchAdapter.SearchPlace firstResult = currentAutocompleteResults.get(0);
                     onSearchResultSelected(firstResult);
                 }
                 return true;
@@ -1016,6 +1033,7 @@ public class MapViewActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 if (simpleSearchAdapter != null) {
                     simpleSearchAdapter.updatePlaces(finalFilteredPlaces);
+                    currentAutocompleteResults = new ArrayList<>(finalFilteredPlaces);
                     
                     // Show results only if there are matches
                     if (!finalFilteredPlaces.isEmpty()) {
@@ -1130,6 +1148,7 @@ public class MapViewActivity extends AppCompatActivity {
                 // Show empty results with "No results found" message
                 List<SimpleSearchAdapter.SearchPlace> emptyList = new ArrayList<>();
                 simpleSearchAdapter.updatePlaces(emptyList);
+                currentAutocompleteResults = new ArrayList<>();
                 
                 // Could optionally show a "No results" placeholder
                 hideSearchResults();
@@ -1192,6 +1211,10 @@ public class MapViewActivity extends AppCompatActivity {
             clearCurrentLocationPin();
             return true;
         });
+
+        if (helpFab != null) {
+            helpFab.setOnClickListener(v -> showHelpDialog());
+        }
 
         // Long press on alert FAB to show map options
         alertFab.setOnLongClickListener(v -> {
@@ -1535,71 +1558,17 @@ public class MapViewActivity extends AppCompatActivity {
      */
     private Bitmap createCurrentLocationMarkerBitmap() {
         ensurePinDimensions();
-        int width = pinWidthPx;
-        int height = pinHeightPx;
-        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Drawable pinDrawable = ContextCompat.getDrawable(this, R.drawable.accizard_pin);
+        if (pinDrawable == null) {
+            return Bitmap.createBitmap(pinWidthPx, pinHeightPx, Bitmap.Config.ARGB_8888);
+        }
+
+        Bitmap bitmap = Bitmap.createBitmap(pinWidthPx, pinHeightPx, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
-        
-        Paint paint = new Paint();
-        paint.setAntiAlias(true);
-        
-        // Draw marker shadow
-        paint.setColor(Color.parseColor("#40000000"));
-        float shadowOffset = width * 0.044f;
-        float shadowRadius = width * 0.178f;
-        float shadowCenterY = height - (height * 0.136f);
-        canvas.drawCircle(width / 2f + shadowOffset, shadowCenterY + shadowOffset, shadowRadius, paint);
-        
-        // Draw main marker body (blue teardrop shape for current location)
-        paint.setColor(Color.parseColor("#4285F4")); // Google Maps blue
-        paint.setStyle(Paint.Style.FILL);
-        
-        // Create teardrop shape using path
-        android.graphics.Path teardropPath = new android.graphics.Path();
-        
-        // Top rounded part (circle)
-        float centerX = width / 2f;
-        float radius = width * 0.167f;
-        float centerY = height - (height * 0.255f);
-        
-        // Bottom pointed part (triangle)
-        float pointY = height - (height * 0.073f);
-        
-        // Create teardrop shape
-        teardropPath.addCircle(centerX, centerY, radius, android.graphics.Path.Direction.CW);
-        
-        // Add triangle point at bottom
-        android.graphics.Path trianglePath = new android.graphics.Path();
-        trianglePath.moveTo(centerX, pointY);
-        trianglePath.lineTo(centerX - radius * 0.65f, centerY + radius * 0.75f);
-        trianglePath.lineTo(centerX + radius * 0.65f, centerY + radius * 0.75f);
-        trianglePath.close();
-        
-        // Combine circle and triangle
-        teardropPath.op(trianglePath, android.graphics.Path.Op.UNION);
-        
-        // Draw the teardrop shape
-        canvas.drawPath(teardropPath, paint);
-        
-        // Add subtle outline
-        paint.setColor(Color.parseColor("#1A73E8")); // Darker blue for outline
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(width * 0.028f);
-        canvas.drawPath(teardropPath, paint);
-        
-        // Draw white circle in center
-        paint.setColor(Color.WHITE);
-        paint.setStyle(Paint.Style.FILL);
-        canvas.drawCircle(centerX, centerY, radius * 0.6f, paint);
-        
-        // Draw inner white circle for the transparent effect
-        paint.setColor(Color.WHITE);
-        canvas.drawCircle(centerX, centerY, radius * 0.47f, paint);
-        
-        // Add a subtle inner shadow for depth
-        paint.setColor(Color.parseColor("#20FFFFFF"));
-        canvas.drawCircle(centerX - width * 0.011f, centerY - width * 0.011f, radius * 0.53f, paint);
-        
+
+        pinDrawable.setBounds(0, 0, pinWidthPx, pinHeightPx);
+        pinDrawable.draw(canvas);
+
         return bitmap;
     }
     
@@ -4291,27 +4260,113 @@ public class MapViewActivity extends AppCompatActivity {
         }
     }
 
+    private List<HotspotTutorialStep> buildHotspotTutorialSteps() {
+        List<HotspotTutorialStep> steps = new ArrayList<>();
+        steps.add(new HotspotTutorialStep(
+                R.drawable.ic_hotspot_flame,
+                R.string.hotspot_tutorial_welcome_title,
+                R.string.hotspot_tutorial_welcome_description));
+        steps.add(new HotspotTutorialStep(
+                R.drawable.ic_hotspot_flame,
+                R.string.view_incident_hotspots,
+                R.string.view_incident_hotspots_description));
+        steps.add(new HotspotTutorialStep(
+                R.drawable.ic_hotspot_flame,
+                R.string.hotspot_tutorial_emergency_title,
+                R.string.hotspot_tutorial_emergency_description));
+        steps.add(new HotspotTutorialStep(
+                R.drawable.ic_hotspot_flame,
+                R.string.hotspot_tutorial_pin_title,
+                R.string.hotspot_tutorial_pin_description));
+        return steps;
+    }
+
     private void showHelpDialog() {
         try {
-            Dialog dialog = new Dialog(this);
+            final Dialog dialog = new Dialog(this);
             dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-            dialog.setContentView(R.layout.dialog_map_help);
+            dialog.setContentView(R.layout.dialog_welcome_hotspot);
             dialog.setCanceledOnTouchOutside(true);
 
-            if (dialog.getWindow() != null) {
-                dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            Window window = dialog.getWindow();
+            if (window != null) {
+                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             }
 
-            View closeView = dialog.findViewById(R.id.btnCloseHelp);
-            if (closeView != null) {
-                closeView.setOnClickListener(v -> dialog.dismiss());
+            ImageButton closeButton = dialog.findViewById(R.id.button_close);
+            ImageView iconView = dialog.findViewById(R.id.image_incident_flame);
+            TextView titleView = dialog.findViewById(R.id.text_title);
+            TextView descriptionView = dialog.findViewById(R.id.text_description);
+            LinearLayout indicatorContainer = dialog.findViewById(R.id.indicator_container);
+            Button previousButton = dialog.findViewById(R.id.button_previous);
+            Button nextButton = dialog.findViewById(R.id.button_next);
+
+            List<HotspotTutorialStep> steps = buildHotspotTutorialSteps();
+            if (steps.isEmpty() || iconView == null || titleView == null || descriptionView == null
+                    || indicatorContainer == null || previousButton == null || nextButton == null) {
+                dialog.dismiss();
+                return;
+            }
+
+            final int[] currentIndex = {0};
+
+            Runnable refreshUi = new Runnable() {
+                @Override
+                public void run() {
+                    HotspotTutorialStep step = steps.get(currentIndex[0]);
+                    iconView.setImageResource(step.iconResId);
+                    titleView.setText(step.titleResId);
+                    descriptionView.setText(step.descriptionResId);
+
+                    indicatorContainer.removeAllViews();
+                    for (int i = 0; i < steps.size(); i++) {
+                        View dot = new View(MapViewActivity.this);
+                        int width = (i == currentIndex[0]) ? dpToPx(24f) : dpToPx(8f);
+                        int height = dpToPx(8f);
+                        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(width, height);
+                        if (i > 0) {
+                            params.setMarginStart(dpToPx(8f));
+                        }
+                        dot.setLayoutParams(params);
+                        dot.setBackgroundResource(i == currentIndex[0] ? R.drawable.bg_indicator_active : R.drawable.bg_indicator_inactive);
+                        indicatorContainer.addView(dot);
+                    }
+
+                    boolean hasPrevious = currentIndex[0] > 0;
+                    previousButton.setEnabled(hasPrevious);
+                    previousButton.setAlpha(hasPrevious ? 1f : 0.4f);
+
+                    boolean isLast = currentIndex[0] == steps.size() - 1;
+                    nextButton.setText(isLast ? getString(R.string.get_started) : getString(R.string.next));
+                }
+            };
+
+            refreshUi.run();
+
+            previousButton.setOnClickListener(v -> {
+                if (currentIndex[0] > 0) {
+                    currentIndex[0]--;
+                    refreshUi.run();
+                }
+            });
+
+            nextButton.setOnClickListener(v -> {
+                if (currentIndex[0] < steps.size() - 1) {
+                    currentIndex[0]++;
+                    refreshUi.run();
+                } else {
+                    dialog.dismiss();
+                }
+            });
+
+            if (closeButton != null) {
+                closeButton.setOnClickListener(v -> dialog.dismiss());
             }
 
             dialog.show();
         } catch (Exception e) {
             Log.e(TAG, "Error showing help dialog", e);
-            // Unable to open help (toast removed)
         }
     }
 

@@ -92,6 +92,21 @@
     <string name="app_title">ACCIZARD\nLUCBAN</string>
     <string name="app_tagline">REPORT PROTECT PREVENT</string>
 
+    <!-- Incident hotspot dialog -->
+    <string name="incident_hotspot_icon">Incident hotspot illustration</string>
+    <string name="close">Close</string>
+    <string name="hotspot_tutorial_welcome_title">Welcome to the Map</string>
+    <string name="hotspot_tutorial_welcome_description">The map shows pins of verified incident reports starting on October 29, 2025. Stay informed about emergencies in your area.</string>
+    <string name="view_incident_hotspots">View Incident Hotspots</string>
+    <string name="view_incident_hotspots_description">Toggle the heatmap feature to view incident hotspots and identify high-risk areas at a glance.</string>
+    <string name="previous">Previous</string>
+    <string name="next">Next</string>
+    <string name="hotspot_tutorial_emergency_title">Emergency Facilities</string>
+    <string name="hotspot_tutorial_emergency_description">The map also shows pins of emergency facilities like hospitals and evacuation centers for quick access during emergencies.</string>
+    <string name="hotspot_tutorial_pin_title">Pin Details</string>
+    <string name="hotspot_tutorial_pin_description">Tap on any pin to view its details, including the incident type, location, and current status.</string>
+    <string name="get_started">Get Started</string>
+
     <!-- Error Messages -->
     <string name="email_required">Email is required</string>
     <string name="password_required">Password is required</string>

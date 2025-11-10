@@ -68,7 +68,7 @@
         <!-- Mapbox Access Token -->
         <meta-data
             android:name="com.mapbox.maps.token"
-            android:value="pk.eyJ1IjoiYWNjaXphcmQtbHVjYmFuLW9mZmljaWFsIiwiYSI6ImNtaG93dTA2aDBnMG8ydm9vemd6a29sNzIifQ.j1N_NloJE19I2Mk4X3J2KA" />
+            android:value="@string/mapbox_access_token" />
 
         <!-- Launcher Activity -->
         <activity
