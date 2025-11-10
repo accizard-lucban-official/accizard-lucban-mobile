@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -46,6 +45,8 @@ import java.util.List;
 import com.example.accizardlucban.StorageHelper;
 import android.view.animation.AnimationUtils;
 import android.content.SharedPreferences;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 
 // Location services imports
 import android.Manifest;
@@ -94,8 +95,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private Button submitReportButton;
     private ImageButton profileButton;
     private ImageView locationInfoIcon;
+    private ImageView reportTypeInfoIcon;
     private RecyclerView reportLogRecyclerView;
-    private Spinner reportLogFilterSpinner;
+    private ChipGroup reportLogFilterChips;
     private RecyclerView imageGalleryRecyclerView;
     private Button addMoreImagesButton;
     
@@ -169,8 +171,8 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         // Setup RecyclerView
         setupReportLogRecyclerView();
 
-        // Setup filter spinner
-        setupReportLogFilterSpinner();
+        // Setup filter chips
+        setupReportLogFilterChips();
         
         // Setup professional image gallery
         setupProfessionalImageGallery();
@@ -204,8 +206,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         submitReportButton = findViewById(R.id.submitReportButton);
         profileButton = findViewById(R.id.profile);
         locationInfoIcon = findViewById(R.id.locationInfoIcon);
+        reportTypeInfoIcon = findViewById(R.id.reportTypeInfoIcon);
         reportLogRecyclerView = findViewById(R.id.reportLogRecyclerView);
-        reportLogFilterSpinner = findViewById(R.id.reportLogFilterSpinner);
+        reportLogFilterChips = findViewById(R.id.reportLogFilterChips);
         imageGalleryRecyclerView = findViewById(R.id.imageGalleryRecyclerView);
         addMoreImagesButton = findViewById(R.id.addMoreImagesButton);
         
@@ -241,13 +244,20 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 "Select Report Type",
                 "Road Crash",
                 "Medical Emergency",
-                "Flooding",
                 "Volcanic Activity",
-                "Landslide",
                 "Earthquake",
-                "Civil Disturbance",
                 "Armed Conflict",
-                "Infectious Disease"
+                "Fire",
+                "Flooding",
+                "Landslide",
+                "Civil Disturbance",
+                "Infectious Disease",
+                "Poor Infrastructure",
+                "Obstructions",
+                "Electrical Hazard",
+                "Environmental Hazard",
+                "Animal Concern",
+                "Others"
         };
 
         // Create adapter and set to spinner
@@ -348,46 +358,64 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         Log.d(TAG, "fetchUserDataFromFirestore() - Reporter fields removed");
     }
 
-    private void setupReportLogFilterSpinner() {
-        // Create array of filter options
-        String[] filterOptions = {
-                "All Reports",
-                "Pending",
-                "Ongoing", 
-                "Responded",
-                "Not Responded",
-                "Redundant",
-                "Road Crash",
-                "Medical Emergency",
-                "Flooding",
-                "Volcanic Activity",
-                "Landslide",
-                "Earthquake",
-                "Civil Disturbance",
-                "Armed Conflict",
-                "Infectious Disease"
+    private void setupReportLogFilterChips() {
+        if (reportLogFilterChips == null) return;
+
+        reportLogFilterChips.setSingleSelection(true);
+        reportLogFilterChips.setSelectionRequired(true);
+        reportLogFilterChips.removeAllViews();
+
+        String[][] filterOptions = {
+                {"All Types", "All Reports"},
+                {"Pending", "Pending"},
+                {"Ongoing", "Ongoing"},
+                {"Responded", "Responded"},
+                {"Unresponded", "Not Responded"},
+                {"Redundant", "Redundant"},
+                {"Road Crash", "Road Crash"},
+                {"Medical Emergency", "Medical Emergency"},
+                {"Volcanic Activity", "Volcanic Activity"},
+                {"Earthquake", "Earthquake"},
+                {"Armed Conflict", "Armed Conflict"},
+                {"Fire", "Fire"},
+                {"Flooding", "Flooding"},
+                {"Landslide", "Landslide"},
+                {"Civil Disturbance", "Civil Disturbance"},
+                {"Infectious Disease", "Infectious Disease"},
+                {"Poor Infrastructure", "Poor Infrastructure"},
+                {"Obstructions", "Obstructions"},
+                {"Electrical Hazard", "Electrical Hazard"},
+                {"Environmental Hazard", "Environmental Hazard"},
+                {"Animal Concern", "Animal Concern"},
+                {"Others", "Others"}
         };
 
-        // Create adapter and set to spinner
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this,
-                android.R.layout.simple_spinner_item,
-                filterOptions
-        );
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        reportLogFilterSpinner.setAdapter(adapter);
+        LayoutInflater inflater = LayoutInflater.from(this);
 
-        // Set selection listener
-        reportLogFilterSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String selectedFilter = filterOptions[position];
-                filterReports(selectedFilter);
+        for (int i = 0; i < filterOptions.length; i++) {
+            String displayText = filterOptions[i][0];
+            String filterValue = filterOptions[i][1];
+
+            Chip chip = (Chip) inflater.inflate(R.layout.item_report_filter_chip, reportLogFilterChips, false);
+            chip.setText(displayText);
+            chip.setTag(filterValue);
+
+            if (i == 0) {
+                chip.setChecked(true);
             }
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                // Do nothing
+            reportLogFilterChips.addView(chip);
+        }
+
+        // Ensure initial filter applied
+        filterReports((String) reportLogFilterChips.getChildAt(0).getTag());
+
+        reportLogFilterChips.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (!checkedIds.isEmpty()) {
+                Chip selectedChip = group.findViewById(checkedIds.get(0));
+                if (selectedChip != null) {
+                    filterReports((String) selectedChip.getTag());
+                }
             }
         });
     }
@@ -410,6 +438,15 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                     Toast.LENGTH_LONG).show();
             }
         });
+
+        if (reportTypeInfoIcon != null) {
+            reportTypeInfoIcon.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showReportTypeGuideDialog();
+                }
+            });
+        }
         
         // Tab click listeners
         submitReportTab.setOnClickListener(new View.OnClickListener() {
@@ -521,6 +558,29 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
             }
         });
+    }
+
+    /**
+     * Show report type guide dialog with detailed descriptions.
+     */
+    private void showReportTypeGuideDialog() {
+        try {
+            AlertDialog dialog = new AlertDialog.Builder(this)
+                    .setView(LayoutInflater.from(this).inflate(R.layout.dialog_report_type_guide, null))
+                    .create();
+
+            dialog.setOnShowListener(d -> {
+                Button closeButton = dialog.findViewById(R.id.btnCloseReportTypeGuide);
+                if (closeButton != null) {
+                    closeButton.setOnClickListener(v -> dialog.dismiss());
+                }
+            });
+
+            dialog.show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing report type guide dialog", e);
+            Toast.makeText(this, "Unable to open report type guide", Toast.LENGTH_SHORT).show();
+        }
     }
 
     // Navigation methods

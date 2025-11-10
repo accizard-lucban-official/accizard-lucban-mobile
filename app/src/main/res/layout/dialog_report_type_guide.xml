@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@android:color/white">
+
+    <TextView
+        android:id="@+id/tvReportTypeGuideTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Report Type Guide"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="12dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Identify the nature of the incident by selecting the most appropriate report category."
+        android:textSize="14sp"
+        android:textColor="#555555"
+        android:layout_marginBottom="16dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_marginBottom="16dp"
+        android:overScrollMode="always">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🚗 Road Crash — Vehicle collisions or road accidents involving motorists, pedestrians, or cyclists."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🆘 Medical Emergency — Situations requiring urgent medical attention such as injuries, fainting, or health crises."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🌋 Volcanic Activity — Reports of ashfall, sulfur smell, tremors, or visible volcanic changes."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🌏 Earthquake — Ground shaking or aftershocks felt in the area that may cause damage or panic."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⚔️ Armed Conflict — Incidents involving violence, gunfire, or threats from armed individuals or groups."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔥 Fire — Building, vehicle, or grass fires that require firefighting assistance."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🌊 Flooding — Rising water levels on roads, homes, or establishments due to rain or drainage overflow."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⛰️ Landslide — Soil or rock movement along slopes, often triggered by heavy rain or earthquakes."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🚨 Civil Disturbance — Riots, protests, or large gatherings causing disruption or safety risks."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🩺 Infectious Disease — Reports of suspected outbreaks or individuals showing contagious symptoms."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🏚️ Poor Infrastructure — Damaged roads, cracked bridges, unstable buildings, or unsafe public structures."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🚧 Obstructions — Fallen trees, road debris, or roadworks blocking vehicle or pedestrian movement."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⚡ Electrical Hazard — Exposed wires, leaning electric posts, or sparks that pose an electrocution or fire risk."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🧪 Environmental Hazard — Improper waste disposal, clogged drainage, or stagnant water that may cause health issues."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🐾 Animal Concern — Reports involving stray, injured, or aggressive animals, animal bites, or livestock causing obstruction or safety issues."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="➕ Others — Any other incidents or hazards not listed in the categories above."
+                android:textSize="14sp"
+                android:textColor="#444444"
+                android:layout_marginBottom="8dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <Button
+        android:id="@+id/btnCloseReportTypeGuide"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Close"
+        android:textAllCaps="false"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
+        android:background="@drawable/submit_button_background" />
+
+</LinearLayout>

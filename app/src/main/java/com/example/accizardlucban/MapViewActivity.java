@@ -12,17 +12,23 @@ import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.CheckBox;
 import android.widget.Button;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.mapbox.geojson.Point;
+import com.mapbox.geojson.Feature;
+import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.maps.CameraOptions;
+import com.mapbox.maps.CameraState;
 import com.mapbox.maps.Style;
 import com.mapbox.maps.MapboxMap;
 import com.mapbox.maps.MapView;
 import com.mapbox.maps.plugin.animation.CameraAnimationsPlugin;
 import com.mapbox.maps.plugin.animation.MapAnimationOptions;
+
+import com.example.accizardlucban.HeatmapHelper;
 import android.widget.FrameLayout;
 import android.view.ViewGroup;
 import android.view.Gravity;
@@ -36,7 +42,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.Locale;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -66,6 +74,21 @@ import com.mapbox.maps.ScreenCoordinate;
 public class MapViewActivity extends AppCompatActivity {
 
     private static final String TAG = "MapViewActivity";
+    private static final String HEATMAP_SOURCE_ID = "hazard-heatmap-source";
+    private static final String HEATMAP_LAYER_ID = "hazard-heatmap-layer";
+    private static final List<String> HAZARD_FILTER_KEYS = Arrays.asList(
+            "Road Accident",
+            "Fire",
+            "Medical Emergency",
+            "Flooding",
+            "Volcanic Activity",
+            "Landslide",
+            "Earthquake",
+            "Civil Disturbance",
+            "Armed Conflict",
+            "Infectious Disease",
+            "Others"
+    );
     private static final String PREFS_NAME = "AlertsActivityPrefs";
     private static final String KEY_LAST_VISIT_TIME = "last_visit_time";
     
@@ -73,7 +96,6 @@ public class MapViewActivity extends AppCompatActivity {
     private ImageView clearSearchButton;
     private FloatingActionButton alertFab;
     private FloatingActionButton pinLocationFab;
-    private FloatingActionButton helpFab;
     private ImageView filterButton;
     private ImageButton profile;
     private RecyclerView searchResultsRecyclerView;
@@ -178,9 +200,9 @@ public class MapViewActivity extends AppCompatActivity {
     }
     private final List<FacilityCheckboxEntry> facilityCheckboxes = new ArrayList<>();
     private boolean isUpdatingFacilityCheckboxes = false;
+    private String activeFacilityFilter = null;
     
-    // Unified flag for updating all checkboxes (both incident and facility)
-    private boolean isUpdatingAllCheckboxes = false;
+    private boolean isUpdatingHeatmapSwitch = false;
     private static final float PIN_WIDTH_DP = 44f;
     private static final float PIN_HEIGHT_DP = 60f;
     private static final float PIN_OFFSET_DP = 3f;
@@ -469,7 +491,6 @@ public class MapViewActivity extends AppCompatActivity {
         clearSearchButton = findViewById(R.id.clearSearchButton);
         alertFab = findViewById(R.id.alertFab);
         pinLocationFab = findViewById(R.id.pinLocationFab);
-        helpFab = findViewById(R.id.helpFab);
         filterButton = findViewById(R.id.filterButton);
         profile = findViewById(R.id.profile);
         searchResultsRecyclerView = findViewById(R.id.searchResultsRecyclerView);
@@ -554,180 +575,90 @@ public class MapViewActivity extends AppCompatActivity {
     }
 
     /**
-     * Unified single-selection enforcement across both Incident Types and Emergency Support Facilities
-     * Only ONE checkbox total can be checked at a time across both groups
+     * Ensure only one incident checkbox is selected at a time
      */
-    private void enforceUnifiedSingleSelection(CheckBox changedCheckBox, String filterType, boolean isChecked, boolean isIncident) {
-        if (isUpdatingAllCheckboxes) {
+    private void enforceSingleIncidentSelection(CheckBox changedCheckBox, String incidentType, boolean isChecked) {
+        if (isUpdatingIncidentCheckboxes) {
             return;
         }
 
-        isUpdatingAllCheckboxes = true;
         isUpdatingIncidentCheckboxes = true;
-        isUpdatingFacilityCheckboxes = true;
-        
         try {
+            String activeIncidentType = null;
+
             if (changedCheckBox != null && isChecked) {
-                // Uncheck ALL incident checkboxes
-                for (IncidentCheckboxEntry entry : incidentCheckboxes) {
-                    if (entry.checkBox == null) {
-                        continue;
-                    }
-                    boolean shouldCheck = entry.checkBox == changedCheckBox && isIncident;
-                    if (entry.checkBox.isChecked() != shouldCheck) {
-                        entry.checkBox.setChecked(shouldCheck);
-                    }
-                    incidentFilters.put(entry.incidentType, shouldCheck);
-                    updateCheckboxVisualState(entry.checkBox, shouldCheck);
-                }
-                
-                // Uncheck ALL facility checkboxes
-                for (FacilityCheckboxEntry entry : facilityCheckboxes) {
-                    if (entry.checkBox == null) {
-                        continue;
-                    }
-                    boolean shouldCheck = entry.checkBox == changedCheckBox && !isIncident;
-                    if (entry.checkBox.isChecked() != shouldCheck) {
-                        entry.checkBox.setChecked(shouldCheck);
-                    }
-                    facilityFilters.put(entry.facilityType, shouldCheck);
-                    updateCheckboxVisualState(entry.checkBox, shouldCheck);
-                    
-                    // Hide layers for unchecked facilities
-                    if (!shouldCheck) {
-                        if ("Health Facilities".equals(entry.facilityType)) {
-                            toggleHealthFacilities(false);
-                        } else if ("Evacuation Centers".equals(entry.facilityType)) {
-                            toggleEvacuationCenters(false);
-                        }
-                    }
-                }
-                
-                // Show layers for newly checked facility (if it's a facility)
-                if (!isIncident) {
-                    if ("Health Facilities".equals(filterType)) {
-                        toggleHealthFacilities(true);
-                    } else if ("Evacuation Centers".equals(filterType)) {
-                        toggleEvacuationCenters(true);
-                    }
-                }
-            } else if (changedCheckBox != null && !isChecked) {
-                // Just uncheck the current one
-                if (isIncident) {
-                    incidentFilters.put(filterType, false);
-                    updateCheckboxVisualState(changedCheckBox, false);
-                } else {
-                    facilityFilters.put(filterType, false);
-                    updateCheckboxVisualState(changedCheckBox, false);
-                    
-                    // Hide layers for unchecked facility
-                    if ("Health Facilities".equals(filterType)) {
-                        toggleHealthFacilities(false);
-                    } else if ("Evacuation Centers".equals(filterType)) {
-                        toggleEvacuationCenters(false);
-                    }
-                }
-            }
-        } finally {
-            isUpdatingAllCheckboxes = false;
-            isUpdatingIncidentCheckboxes = false;
-            isUpdatingFacilityCheckboxes = false;
-        }
-
-        applyFiltersToMap();
-        updateFilterIndicator();
-    }
-    
-    /**
-     * Enforce single selection across all checkboxes (used when loading/updating states)
-     */
-    private void enforceUnifiedSingleSelection() {
-        if (isUpdatingAllCheckboxes) {
-            return;
-        }
-
-        isUpdatingAllCheckboxes = true;
-        isUpdatingIncidentCheckboxes = true;
-        isUpdatingFacilityCheckboxes = true;
-        
-        try {
-            // Find the first checked checkbox across both groups
-            CheckBox firstChecked = null;
-            String firstCheckedType = null;
-            boolean firstCheckedIsIncident = false;
-            
-            // Check incident checkboxes first
-            for (IncidentCheckboxEntry entry : incidentCheckboxes) {
-                if (entry.checkBox != null && entry.checkBox.isChecked()) {
-                    firstChecked = entry.checkBox;
-                    firstCheckedType = entry.incidentType;
-                    firstCheckedIsIncident = true;
-                    break;
-                }
-            }
-            
-            // If no incident checked, check facility checkboxes
-            if (firstChecked == null) {
-                for (FacilityCheckboxEntry entry : facilityCheckboxes) {
-                    if (entry.checkBox != null && entry.checkBox.isChecked()) {
-                        firstChecked = entry.checkBox;
-                        firstCheckedType = entry.facilityType;
-                        firstCheckedIsIncident = false;
+                activeIncidentType = incidentType;
+            } else {
+                for (Map.Entry<String, Boolean> entry : incidentFilters.entrySet()) {
+                    if (Boolean.TRUE.equals(entry.getValue())) {
+                        activeIncidentType = entry.getKey();
                         break;
                     }
                 }
             }
-            
-            // Uncheck all others (or uncheck all if none was found)
+
             for (IncidentCheckboxEntry entry : incidentCheckboxes) {
                 if (entry.checkBox == null) {
                     continue;
                 }
-                boolean shouldCheck = firstChecked != null && entry.checkBox == firstChecked && firstCheckedIsIncident;
+
+                boolean shouldCheck = activeIncidentType != null && entry.incidentType.equals(activeIncidentType);
+
                 if (entry.checkBox.isChecked() != shouldCheck) {
                     entry.checkBox.setChecked(shouldCheck);
                 }
+
                 incidentFilters.put(entry.incidentType, shouldCheck);
                 updateCheckboxVisualState(entry.checkBox, shouldCheck);
             }
-            
-            for (FacilityCheckboxEntry entry : facilityCheckboxes) {
-                if (entry.checkBox == null) {
-                    continue;
-                }
-                boolean shouldCheck = firstChecked != null && entry.checkBox == firstChecked && !firstCheckedIsIncident;
-                if (entry.checkBox.isChecked() != shouldCheck) {
-                    entry.checkBox.setChecked(shouldCheck);
-                }
-                facilityFilters.put(entry.facilityType, shouldCheck);
-                updateCheckboxVisualState(entry.checkBox, shouldCheck);
-                
-                // Toggle map layers for facilities
-                if ("Health Facilities".equals(entry.facilityType)) {
-                    toggleHealthFacilities(shouldCheck);
-                } else if ("Evacuation Centers".equals(entry.facilityType)) {
-                    toggleEvacuationCenters(shouldCheck);
-                }
-            }
         } finally {
-            isUpdatingAllCheckboxes = false;
             isUpdatingIncidentCheckboxes = false;
-            isUpdatingFacilityCheckboxes = false;
         }
 
         applyFiltersToMap();
         updateFilterIndicator();
-    }
-    
-    private void enforceSingleIncidentSelection() {
-        enforceUnifiedSingleSelection();
+        updateHeatmapToggleState();
+
+        if (heatmapEnabled && hasActiveHazardFilter()) {
+            showHeatmapView();
+        } else {
+            hideHeatmapView();
+        }
     }
 
-    private void enforceSingleIncidentSelection(CheckBox changedCheckBox, String incidentType, boolean isChecked) {
-        // Use unified enforcement
-        enforceUnifiedSingleSelection(changedCheckBox, incidentType, isChecked, true);
+    private void enforceSingleIncidentSelection() {
+        enforceSingleIncidentSelection(null, null, false);
     }
-    
+
+    /**
+     * Apply facility selection to UI and filters, ensuring only one facility is active.
+     */
+    private void applyFacilitySelectionState() {
+        if (isUpdatingFacilityCheckboxes) {
+            return;
+        }
+
+        isUpdatingFacilityCheckboxes = true;
+        try {
+            for (FacilityCheckboxEntry entry : facilityCheckboxes) {
+                if (entry.checkBox == null) {
+                    continue;
+                }
+
+                boolean shouldCheck = activeFacilityFilter != null && activeFacilityFilter.equals(entry.facilityType);
+
+                if (entry.checkBox.isChecked() != shouldCheck) {
+                    entry.checkBox.setChecked(shouldCheck);
+                }
+
+                facilityFilters.put(entry.facilityType, shouldCheck);
+                updateCheckboxVisualState(entry.checkBox, shouldCheck);
+                applyFacilityLayerVisibility(entry.facilityType, shouldCheck);
+            }
+        } finally {
+            isUpdatingFacilityCheckboxes = false;
+        }
+    }
     /**
      * Setup checkbox listeners similar to RegistrationActivity cbTerms functionality
      * This method handles checkbox state changes and updates the filter states accordingly
@@ -737,8 +668,32 @@ public class MapViewActivity extends AppCompatActivity {
             // Heatmap Switch Listener
             if (heatmapSwitch != null) {
                 heatmapSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if (isUpdatingHeatmapSwitch) {
+                        return;
+                    }
+
+                    if (isChecked && !hasActiveHazardFilter()) {
+                        isUpdatingHeatmapSwitch = true;
+                        buttonView.setChecked(false);
+                        isUpdatingHeatmapSwitch = false;
+                        heatmapEnabled = false;
+                        hideHeatmapView();
+                        Toast.makeText(MapViewActivity.this,
+                                "Turn on an accident or hazard filter to use the heatmap.",
+                                Toast.LENGTH_SHORT).show();
+                        updateFilterIndicator();
+                        return;
+                    }
+
                     heatmapEnabled = isChecked;
                     Log.d(TAG, "Heatmap toggle changed: " + isChecked);
+
+                    if (heatmapEnabled) {
+                        showHeatmapView();
+                    } else {
+                        hideHeatmapView();
+                    }
+
                     // Update filter indicator when heatmap changes
                     updateFilterIndicator();
                 });
@@ -773,6 +728,8 @@ public class MapViewActivity extends AppCompatActivity {
             setupFacilityCheckboxListener(governmentOfficesCheck, "Government Offices");
             
             Log.d(TAG, "All checkbox listeners setup successfully");
+            applyFacilitySelectionFromState();
+            updateHeatmapToggleState();
             
         } catch (Exception e) {
             Log.e(TAG, "Error setting up checkbox listeners: " + e.getMessage(), e);
@@ -788,7 +745,7 @@ public class MapViewActivity extends AppCompatActivity {
             checkBox.setChecked(incidentFilters.getOrDefault(incidentType, false));
             
             checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isUpdatingAllCheckboxes || isUpdatingIncidentCheckboxes) {
+                if (isUpdatingIncidentCheckboxes) {
                     return;
                 }
 
@@ -796,8 +753,7 @@ public class MapViewActivity extends AppCompatActivity {
                     incidentFilters.put(incidentType, isChecked);
                     Log.d(TAG, "Incident filter '" + incidentType + "' changed: " + isChecked);
                     
-                    // Enforce unified single selection (will uncheck all others including facilities)
-                    enforceUnifiedSingleSelection(checkBox, incidentType, isChecked, true);
+                    enforceSingleIncidentSelection(checkBox, incidentType, isChecked);
                 } catch (Exception e) {
                     Log.e(TAG, "Error handling incident checkbox change for " + incidentType, e);
                 }
@@ -814,20 +770,6 @@ public class MapViewActivity extends AppCompatActivity {
             facilityCheckboxes.add(new FacilityCheckboxEntry(checkBox, facilityType));
         }
     }
-    
-    /**
-     * Enforce single facility selection (only one checkbox can be checked at a time)
-     * Now uses unified enforcement across both groups
-     */
-    private void enforceSingleFacilitySelection(CheckBox changedCheckBox, String facilityType, boolean isChecked) {
-        // Use unified enforcement - this will uncheck all incident checkboxes too
-        enforceUnifiedSingleSelection(changedCheckBox, facilityType, isChecked, false);
-    }
-    
-    private void enforceSingleFacilitySelection() {
-        enforceUnifiedSingleSelection();
-    }
-    
     /**
      * Setup individual facility checkbox listener
      */
@@ -835,31 +777,103 @@ public class MapViewActivity extends AppCompatActivity {
         if (checkBox != null) {
             // Set flag to prevent listener from firing during initialization
             isUpdatingFacilityCheckboxes = true;
-            isUpdatingAllCheckboxes = true;
             try {
-                // Initialize checkbox state without triggering listener
-                checkBox.setChecked(facilityFilters.getOrDefault(facilityType, false));
+                // Initialize checkbox state based on current filters without triggering listener
+                boolean initialChecked = facilityFilters.getOrDefault(facilityType, false);
+                checkBox.setChecked(initialChecked);
             } finally {
                 isUpdatingFacilityCheckboxes = false;
-                isUpdatingAllCheckboxes = false;
             }
-            
+
             checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isUpdatingAllCheckboxes || isUpdatingFacilityCheckboxes) {
+                if (isUpdatingFacilityCheckboxes) {
                     return;
                 }
 
-                try {
-                    // Update the filter state FIRST
-                    facilityFilters.put(facilityType, isChecked);
-                    Log.d(TAG, "Facility filter '" + facilityType + "' changed to: " + isChecked);
-                    
-                    // Enforce unified single selection (will uncheck all others including incidents)
-                    enforceUnifiedSingleSelection(checkBox, facilityType, isChecked, false);
-                } catch (Exception e) {
-                    Log.e(TAG, "Error handling facility checkbox change for " + facilityType, e);
-                }
+                Log.d(TAG, "Facility filter '" + facilityType + "' changed to: " + isChecked);
+                handleFacilitySelectionChange(checkBox, facilityType, isChecked);
             });
+        }
+    }
+
+    /**
+     * Handle facility checkbox interactions while enforcing single selection
+     */
+    private void handleFacilitySelectionChange(CheckBox changedCheckBox, String facilityType, boolean isChecked) {
+        if (facilityType == null) {
+            activeFacilityFilter = null;
+            for (Map.Entry<String, Boolean> entry : facilityFilters.entrySet()) {
+                if (Boolean.TRUE.equals(entry.getValue())) {
+                    activeFacilityFilter = entry.getKey();
+                    break;
+                }
+            }
+            applyFacilitySelectionState();
+            applyFiltersToMap();
+            updateFilterIndicator();
+            return;
+        }
+
+        try {
+            Log.d(TAG, "Facility filter '" + facilityType + "' changed to: " + isChecked);
+            if (isChecked) {
+                activeFacilityFilter = facilityType;
+            } else if (facilityType.equals(activeFacilityFilter)) {
+                activeFacilityFilter = null;
+            }
+
+            for (Map.Entry<String, Boolean> entry : facilityFilters.entrySet()) {
+                boolean shouldBeActive = activeFacilityFilter != null && activeFacilityFilter.equals(entry.getKey());
+                entry.setValue(shouldBeActive);
+            }
+
+            applyFacilitySelectionState();
+            applyFiltersToMap();
+            updateFilterIndicator();
+        } catch (Exception e) {
+            Log.e(TAG, "Error handling facility selection change for " + facilityType, e);
+        }
+    }
+
+    /**
+     * Apply the current facility selection state to the UI and map layers
+     */
+    private void applyFacilitySelectionFromState() {
+        activeFacilityFilter = null;
+        for (Map.Entry<String, Boolean> entry : facilityFilters.entrySet()) {
+            if (Boolean.TRUE.equals(entry.getValue())) {
+                activeFacilityFilter = entry.getKey();
+                break;
+            }
+        }
+        applyFacilitySelectionState();
+        applyFiltersToMap();
+        updateFilterIndicator();
+    }
+
+    /**
+     * Toggle map layers associated with facility selections
+     */
+    private void applyFacilityLayerVisibility(String facilityType, boolean visible) {
+        if (facilityType == null) {
+            return;
+        }
+
+        switch (facilityType) {
+            case "Health Facilities":
+                toggleHealthFacilities(visible);
+                break;
+            case "Evacuation Centers":
+                toggleEvacuationCenters(visible);
+                break;
+            case "Police Stations":
+            case "Fire Stations":
+            case "Government Offices":
+                // Currently handled via Firestore pins; layers can be added here when available
+                break;
+            default:
+                // Unknown facility type - no layer to toggle
+                break;
         }
     }
 
@@ -1184,12 +1198,14 @@ public class MapViewActivity extends AppCompatActivity {
             // Show options: navigate to Lucban OR refresh pins
             android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
             builder.setTitle("Map Options");
-            builder.setItems(new CharSequence[]{"Center on Lucban", "Refresh Pins"}, (dialog, which) -> {
+            builder.setItems(new CharSequence[]{"Center on Lucban", "Refresh Pins", "Create Road Accident Pin"}, (dialog, which) -> {
                 if (which == 0) {
                     Point lucbanCenter = Point.fromLngLat(121.5564, 14.1136);
                     animateToLocation(lucbanCenter, 15.0);
-                } else {
+                } else if (which == 1) {
                     refreshPinsFromFirestore();
+                } else if (which == 2) {
+                    createRoadAccidentPinAtCameraCenter();
                 }
             });
             builder.show();
@@ -1231,9 +1247,6 @@ public class MapViewActivity extends AppCompatActivity {
             });
         }
 
-        if (helpFab != null) {
-            helpFab.setOnClickListener(v -> showHelpDialog());
-        }
     }
 
     private void setupBottomNavigation() {
@@ -1595,6 +1608,10 @@ public class MapViewActivity extends AppCompatActivity {
      */
     private void positionCurrentLocationMarkerAtCoordinates(Point point) {
         if (currentLocationMarker != null && mapboxMap != null && mapContainer != null) {
+            if (heatmapEnabled && hasActiveHazardFilter()) {
+                currentLocationMarker.setVisibility(View.GONE);
+                return;
+            }
             try {
                 ensurePinDimensions();
                 // Convert geographic coordinates to screen coordinates with high precision
@@ -1749,6 +1766,10 @@ public class MapViewActivity extends AppCompatActivity {
             MapMarker mapMarker = new MapMarker(markerView, point, title);
             pinnedMarkers.add(mapMarker);
             pinnedLocations.add(point);
+
+            if (heatmapEnabled && hasActiveHazardFilter()) {
+                markerView.setVisibility(View.GONE);
+            }
         }
     }
 
@@ -2164,10 +2185,12 @@ public class MapViewActivity extends AppCompatActivity {
             
             // Apply filters to existing Firestore pins
             applyFiltersToFirestorePins();
+            updateHeatmapToggleState();
             
-            // If heatmap is enabled, show heatmap view
-            if (heatmapEnabled) {
+            // If heatmap is enabled and hazard filters are active, update visualization
+            if (heatmapEnabled && hasActiveHazardFilter()) {
                 showHeatmapView();
+                setAllPinsVisibility(false);
             } else {
                 hideHeatmapView();
             }
@@ -2196,15 +2219,43 @@ public class MapViewActivity extends AppCompatActivity {
             int visiblePins = 0;
             int hiddenPins = 0;
             int totalPins = firestorePinMarkers.size();
+            boolean layersActive = hasAnyLayerActive();
             
             for (MapMarker mapMarker : firestorePinMarkers) {
                 if (mapMarker.pinData != null) {
+                    boolean previouslyVisible = mapMarker.markerView.getVisibility() == View.VISIBLE;
+
+                    if (layersActive) {
+                        if (previouslyVisible) {
+                            mapMarker.markerView.clearAnimation();
+                            mapMarker.markerView.setAlpha(1f);
+                        }
+                        mapMarker.markerView.setVisibility(View.GONE);
+                        hiddenPins++;
+                        continue;
+                    }
+
                     boolean shouldShow = shouldShowPinBasedOnFilters(mapMarker.pinData);
-                    
+
+                    if (heatmapEnabled && hasActiveHazardFilter()) {
+                        mapMarker.markerView.setVisibility(View.GONE);
+                        hiddenPins++;
+                        continue;
+                    }
+
                     if (shouldShow) {
-                        mapMarker.markerView.setVisibility(View.VISIBLE);
+                        if (!previouslyVisible) {
+                            mapMarker.markerView.clearAnimation();
+                            mapMarker.markerView.setAlpha(1f);
+                            mapMarker.markerView.setVisibility(View.VISIBLE);
+                            mapMarker.markerView.bringToFront();
+                        }
                         visiblePins++;
                     } else {
+                        if (previouslyVisible) {
+                            mapMarker.markerView.clearAnimation();
+                            mapMarker.markerView.setAlpha(1f);
+                        }
                         mapMarker.markerView.setVisibility(View.GONE);
                         hiddenPins++;
                     }
@@ -2215,6 +2266,11 @@ public class MapViewActivity extends AppCompatActivity {
             
             // Show toast with filter results only if requested
             // Toast messages removed
+            if (!layersActive && heatmapEnabled && hasActiveHazardFilter()) {
+                updateHeatmapLayerData();
+            } else if (layersActive) {
+                hideHeatmapView();
+            }
             
         } catch (Exception e) {
             Log.e(TAG, "Error applying filters to Firestore pins: " + e.getMessage(), e);
@@ -2231,24 +2287,24 @@ public class MapViewActivity extends AppCompatActivity {
             
             // Check facility filters
             if (name.contains("hospital") || name.contains("medical") || name.contains("health")) {
-                return facilityFilters.getOrDefault("Health Facilities", true);
+                return facilityFilters.getOrDefault("Health Facilities", false);
             }
             
             if (name.contains("police") || name.contains("station")) {
-                return facilityFilters.getOrDefault("Police Stations", true);
+                return facilityFilters.getOrDefault("Police Stations", false);
             }
             
             if (name.contains("fire")) {
-                return facilityFilters.getOrDefault("Fire Stations", true);
+                return facilityFilters.getOrDefault("Fire Stations", false);
             }
             
             if (name.contains("hall") || name.contains("government") || name.contains("municipal") || 
                 name.contains("capitol") || name.contains("office")) {
-                return facilityFilters.getOrDefault("Government Offices", true);
+                return facilityFilters.getOrDefault("Government Offices", false);
             }
             
             if (name.contains("evacuation") || name.contains("center")) {
-                return facilityFilters.getOrDefault("Evacuation Centers", true);
+                return facilityFilters.getOrDefault("Evacuation Centers", false);
             }
             
             // If no specific category matches, show by default
@@ -2260,28 +2316,109 @@ public class MapViewActivity extends AppCompatActivity {
         }
     }
     
-    /**
-     * Show heatmap view (placeholder implementation)
-     */
     private void showHeatmapView() {
+        if (!heatmapEnabled || !hasActiveHazardFilter() || mapboxMap == null) {
+            return;
+        }
         try {
+            Style style = mapboxMap.getStyle();
+            if (style == null) {
+                return;
+            }
+            
+            ensureHeatmapLayer(style);
+            updateHeatmapLayerData(style);
+            setHeatmapVisibility(style, true);
+            setAllPinsVisibility(false);
             Log.d(TAG, "Heatmap view enabled");
-            // TODO: Implement actual heatmap visualization
-            // This could involve changing map style or adding heatmap layers
         } catch (Exception e) {
             Log.e(TAG, "Error showing heatmap view: " + e.getMessage(), e);
         }
     }
     
-    /**
-     * Hide heatmap view (placeholder implementation)
-     */
     private void hideHeatmapView() {
         try {
+            if (mapboxMap == null) return;
+            Style style = mapboxMap.getStyle();
+            if (style == null) return;
+            setHeatmapVisibility(style, false);
+            setAllPinsVisibility(true);
+            applyFiltersToFirestorePins(false);
             Log.d(TAG, "Heatmap view disabled");
-            // TODO: Implement heatmap removal
         } catch (Exception e) {
             Log.e(TAG, "Error hiding heatmap view: " + e.getMessage(), e);
+        }
+    }
+
+    private void ensureHeatmapLayer(Style style) {
+        if (style == null) return;
+        HeatmapHelper.INSTANCE.ensureComponents(style, HEATMAP_SOURCE_ID, HEATMAP_LAYER_ID);
+    }
+
+    private void updateHeatmapLayerData() {
+        if (!heatmapEnabled || mapboxMap == null) {
+            return;
+        }
+
+        Style style = mapboxMap.getStyle();
+        if (style == null) {
+            return;
+        }
+
+        updateHeatmapLayerData(style);
+    }
+
+    private void updateHeatmapLayerData(Style style) {
+        if (style == null || !heatmapEnabled) return;
+        ensureHeatmapLayer(style);
+
+        List<Feature> features = new ArrayList<>();
+        for (MapMarker mapMarker : firestorePinMarkers) {
+            if (mapMarker != null && mapMarker.location != null && mapMarker.pinData != null) {
+                if (isHazardCategory(mapMarker.pinData.getCategory()) &&
+                        shouldShowPinBasedOnFilters(mapMarker.pinData)) {
+                    features.add(Feature.fromGeometry(Point.fromLngLat(
+                            mapMarker.location.longitude(),
+                            mapMarker.location.latitude()
+                    )));
+                }
+            }
+        }
+
+        FeatureCollection collection = FeatureCollection.fromFeatures(features);
+        HeatmapHelper.INSTANCE.updateFeatures(style, HEATMAP_SOURCE_ID, collection);
+        setHeatmapVisibility(style, !features.isEmpty());
+    }
+
+    private void setHeatmapVisibility(Style style, boolean visible) {
+        if (style == null) return;
+        HeatmapHelper.INSTANCE.setVisibility(style, HEATMAP_LAYER_ID, visible);
+    }
+
+    private boolean hasActiveHazardFilter() {
+        for (String key : HAZARD_FILTER_KEYS) {
+            if (incidentFilters.getOrDefault(key, false)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void updateHeatmapToggleState() {
+        boolean hasHazard = hasActiveHazardFilter();
+        if (heatmapSwitch == null) {
+            return;
+        }
+
+        heatmapSwitch.setEnabled(hasHazard);
+        heatmapSwitch.setAlpha(hasHazard ? 1f : 0.5f);
+
+        if (!hasHazard && heatmapEnabled) {
+            isUpdatingHeatmapSwitch = true;
+            heatmapEnabled = false;
+            heatmapSwitch.setChecked(false);
+            isUpdatingHeatmapSwitch = false;
+            hideHeatmapView();
         }
     }
     
@@ -2583,6 +2720,10 @@ public class MapViewActivity extends AppCompatActivity {
      * When no layers are active, pins visibility is controlled by filters
      */
     private void updatePinsVisibilityBasedOnLayers() {
+        if (heatmapEnabled && hasActiveHazardFilter()) {
+            setAllPinsVisibility(false);
+            return;
+        }
         boolean anyLayerActive = hasAnyLayerActive();
         if (anyLayerActive) {
             // Hide all pins when layers are active
@@ -2673,6 +2814,9 @@ public class MapViewActivity extends AppCompatActivity {
      */
     private void setAllPinsVisibility(boolean visible) {
         try {
+            if (visible && heatmapEnabled && hasActiveHazardFilter()) {
+                visible = false;
+            }
             int visibility = visible ? View.VISIBLE : View.GONE;
             
             // Hide/show Firestore pins
@@ -2950,19 +3094,7 @@ public class MapViewActivity extends AppCompatActivity {
             }
             
             // Load facility filter states and enforce single selection
-            isUpdatingFacilityCheckboxes = true;
-            try {
-                for (FacilityCheckboxEntry entry : facilityCheckboxes) {
-                    if (entry.checkBox != null) {
-                        boolean isChecked = facilityFilters.getOrDefault(entry.facilityType, false);
-                        entry.checkBox.setChecked(isChecked);
-                    }
-                }
-                // Enforce single selection after loading (unified across both groups)
-                enforceUnifiedSingleSelection();
-            } finally {
-                isUpdatingFacilityCheckboxes = false;
-            }
+            applyFacilitySelectionFromState();
 
             // Load timeline selection
             updateTimelineSelection();
@@ -2973,11 +3105,14 @@ public class MapViewActivity extends AppCompatActivity {
                     incidentFilters.put(entry.incidentType, entry.checkBox.isChecked());
                 }
             }
+            enforceSingleIncidentSelection();
 
             // Facility filter states are already loaded above with single-selection enforcement
             
             // Setup filter panel click listeners
             setupFilterPanelClickListeners();
+            
+            updateHeatmapToggleState();
             
         } catch (Exception e) {
             Log.e(TAG, "Error loading filter states into UI: " + e.getMessage(), e);
@@ -3224,24 +3359,27 @@ public class MapViewActivity extends AppCompatActivity {
                 }
             }
 
-            // Update facility filters from checkboxes and enforce single selection
-            isUpdatingFacilityCheckboxes = true;
-            try {
-                for (FacilityCheckboxEntry entry : facilityCheckboxes) {
-                    if (entry.checkBox != null) {
-                        facilityFilters.put(entry.facilityType, entry.checkBox.isChecked());
+            // Update facility filters from checkboxes (single selection enforced afterwards)
+            boolean facilityCaptured = false;
+            for (FacilityCheckboxEntry entry : facilityCheckboxes) {
+                if (entry.checkBox != null) {
+                    boolean checked = entry.checkBox.isChecked();
+                    if (checked && !facilityCaptured) {
+                        facilityFilters.put(entry.facilityType, true);
+                        facilityCaptured = true;
+                    } else {
+                        facilityFilters.put(entry.facilityType, false);
                     }
                 }
-            } finally {
-                isUpdatingFacilityCheckboxes = false;
             }
+            applyFacilitySelectionFromState();
             
         } catch (Exception e) {
             Log.e(TAG, "Error updating filter states from UI: " + e.getMessage(), e);
         }
 
-        // Enforce single selection after updating (unified across both groups)
-        enforceUnifiedSingleSelection();
+        // Enforce single selection after updating
+        enforceSingleIncidentSelection();
     }
     
     /**
@@ -3268,6 +3406,7 @@ public class MapViewActivity extends AppCompatActivity {
             facilityFilters.put("Police Stations", false);
             facilityFilters.put("Fire Stations", false);
             facilityFilters.put("Government Offices", false);
+            activeFacilityFilter = null;
             
             // Reset heatmap
             heatmapEnabled = false;
@@ -3344,7 +3483,12 @@ public class MapViewActivity extends AppCompatActivity {
                         // Apply current filters to the newly loaded pins (without toast during initial load)
                         runOnUiThread(() -> {
                             applyFiltersToFirestorePins(false); // Don't show toast during initial load
-                            
+                            updateHeatmapToggleState();
+                            if (heatmapEnabled && hasActiveHazardFilter()) {
+                                showHeatmapView();
+                            } else {
+                                hideHeatmapView();
+                            }
                             Log.d(TAG, "Map pins loaded and filtered: " + finalPinCount + " total pins");
                         });
                         
@@ -3419,7 +3563,6 @@ public class MapViewActivity extends AppCompatActivity {
                 return;
             }
             
-            // CRITICAL: Verify coordinates are valid before adding
             if (point.latitude() == 0.0 && point.longitude() == 0.0) {
                 Log.e(TAG, "Invalid coordinates (0,0) for pin: " + pin.getDisplayTitle());
                 return;
@@ -3432,47 +3575,31 @@ public class MapViewActivity extends AppCompatActivity {
             Log.d(TAG, "These coordinates will NEVER change!");
             Log.d(TAG, "================================================");
             
-            // Create marker view
             ensurePinDimensions();
             ImageView markerView = new ImageView(this);
-            
-            // Set custom SVG icon based on pin category
             int drawableResource = getDrawableForPinCategory(pin.getCategory());
             markerView.setImageResource(drawableResource);
             FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(pinWidthPx, pinHeightPx);
             markerView.setLayoutParams(layoutParams);
+            markerView.setOnClickListener(v -> showPinDetails(pin));
             
-            // Add click listener to show pin details
-            markerView.setOnClickListener(v -> {
-                Log.d(TAG, "Pin clicked: " + pin.getDisplayTitle() + " at coordinates: " + 
-                    point.latitude() + ", " + point.longitude());
-                showPinDetails(pin);
-            });
-            
-            // Add marker to container first
             mapContainer.addView(markerView);
             
-            // Create MapMarker object and add to Firestore pins list
-            // IMPORTANT: The Point object stored here NEVER changes!
             MapMarker mapMarker = new MapMarker(markerView, point, pin.getDisplayTitle(), pin, pin.getId());
             firestorePinMarkers.add(mapMarker);
             
-            // Position marker at geographic coordinates (converts to screen coords)
             positionFirestorePinAtCoordinates(mapMarker, point);
             
-            // Set initial visibility based on layer state and filters
-            // Hide pin if any layers are active, otherwise show based on filters
-            // Initial state: All pins are hidden (only boundaries visible)
             boolean anyLayerActive = hasAnyLayerActive();
-            if (anyLayerActive) {
+            if (heatmapEnabled && hasActiveHazardFilter()) {
+                markerView.setVisibility(View.GONE);
+            } else if (anyLayerActive) {
                 markerView.setVisibility(View.GONE);
             } else {
-                // Pins only show when filters are toggled ON
                 boolean shouldShow = shouldShowPinBasedOnFilters(pin);
                 markerView.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
             }
             
-            // Start camera tracking if not already active
             if (!isFirestorePinTrackingActive) {
                 startFirestorePinCameraTracking();
                 Log.d(TAG, "Started camera tracking for geographic locking");
@@ -3491,6 +3618,11 @@ public class MapViewActivity extends AppCompatActivity {
      */
     private void positionFirestorePinAtCoordinates(MapMarker mapMarker, Point point) {
         if (mapMarker == null || mapMarker.markerView == null || mapboxMap == null || mapContainer == null) {
+            return;
+        }
+        
+        if (heatmapEnabled && hasActiveHazardFilter()) {
+            mapMarker.markerView.setVisibility(View.GONE);
             return;
         }
         
@@ -3919,6 +4051,72 @@ public class MapViewActivity extends AppCompatActivity {
         loadPinsFromFirestore();
     }
 
+    /**
+     * Create a new road accident pin at the current camera center and save it to Firestore.
+     */
+    private void createRoadAccidentPinAtCameraCenter() {
+        if (db == null) {
+            Log.e(TAG, "Firestore not initialized. Cannot create road accident pin.");
+            return;
+        }
+
+        Point targetPoint;
+        if (mapboxMap != null) {
+            CameraState cameraState = mapboxMap.getCameraState();
+            if (cameraState != null && cameraState.getCenter() != null) {
+                targetPoint = cameraState.getCenter();
+            } else {
+                targetPoint = Point.fromLngLat(121.5564, 14.1136); // Lucban center fallback
+            }
+        } else {
+            targetPoint = Point.fromLngLat(121.5564, 14.1136);
+        }
+
+        double latitude = targetPoint.latitude();
+        double longitude = targetPoint.longitude();
+        String locationName = String.format(Locale.getDefault(),
+                "Road Accident near %.5f, %.5f", latitude, longitude);
+
+        Map<String, Object> pinData = new HashMap<>();
+        pinData.put("category", "Road Accident");
+        pinData.put("latitude", latitude);
+        pinData.put("longitude", longitude);
+        pinData.put("locationName", locationName);
+        pinData.put("createdAt", new Date());
+
+        FirebaseUser currentUser = mAuth != null ? mAuth.getCurrentUser() : null;
+        if (currentUser != null) {
+            pinData.put("createdBy", currentUser.getUid());
+            if (currentUser.getDisplayName() != null) {
+                pinData.put("createdByName", currentUser.getDisplayName());
+            }
+        }
+
+        List<String> searchTerms = Arrays.asList(
+                "road accident",
+                "accident",
+                "road",
+                String.format(Locale.getDefault(), "%.5f", latitude),
+                String.format(Locale.getDefault(), "%.5f", longitude),
+                locationName.toLowerCase(Locale.getDefault())
+        );
+        pinData.put("searchTerms", searchTerms);
+
+        db.collection("pins")
+                .add(pinData)
+                .addOnSuccessListener(documentReference -> {
+                    Log.d(TAG, "Road accident pin created with ID: " + documentReference.getId());
+                    Toast.makeText(MapViewActivity.this,
+                            "Road accident pin saved successfully", Toast.LENGTH_SHORT).show();
+                    refreshPinsFromFirestore();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to create road accident pin", e);
+                    Toast.makeText(MapViewActivity.this,
+                            "Unable to save road accident pin", Toast.LENGTH_SHORT).show();
+                });
+    }
+
     private boolean isFacilityCategory(String category) {
         if (category == null) {
             return false;
@@ -3978,6 +4176,59 @@ public class MapViewActivity extends AppCompatActivity {
         }
 
         return false;
+    }
+
+    private boolean isHazardCategory(String category) {
+        if (category == null) return false;
+        String normalized = category.trim().toLowerCase(Locale.getDefault());
+
+        if (isRoadAccidentCategory(category)) {
+            return true;
+        }
+        if (normalized.contains("fire") && !normalized.contains("station") && !normalized.contains("bumbero")) {
+            return true;
+        }
+        if (normalized.contains("medical") || normalized.contains("injur") || normalized.contains("emergency")) {
+            return true;
+        }
+        if (normalized.contains("flood") || normalized.contains("baha")) {
+            return true;
+        }
+        if (normalized.contains("volcan") || normalized.contains("bulkan")) {
+            return true;
+        }
+        if (normalized.contains("landslide") || normalized.contains("guho")) {
+            return true;
+        }
+        if (normalized.contains("earthquake") || normalized.contains("lindol")) {
+            return true;
+        }
+        if (normalized.contains("civil") || normalized.contains("disturbance") || normalized.contains("riot")) {
+            return true;
+        }
+        if (normalized.contains("armed") || normalized.contains("conflict") || normalized.contains("gunfire")
+                || normalized.contains("barilan")) {
+            return true;
+        }
+        if (normalized.contains("infectious") || normalized.contains("disease") || normalized.contains("outbreak")
+                || normalized.contains("sakit")) {
+            return true;
+        }
+        if (normalized.equals("others")) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isRoadAccidentCategory(String category) {
+        if (category == null) return false;
+        String normalized = category.trim().toLowerCase(Locale.getDefault());
+        return normalized.contains("road accident")
+                || normalized.contains("road_accident")
+                || normalized.contains("road-crash")
+                || (normalized.contains("road") && (normalized.contains("crash") || normalized.contains("accident")))
+                || normalized.contains("collision")
+                || normalized.equals("accident");
     }
 
     private String formatCategoryLabel(String category) {
