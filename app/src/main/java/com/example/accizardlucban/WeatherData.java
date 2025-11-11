@@ -18,6 +18,12 @@ public class WeatherData {
     
     @SerializedName("name")
     private String cityName;
+
+    @SerializedName("rain")
+    private Rain rain;
+
+    @SerializedName("snow")
+    private Snow snow;
     
     // Getters and setters
     public Main getMain() {
@@ -50,6 +56,22 @@ public class WeatherData {
     
     public void setCityName(String cityName) {
         this.cityName = cityName;
+    }
+
+    public Rain getRain() {
+        return rain;
+    }
+
+    public void setRain(Rain rain) {
+        this.rain = rain;
+    }
+
+    public Snow getSnow() {
+        return snow;
+    }
+
+    public void setSnow(Snow snow) {
+        this.snow = snow;
     }
     
     /**
@@ -177,6 +199,60 @@ public class WeatherData {
         
         public void setDeg(int deg) {
             this.deg = deg;
+        }
+    }
+
+    /**
+     * Rain data (precipitation volume)
+     */
+    public static class Rain {
+        @SerializedName("1h")
+        private Double oneHour;
+
+        @SerializedName("3h")
+        private Double threeHour;
+
+        public Double getOneHour() {
+            return oneHour;
+        }
+
+        public void setOneHour(Double oneHour) {
+            this.oneHour = oneHour;
+        }
+
+        public Double getThreeHour() {
+            return threeHour;
+        }
+
+        public void setThreeHour(Double threeHour) {
+            this.threeHour = threeHour;
+        }
+    }
+
+    /**
+     * Snow data (precipitation volume)
+     */
+    public static class Snow {
+        @SerializedName("1h")
+        private Double oneHour;
+
+        @SerializedName("3h")
+        private Double threeHour;
+
+        public Double getOneHour() {
+            return oneHour;
+        }
+
+        public void setOneHour(Double oneHour) {
+            this.oneHour = oneHour;
+        }
+
+        public Double getThreeHour() {
+            return threeHour;
+        }
+
+        public void setThreeHour(Double threeHour) {
+            this.threeHour = threeHour;
         }
     }
 }

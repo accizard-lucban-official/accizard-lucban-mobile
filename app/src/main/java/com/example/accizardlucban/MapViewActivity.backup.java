@@ -655,16 +655,6 @@ public class MapViewActivity extends AppCompatActivity {
             return;
         }
 
-        if (changedCheckBox != null && isChecked && heatmapEnabled) {
-            hideHeatmapView();
-            heatmapEnabled = false;
-            if (heatmapSwitch != null) {
-                isUpdatingHeatmapSwitch = true;
-                heatmapSwitch.setChecked(false);
-                isUpdatingHeatmapSwitch = false;
-            }
-        }
-
         isUpdatingFacilityCheckboxes = true;
         try {
             String activeFacilityType = null;
@@ -2129,40 +2119,104 @@ public class MapViewActivity extends AppCompatActivity {
     private void applyFiltersToMap() {
         try {
             Log.d(TAG, "Applying filters to map...");
-
-            boolean layersActive = hasAnyLayerActive();
-
-            List<SimpleSearchAdapter.SearchPlace> filteredPlaces = new ArrayList<>();
-            for (SimpleSearchAdapter.SearchPlace place : searchPlaces) {
-                if (shouldShowPlace(place)) {
-                    filteredPlaces.add(place);
-                }
-            }
-
-            Log.d(TAG, "Filtered places: " + filteredPlaces.size() + " out of " + searchPlaces.size());
-
-            if (simpleSearchAdapter != null) {
-                simpleSearchAdapter.updatePlaces(filteredPlaces);
-            }
-
-            if (layersActive) {
-                setAllPinsVisibility(false);
-                hideHeatmapView();
+            
+            // Update pins based on filters
+            updatePinsVisibility();
+            
+            // Update heatmap if enabled
+            if (heatmapEnabled && hasActiveHazardFilter()) {
+                updateHeatmapLayerData();
             } else {
-                applyFiltersToFirestorePins();
-                updateHeatmapToggleState();
-
-                if (heatmapEnabled && hasActiveHazardFilter()) {
-                    showHeatmapView();
-                    setAllPinsVisibility(false);
-                } else {
-                    hideHeatmapView();
+                // Hide heatmap if no active hazard filters or heatmap is disabled
+                if (mapboxMap != null) {
+                    mapboxMap.getStyle(style -> {
+                        if (style != null) {
+                            setHeatmapVisibility(style, false);
+                        }
+                    });
                 }
             }
-
+            
+            // Update filter indicator
+            updateFilterIndicator();
+            
+            // Ensure pins are on top of heatmap
+            bringPinsToFront();
+            
         } catch (Exception e) {
             Log.e(TAG, "Error applying filters to map: " + e.getMessage(), e);
         }
+    }
+    }
+    }
+    
+    /**
+     * Update visibility of all pins based on current filters
+     */
+    private void updatePinsVisibility() {
+        try {
+            if (mapboxMap == null) return;
+            
+            // Get current style
+            Style style = mapboxMap.getStyle();
+            if (style == null) return;
+            
+            boolean anyLayerActive = hasAnyLayerActive();
+            boolean showPins = !anyLayerActive && !(heatmapEnabled && hasActiveHazardFilter());
+            
+            // Update visibility of all pins
+            for (MapMarker marker : firestorePinMarkers) {
+                if (marker == null || marker.markerView == null || marker.pinData == null) {
+                    continue;
+                }
+                
+                boolean shouldShow = showPins && shouldShowPinBasedOnFilters(marker.pinData);
+                
+                // Update visibility
+                runOnUiThread(() -> {
+                    if (shouldShow) {
+                        marker.markerView.setVisibility(View.VISIBLE);
+                        marker.markerView.bringToFront();
+                    } else {
+                        marker.markerView.setVisibility(View.GONE);
+                    }
+                });
+            }
+            
+            // Ensure current location marker is always on top if visible
+            if (currentLocationMarker != null && currentLocationMarker.getVisibility() == View.VISIBLE) {
+                currentLocationMarker.bringToFront();
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating pins visibility: " + e.getMessage(), e);
+        }
+    }
+    }
+    }
+    
+    /**
+     * Bring all visible pins to the front
+     */
+    private void bringPinsToFront() {
+        if (mapboxMap == null) return;
+        
+        mapboxMap.getStyle(style -> {
+            runOnUiThread(() -> {
+                // Bring all visible pins to front
+                for (MapMarker marker : firestorePinMarkers) {
+                    if (marker != null && marker.markerView != null && 
+                        marker.markerView.getVisibility() == View.VISIBLE) {
+                        marker.markerView.bringToFront();
+                    }
+                }
+                
+                // Ensure current location marker is on top
+                if (currentLocationMarker != null && currentLocationMarker.getVisibility() == View.VISIBLE) {
+                    currentLocationMarker.bringToFront();
+                }
+            });
+        });
     }
     
     /**
@@ -2318,30 +2372,224 @@ public class MapViewActivity extends AppCompatActivity {
         }
     }
 
-    private void ensureHeatmapLayer(Style style) {
-        if (style == null) return;
-        HeatmapHelper.INSTANCE.ensureComponents(style, HEATMAP_SOURCE_ID, HEATMAP_LAYER_ID);
+    } catch (Exception e) {
+        Log.e(TAG, "Error applying filters to map: " + e.getMessage(), e);
     }
+}
 
-    private void updateHeatmapLayerData() {
-        if (!heatmapEnabled || mapboxMap == null) {
-            return;
+/**
+ * Apply current filter settings to existing Firestore pins
+ * UPDATED: Added showToast parameter to control feedback
+ */
+private void applyFiltersToFirestorePins() {
+    applyFiltersToFirestorePins(true);
+}
+
+/**
+ * Apply current filter settings to existing Firestore pins
+ * @param showToast Whether to show toast message with results
+ */
+private void applyFiltersToFirestorePins(boolean showToast) {
+    try {
+        Log.d(TAG, "Applying filters to Firestore pins...");
+        
+        int visiblePins = 0;
+        int hiddenPins = 0;
+        int totalPins = firestorePinMarkers.size();
+        boolean layersActive = hasAnyLayerActive();
+        
+        for (MapMarker mapMarker : firestorePinMarkers) {
+            if (mapMarker.pinData != null) {
+                boolean previouslyVisible = mapMarker.markerView.getVisibility() == View.VISIBLE;
+
+                if (layersActive) {
+                    if (previouslyVisible) {
+                        mapMarker.markerView.clearAnimation();
+                        mapMarker.markerView.setAlpha(1f);
+                    }
+                    mapMarker.markerView.setVisibility(View.GONE);
+                    hiddenPins++;
+                    continue;
+                }
+
+                boolean shouldShow = shouldShowPinBasedOnFilters(mapMarker.pinData);
+
+                if (heatmapEnabled && hasActiveHazardFilter()) {
+                    if (previouslyVisible) {
+                        mapMarker.markerView.clearAnimation();
+                        mapMarker.markerView.setAlpha(1f);
+                    }
+                    mapMarker.markerView.setVisibility(View.GONE);
+                    hiddenPins++;
+                    continue;
+                }
+
+                if (shouldShow) {
+                    if (!previouslyVisible) {
+                        mapMarker.markerView.clearAnimation();
+                        mapMarker.markerView.setAlpha(1f);
+                        mapMarker.markerView.setVisibility(View.VISIBLE);
+                        mapMarker.markerView.bringToFront();
+                    }
+                    visiblePins++;
+                } else {
+                    if (previouslyVisible) {
+                        mapMarker.markerView.clearAnimation();
+                        mapMarker.markerView.setAlpha(1f);
+                    }
+                    mapMarker.markerView.setVisibility(View.GONE);
+                    hiddenPins++;
+                }
+            }
         }
+        
+        Log.d(TAG, "Filtered Firestore pins - Total: " + totalPins + ", Visible: " + visiblePins + ", Hidden: " + hiddenPins);
+        
+        // Show toast with filter results only if requested
+        // Toast messages removed
+        if (!layersActive && heatmapEnabled && hasActiveHazardFilter()) {
+            updateHeatmapLayerData();
+        } else if (layersActive) {
+            hideHeatmapView();
+        }
+        
+    } catch (Exception e) {
+        Log.e(TAG, "Error applying filters to Firestore pins: " + e.getMessage(), e);
+    }
+}
 
+private void ensureHeatmapLayer(Style style) {
+    if (style == null) return;
+/**
+ * Update heatmap data based on current filters
+ */
+private void updateHeatmapLayerData() {
+    if (mapboxMap == null) return;
+    
+    mapboxMap.getStyle(style -> {
+        try {
+            // Remove existing heatmap layer if it exists
+            if (style.getLayer(HEATMAP_LAYER_ID) != null) {
+                style.removeLayer(HEATMAP_LAYER_ID);
+            }
+            
+            // Remove existing heatmap source if it exists
+            if (style.getSource(HEATMAP_SOURCE_ID) != null) {
+                style.removeSource(HEATMAP_SOURCE_ID);
+            }
+            
+            // Only proceed if heatmap is enabled and we have active hazard filters
+            if (heatmapEnabled && hasActiveHazardFilter()) {
+                // Create heatmap data based on active filters
+                List<Feature> heatmapFeatures = createHeatmapData();
+                
+                if (!heatmapFeatures.isEmpty()) {
+                    // Create a GeoJSON source with the heatmap data
+                    GeoJsonSource source = new GeoJsonSource(HEATMAP_SOURCE_ID, 
+                        FeatureCollection.fromFeatures(heatmapFeatures));
+                    
+                    // Add the source to the map
+                    style.addSource(source);
+                    
+                    // Create and add the heatmap layer
+                    HeatmapLayer layer = new HeatmapLayer(HEATMAP_LAYER_ID, HEATMAP_SOURCE_ID);
+                    
+                    // Configure the heatmap layer
+                    layer.setSourceLayer(HEATMAP_SOURCE_ID);
+                    layer.setProperties(
+                        heatmapOpacity(0.7f),
+                        heatmapRadius(25f),
+                        heatmapWeight(
+                            interpolate(
+                                exponential(1),
+                                get("point_count"),
+                                stop(1, 1),
+                                stop(50, 3)
+                            )
+                        ),
+                        heatmapIntensity(1f),
+                        heatmapColor(
+                            interpolate(
+                                linear(),
+                                heatmapDensity(),
+                                stop(0, "rgba(0, 0, 255, 0)"),
+                                stop(0.1, "rgba(0, 0, 255, 0.2)"),
+                                stop(0.3, "rgba(0, 255, 0, 0.4)"),
+                                stop(0.5, "rgba(255, 255, 0, 0.6)"),
+                                stop(0.7, "rgba(255, 165, 0, 0.8)"),
+                                stop(1, "rgba(255, 0, 0, 1)")
+                            )
+                        )
+                    );
+                    
+                    // Add the heatmap layer to the map, below labels but above water
+                    style.addLayerBelow(layer, "waterway-label");
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating heatmap: " + e.getMessage(), e);
+        }
+    });
+}
+
+/**
+ * Create heatmap data based on active filters
+ */
+private List<Feature> createHeatmapData() {
+    List<Feature> features = new ArrayList<>();
+    
+    // Only create heatmap data if we have active hazard filters
+    if (!hasActiveHazardFilter()) {
+        return features;
+    }
+    
+    // Add your heatmap data points here based on active filters
+    // This is a simplified example - you would typically query your data source
+    // and add points based on the active filters
+    
+    // Example: Add points for road accidents if that filter is active
+    if (Boolean.TRUE.equals(incidentFilters.get("Road Accident"))) {
+        // Add road accident points to heatmap
+        // features.add(Feature.fromGeometry(Point.fromLngLat(longitude, latitude)));
+    }
+    
+    // Add more points based on other active filters
+    
+    return features;
+}
+
+private void updateHeatmapLayerData(Style style) {
+    if (style == null || !heatmapEnabled) return;
+    try {
+        ensureHeatmapLayer(style);
+    } catch (Exception e) {
+        Log.w(TAG, "Unable to ensure heatmap layer: " + e.getMessage());
+    }
+}
+
+private void showHeatmapView() {
+    if (!heatmapEnabled || !hasActiveHazardFilter() || mapboxMap == null) {
+        return;
+    }
+    try {
         Style style = mapboxMap.getStyle();
         if (style == null) {
             return;
         }
-
+        ensureHeatmapLayer(style);
         updateHeatmapLayerData(style);
+        setHeatmapVisibility(style, true);
+        setAllPinsVisibility(false);
+        Log.d(TAG, "Heatmap view enabled");
+    } catch (Exception e) {
+        Log.e(TAG, "Error showing heatmap view: " + e.getMessage(), e);
     }
+}
 
-    private void updateHeatmapLayerData(Style style) {
-        if (style == null || !heatmapEnabled) return;
-        try {
-            ensureHeatmapLayer(style);
-        } catch (Exception e) {
-            Log.w(TAG, "Unable to ensure heatmap layer: " + e.getMessage());
+private void hideHeatmapView() {
+    try {
+        if (mapboxMap == null) return;
+        Style style = mapboxMap.getStyle();
             return;
         }
 

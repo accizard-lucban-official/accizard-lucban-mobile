@@ -31,6 +31,8 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import androidx.annotation.NonNull;
 import android.content.SharedPreferences;
+
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -67,6 +69,24 @@ public class MainActivity extends AppCompatActivity {
 
         // FirebaseAuth instance
         FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+
+        if (currentUser != null) {
+            try {
+                currentUser.reload();
+            } catch (Exception ignored) {}
+
+            if (currentUser.isEmailVerified()) {
+                Log.d(TAG, "User already authenticated. Skipping MainActivity login screen.");
+                initializeNotificationChannels();
+                initializeFCMToken();
+                String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
+                navigateAfterLoginFast(email);
+                return;
+            } else {
+                Log.w(TAG, "Authenticated user found but email not verified. Showing login screen.");
+            }
+        }
         // Remove or comment out the anonymous sign-in example
         // mAuth.signInAnonymously() ...
 

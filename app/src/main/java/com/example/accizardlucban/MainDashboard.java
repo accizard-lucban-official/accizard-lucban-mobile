@@ -34,14 +34,17 @@ import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.appcompat.widget.PopupMenu;
+import androidx.core.graphics.ColorUtils;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import android.graphics.Bitmap;
@@ -53,24 +56,33 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.Map;
 import java.util.HashMap;
-import com.github.mikephil.charting.charts.LineChart;
+import java.time.Instant;
+import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.components.Description;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
-import com.github.mikephil.charting.data.Entry;
-import com.github.mikephil.charting.data.LineData;
-import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarDataSet;
+import com.github.mikephil.charting.data.BarEntry;
 import com.github.mikephil.charting.data.PieData;
 import com.github.mikephil.charting.data.PieDataSet;
 import com.github.mikephil.charting.data.PieEntry;
+import com.github.mikephil.charting.formatter.ValueFormatter;
 import java.util.ArrayList;
+import java.text.DateFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Calendar;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.TreeMap;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.Collections;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.ImageView;
@@ -115,8 +127,9 @@ public class MainDashboard extends AppCompatActivity {
     private ImageView helpButton;
     private ImageView profileButton;
     private LinearLayout emergencyContactsLayout;
-    private LineChart reportChart;
+    private BarChart reportChart;
     private TextView reportFilterText;
+    private TextView reportChartSummaryText;
     
     // Statistics views
     private TextView totalReportsCount;
@@ -132,7 +145,37 @@ public class MainDashboard extends AppCompatActivity {
     private TextView topBarangay2Count;
     private TextView topBarangay3Name;
     private TextView topBarangay3Count;
-    
+    private String currentTypeFilter = "All Types";
+    private String activeReportsCollection = null;
+    private final Map<String, Map<Integer, Integer>> monthlyCountsByType = new HashMap<>();
+    private final Map<Integer, Integer> currentChartMonthlyValues = new HashMap<>();
+    private static final String[] BASE_TYPE_FILTERS = new String[]{
+            "Road Crash",
+            "Fire",
+            "Medical Emergency",
+            "Flooding",
+            "Volcanic Activity",
+            "Landslide",
+            "Earthquake",
+            "Civil Disturbance",
+            "Armed Conflict",
+            "Infectious Disease",
+            "Poor Infrastructure",
+            "Electrical Hazard",
+            "Environmental Hazard",
+            "Obstructions"
+    };
+    private static final String[] DATE_PATTERNS = new String[]{
+            "MM/dd/yyyy",
+            "yyyy-MM-dd",
+            "MMM d, yyyy",
+            "MMMM d, yyyy",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ssXXX",
+            "EEE MMM dd HH:mm:ss zzz yyyy"
+    };
+
     // Weather and Time views
     private TextView temperatureText;
     private TextView dateText;
@@ -142,6 +185,9 @@ public class MainDashboard extends AppCompatActivity {
     private TextView windText;
     private TextView precipitationText;
     private TextView weatherLocationText;
+    private final Map<Integer, Integer> monthlyReportCounts = new HashMap<>();
+    private final LinkedHashMap<String, Integer> typeReportCounts = new LinkedHashMap<>();
+    private final List<String> chartTypeLabels = new ArrayList<>();
     
     // Timer for real-time updates
     private Timer timeUpdateTimer;
@@ -175,7 +221,7 @@ public class MainDashboard extends AppCompatActivity {
     private TextView alertsBadgeDashboard;
     private SharedPreferences sharedPreferences;
 
-    private String currentReportFilter = "Per Barangay";
+    private String currentReportFilter = "Per Type";
     
     // ActivityResultLauncher for handling profile updates
     private ActivityResultLauncher<Intent> profileLauncher;
@@ -367,6 +413,7 @@ public class MainDashboard extends AppCompatActivity {
             emergencyContactsLayout = findViewById(R.id.emergencyContactsLayout);
             reportChart = findViewById(R.id.reportChart);
             reportFilterText = findViewById(R.id.reportFilterText);
+            reportChartSummaryText = findViewById(R.id.reportChartSummary);
             
             // Statistics views
             totalReportsCount = findViewById(R.id.totalReportsCount);
@@ -423,7 +470,7 @@ public class MainDashboard extends AppCompatActivity {
         try {
             if (reportFilterText != null) {
                 // Initialize label
-                reportFilterText.setText(currentReportFilter + " ▼");
+            reportFilterText.setText("All Types ▼");
                 reportFilterText.setOnClickListener(v -> showReportFilterMenu(v));
             }
         } catch (Exception e) {
@@ -433,19 +480,29 @@ public class MainDashboard extends AppCompatActivity {
 
     private void showReportFilterMenu(View anchor) {
         try {
+            if (reportFilterText == null) {
+                return;
+            }
+
             PopupMenu popupMenu = new PopupMenu(this, anchor);
-            popupMenu.getMenu().add("Per Barangay");
-            popupMenu.getMenu().add("Per Type");
+            List<String> options = new ArrayList<>();
+            options.add("All Types");
+            for (String base : BASE_TYPE_FILTERS) {
+                if (!options.contains(base)) {
+                    options.add(base);
+                }
+            }
+            for (String dynamic : typeReportCounts.keySet()) {
+                if (!options.contains(dynamic)) {
+                    options.add(dynamic);
+                }
+            }
+            for (String label : options) {
+                popupMenu.getMenu().add(label);
+            }
 
             popupMenu.setOnMenuItemClickListener(item -> {
-                String selection = item.getTitle().toString();
-                if (!selection.equals(currentReportFilter)) {
-                    currentReportFilter = selection;
-                    if (reportFilterText != null) {
-                        reportFilterText.setText(currentReportFilter + " ▼");
-                    }
-                    updateChartData();
-                }
+                applyTypeFilter(item.getTitle().toString());
                 return true;
             });
 
@@ -453,6 +510,160 @@ public class MainDashboard extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Error showing report filter menu: " + e.getMessage(), e);
         }
+    }
+
+    private void applyTypeFilter(String selection) {
+        if (selection == null) {
+            selection = "All Types";
+        }
+        currentTypeFilter = selection;
+        if (reportFilterText != null) {
+            reportFilterText.setText(selection + " ▼");
+        }
+        updateChartData();
+    }
+
+    private static String normalizeTypeKey(String raw) {
+        if (raw == null) {
+            return "uncategorized";
+        }
+        return raw.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String formatTypeDisplay(String raw) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return "Uncategorized";
+        }
+        StringBuilder sb = new StringBuilder();
+        String[] parts = raw.trim().toLowerCase(Locale.ROOT).split("\\s+");
+        for (int i = 0; i < parts.length; i++) {
+            String p = parts[i];
+            if (p.isEmpty()) continue;
+            sb.append(Character.toUpperCase(p.charAt(0)));
+            if (p.length() > 1) {
+                sb.append(p.substring(1));
+            }
+            if (i < parts.length - 1) {
+                sb.append(' ');
+            }
+        }
+        return sb.toString();
+    }
+
+    private String resolveDisplayLabel(String rawType) {
+        if (rawType == null || rawType.trim().isEmpty()) {
+            return "Others";
+        }
+        String normalized = normalizeTypeKey(rawType);
+        switch (normalized) {
+            case "road accident":
+            case "road crash":
+                return "Road Crash";
+            case "fire":
+                return "Fire";
+            case "medical emergency":
+                return "Medical Emergency";
+            case "flooding":
+                return "Flooding";
+            case "volcanic activity":
+                return "Volcanic Activity";
+            case "landslide":
+                return "Landslide";
+            case "earthquake":
+                return "Earthquake";
+            case "civil disturbance":
+                return "Civil Disturbance";
+            case "armed conflict":
+                return "Armed Conflict";
+            case "infectious disease":
+                return "Infectious Disease";
+            case "poor infrastructure":
+                return "Poor Infrastructure";
+            case "electrical hazard":
+                return "Electrical Hazard";
+            case "environmental hazard":
+                return "Environmental Hazard";
+            case "obstructions":
+                return "Obstructions";
+            case "others":
+            case "uncategorized":
+                return "Others";
+            default:
+                return formatTypeDisplay(rawType);
+        }
+    }
+
+    private Long extractMillisFromDocument(DocumentSnapshot document) {
+        try {
+            // Prefer Firestore Timestamp or Date
+            Timestamp ts = document.getTimestamp("createdAt");
+            if (ts != null) {
+                return ts.toDate().getTime();
+            }
+            Date dateVal = document.getDate("createdAt");
+            if (dateVal != null) {
+                return dateVal.getTime();
+            }
+
+            // Numeric epoch fields
+            Object timestampObj = document.get("timestamp");
+            if (timestampObj instanceof Number) {
+                return ((Number) timestampObj).longValue();
+            }
+
+            Object epochMillis = document.get("createdAtMillis");
+            if (epochMillis instanceof Number) {
+                return ((Number) epochMillis).longValue();
+            }
+
+            // String based fields
+            String[] candidateKeys = new String[]{
+                    "createdAt",
+                    "createdDate",
+                    "reportDate",
+                    "dateReported",
+                    "incidentDate",
+                    "submittedAt"
+            };
+
+            for (String key : candidateKeys) {
+                String value = document.getString(key);
+                Long parsed = parseDateString(value);
+                if (parsed != null) {
+                    return parsed;
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to extract timestamp from document " + document.getId(), e);
+        }
+        return null;
+    }
+
+    private Long parseDateString(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        String trimmed = value.trim();
+
+        // Try ISO instant first
+        try {
+            Instant instant = Instant.parse(trimmed);
+            return instant.toEpochMilli();
+        } catch (Exception ignored) { }
+
+        // Try known patterns
+        for (String pattern : DATE_PATTERNS) {
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat(pattern, Locale.getDefault());
+                sdf.setLenient(true);
+                Date parsed = sdf.parse(trimmed);
+                if (parsed != null) {
+                    return parsed.getTime();
+                }
+            } catch (Exception ignored) { }
+        }
+
+        return null;
     }
 
     private void setupUserInfo() {
@@ -703,9 +914,7 @@ public class MainDashboard extends AppCompatActivity {
                 int humidity = weatherData.getMain().getHumidity();
                 humidityText.setText(WeatherManager.formatHumidity(humidity));
                 
-                // Calculate precipitation
-                double pressure = weatherData.getMain().getPressure();
-                String precipitation = WeatherManager.calculatePrecipitation(humidity, pressure);
+                String precipitation = WeatherManager.formatPrecipitation(weatherData);
                 precipitationText.setText(precipitation);
             }
             
@@ -1299,6 +1508,80 @@ public class MainDashboard extends AppCompatActivity {
         }
     }
 
+    private String resolveBarangayName(DocumentSnapshot document) {
+        if (document == null) {
+            return "";
+        }
+        String[] directKeys = new String[]{"barangay", "barangayName", "brgy"};
+        for (String key : directKeys) {
+            String value = document.getString(key);
+            if (value != null && !value.trim().isEmpty()) {
+                return value.trim();
+            }
+        }
+
+        String[] locationKeys = new String[]{"locationName", "location", "address", "fullAddress"};
+        for (String key : locationKeys) {
+            String value = document.getString(key);
+            if (value == null || value.trim().isEmpty()) {
+                continue;
+            }
+            String extracted = extractBarangayFromLocation(value);
+            if (!extracted.isEmpty()) {
+                return extracted;
+            }
+            return value.trim();
+        }
+        return "";
+    }
+
+    private String extractBarangayFromLocation(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String sanitized = raw.replace("(", ",").replace(")", ",");
+        String[] parts = sanitized.split(",");
+        for (String part : parts) {
+            String candidate = part.trim();
+            if (candidate.isEmpty()) {
+                continue;
+            }
+            if (candidate.equalsIgnoreCase("Lucban") ||
+                    candidate.equalsIgnoreCase("Quezon") ||
+                    candidate.equalsIgnoreCase("Calabarzon") ||
+                    candidate.equalsIgnoreCase("Philippines")) {
+                continue;
+            }
+            if (!candidate.matches(".*[A-Za-z].*")) {
+                continue;
+            }
+            return candidate;
+        }
+        return "";
+    }
+
+    private String formatBarangayDisplay(String raw) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return "Unknown";
+        }
+        String[] parts = raw.trim().toLowerCase(Locale.ROOT).split("\\s+");
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i];
+            if (part.isEmpty()) {
+                continue;
+            }
+            builder.append(Character.toUpperCase(part.charAt(0)));
+            if (part.length() > 1) {
+                builder.append(part.substring(1));
+            }
+            if (i < parts.length - 1) {
+                builder.append(' ');
+            }
+        }
+        return builder.toString();
+    }
+
     private void setupChart() {
         try {
             if (reportChart == null) {
@@ -1306,49 +1589,53 @@ public class MainDashboard extends AppCompatActivity {
                 return;
             }
 
-            // Build initial data for current filter
-            ArrayList<Entry> entries = buildEntriesForCurrentFilter();
-
-            LineDataSet dataSet = new LineDataSet(entries, "Reports");
-
-            // Check if colors exist, use fallback colors if not
-            int primaryColor = getColorSafe(R.color.colorPrimary, android.R.color.holo_orange_dark);
-            int lightColor = getColorSafe(R.color.orange_light, android.R.color.holo_orange_light);
-
-            dataSet.setColor(primaryColor);
-            dataSet.setCircleColor(primaryColor);
-            dataSet.setLineWidth(3f);
-            dataSet.setCircleRadius(4f);
-            dataSet.setDrawValues(false);
-            dataSet.setDrawFilled(true);
-            dataSet.setFillColor(lightColor);
-            dataSet.setDrawCircleHole(false);
-
-            LineData lineData = new LineData(dataSet);
-            reportChart.setData(lineData);
-
-            // Customize chart appearance
             Description description = new Description();
             description.setText("");
             reportChart.setDescription(description);
             reportChart.getLegend().setEnabled(false);
 
-            // Configure axes
             XAxis xAxis = reportChart.getXAxis();
-            xAxis.setEnabled(false);
+            xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+            xAxis.setDrawGridLines(false);
+            xAxis.setGranularity(1f);
+            xAxis.setValueFormatter(new ValueFormatter() {
+                @Override
+                public String getFormattedValue(float value) {
+                    int monthIndex = Math.round(value);
+                    if (monthIndex >= 0 && monthIndex < 12) {
+                        return new DateFormatSymbols().getShortMonths()[monthIndex];
+                    }
+                    return "";
+                }
+            });
 
             YAxis leftAxis = reportChart.getAxisLeft();
-            leftAxis.setEnabled(false);
+            leftAxis.setDrawGridLines(false);
+            leftAxis.setAxisMinimum(0f);
+            leftAxis.setGranularity(10f);
+            leftAxis.setLabelCount(6, true);
 
             YAxis rightAxis = reportChart.getAxisRight();
             rightAxis.setEnabled(false);
 
-            reportChart.setTouchEnabled(false);
-            reportChart.setDragEnabled(false);
+            reportChart.setTouchEnabled(true);
+            reportChart.setDragEnabled(true);
             reportChart.setScaleEnabled(false);
             reportChart.setPinchZoom(false);
             reportChart.setDrawGridBackground(false);
-            reportChart.invalidate();
+            reportChart.setHighlightPerTapEnabled(true);
+
+            BarChartMarkerView barMarker = new BarChartMarkerView(
+                    this,
+                    R.layout.marker_bar_chart,
+                    () -> false,
+                    chartTypeLabels,
+                    typeReportCounts,
+                    currentChartMonthlyValues);
+            barMarker.setChartView(reportChart);
+            reportChart.setMarker(barMarker);
+
+            updateChartData();
         } catch (Exception e) {
             Log.e(TAG, "Error setting up chart: " + e.getMessage(), e);
         }
@@ -1401,34 +1688,102 @@ public class MainDashboard extends AppCompatActivity {
      * Fetch report statistics from Firestore
      */
     private void fetchReportStatistics(String userBarangay) {
+        fetchReportStatisticsFromCollection("reports", userBarangay, true);
+    }
+
+    private void fetchReportStatisticsFromCollection(String collectionName, String userBarangay, boolean allowFallback) {
         try {
             FirebaseFirestore db = FirebaseFirestore.getInstance();
-            
-            // Fetch total reports count
-            db.collection("reports")
+            db.collection(collectionName)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    int totalCount = queryDocumentSnapshots.size();
-                    updateTotalReportsCount(totalCount);
-                    
-                    // Fetch barangay-specific reports if barangay is available
-                    if (userBarangay != null && !userBarangay.isEmpty()) {
-                        fetchBarangayReportsCount(userBarangay);
-                    } else {
-                        // Use default barangay
-                        fetchBarangayReportsCount("Kulapi");
+                    if (queryDocumentSnapshots.isEmpty() && allowFallback && !"Reports".equals(collectionName)) {
+                        Log.w(TAG, "No reports found in '" + collectionName + "', trying 'Reports'.");
+                        fetchReportStatisticsFromCollection("Reports", userBarangay, false);
+                        return;
                     }
-                    
-                    // Fetch user's personal reports
-                    fetchMyReportsCount();
+                    activeReportsCollection = collectionName;
+                    processReportStatisticsSnapshot(queryDocumentSnapshots, userBarangay);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error fetching total reports: " + e.getMessage());
-                    setDefaultStatistics();
+                    Log.e(TAG, "Error fetching reports from '" + collectionName + "': " + e.getMessage());
+                    if (allowFallback && !"Reports".equals(collectionName)) {
+                        fetchReportStatisticsFromCollection("Reports", userBarangay, false);
+                    } else {
+                        setDefaultStatistics();
+                    }
                 });
-                
         } catch (Exception e) {
-            Log.e(TAG, "Error fetching report statistics: " + e.getMessage());
+            Log.e(TAG, "Error initiating report statistics fetch: " + e.getMessage(), e);
+            setDefaultStatistics();
+        }
+    }
+
+    private void processReportStatisticsSnapshot(QuerySnapshot queryDocumentSnapshots, String userBarangay) {
+        try {
+            int totalCount = queryDocumentSnapshots.size();
+            updateTotalReportsCount(totalCount);
+
+            Map<Integer, Integer> monthlyCounts = new HashMap<>();
+            Map<String, Integer> typeCountsTemp = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            Map<String, Map<Integer, Integer>> monthlyCountsByTypeTemp = new HashMap<>();
+            Calendar recordCalendar = Calendar.getInstance();
+            int fallbackMonth = Calendar.getInstance().get(Calendar.MONTH);
+
+            for (DocumentSnapshot document : queryDocumentSnapshots) {
+                Long millis = extractMillisFromDocument(document);
+
+                int monthIndex;
+                if (millis != null) {
+                    recordCalendar.setTimeInMillis(millis);
+                    monthIndex = recordCalendar.get(Calendar.MONTH);
+                } else {
+                    monthIndex = fallbackMonth;
+                }
+                monthlyCounts.put(monthIndex, monthlyCounts.getOrDefault(monthIndex, 0) + 1);
+
+                String typeValue = document.getString("category");
+                if (typeValue == null || typeValue.trim().isEmpty()) {
+                    typeValue = document.getString("reportType");
+                }
+                String displayLabel = resolveDisplayLabel(typeValue);
+
+                typeCountsTemp.put(displayLabel, typeCountsTemp.getOrDefault(displayLabel, 0) + 1);
+
+                Map<Integer, Integer> typeMonthlyMap = monthlyCountsByTypeTemp.computeIfAbsent(displayLabel, k -> new HashMap<>());
+                typeMonthlyMap.put(monthIndex, typeMonthlyMap.getOrDefault(monthIndex, 0) + 1);
+            }
+
+            LinkedHashMap<String, Integer> orderedTypeCounts = new LinkedHashMap<>();
+            typeCountsTemp.entrySet()
+                    .stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(entry -> orderedTypeCounts.put(entry.getKey(), entry.getValue()));
+
+            runOnUiThread(() -> {
+                monthlyReportCounts.clear();
+                monthlyReportCounts.putAll(monthlyCounts);
+                typeReportCounts.clear();
+                typeReportCounts.putAll(orderedTypeCounts);
+                monthlyCountsByType.clear();
+                for (Map.Entry<String, Map<Integer, Integer>> entry : monthlyCountsByTypeTemp.entrySet()) {
+                    monthlyCountsByType.put(entry.getKey(), new HashMap<>(entry.getValue()));
+                }
+                chartTypeLabels.clear();
+                chartTypeLabels.addAll(typeReportCounts.keySet());
+                updateChartData();
+                updatePieChartData();
+            });
+
+            if (userBarangay != null && !userBarangay.isEmpty()) {
+                fetchBarangayReportsCount(userBarangay);
+            } else {
+                fetchBarangayReportsCount("Kulapi");
+            }
+
+            fetchMyReportsCount();
+        } catch (Exception e) {
+            Log.e(TAG, "Error processing report statistics snapshot: " + e.getMessage(), e);
             setDefaultStatistics();
         }
     }
@@ -1439,24 +1794,41 @@ public class MainDashboard extends AppCompatActivity {
     private void fetchBarangayReportsCount(String barangay) {
         try {
             FirebaseFirestore db = FirebaseFirestore.getInstance();
-            
-            db.collection("reports")
-                .whereEqualTo("barangay", barangay)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    int barangayCount = queryDocumentSnapshots.size();
-                    updateBarangayReportsCount(barangayCount);
-                    Log.d(TAG, "Barangay " + barangay + " reports count: " + barangayCount);
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error fetching barangay reports: " + e.getMessage());
-                    updateBarangayReportsCount(0);
-                });
-                
+            String collection = activeReportsCollection != null ? activeReportsCollection : "reports";
+            fetchBarangayReportsCountFromCollection(db, collection, barangay, activeReportsCollection == null);
         } catch (Exception e) {
             Log.e(TAG, "Error fetching barangay reports count: " + e.getMessage());
             updateBarangayReportsCount(0);
         }
+    }
+
+    private void fetchBarangayReportsCountFromCollection(FirebaseFirestore db,
+                                                         String collectionName,
+                                                         String barangay,
+                                                         boolean allowFallback) {
+        db.collection(collectionName)
+                .whereEqualTo("barangay", barangay)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots.isEmpty() && allowFallback && !"Reports".equals(collectionName)) {
+                        fetchBarangayReportsCountFromCollection(db, "Reports", barangay, false);
+                        return;
+                    }
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        activeReportsCollection = collectionName;
+                    }
+                    int barangayCount = queryDocumentSnapshots.size();
+                    updateBarangayReportsCount(barangayCount);
+                    Log.d(TAG, "Barangay " + barangay + " reports count (" + collectionName + "): " + barangayCount);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error fetching barangay reports from '" + collectionName + "': " + e.getMessage());
+                    if (allowFallback && !"Reports".equals(collectionName)) {
+                        fetchBarangayReportsCountFromCollection(db, "Reports", barangay, false);
+                    } else {
+                        updateBarangayReportsCount(0);
+                    }
+                });
     }
     
     /**
@@ -1490,27 +1862,44 @@ public class MainDashboard extends AppCompatActivity {
                 updateMyReportsCount(0);
                 return;
             }
-            
+
             String userId = currentUser.getUid();
             FirebaseFirestore db = FirebaseFirestore.getInstance();
-            
-            db.collection("reports")
-                .whereEqualTo("userId", userId)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    int myCount = queryDocumentSnapshots.size();
-                    updateMyReportsCount(myCount);
-                    Log.d(TAG, "My reports count: " + myCount);
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error fetching my reports: " + e.getMessage());
-                    updateMyReportsCount(0);
-                });
-                
+            String collection = activeReportsCollection != null ? activeReportsCollection : "reports";
+            fetchMyReportsCountFromCollection(db, collection, userId, activeReportsCollection == null);
         } catch (Exception e) {
             Log.e(TAG, "Error fetching my reports count: " + e.getMessage());
             updateMyReportsCount(0);
         }
+    }
+
+    private void fetchMyReportsCountFromCollection(FirebaseFirestore db,
+                                                   String collectionName,
+                                                   String userId,
+                                                   boolean allowFallback) {
+        db.collection(collectionName)
+                .whereEqualTo("userId", userId)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots.isEmpty() && allowFallback && !"Reports".equals(collectionName)) {
+                        fetchMyReportsCountFromCollection(db, "Reports", userId, false);
+                        return;
+                    }
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        activeReportsCollection = collectionName;
+                    }
+                    int myCount = queryDocumentSnapshots.size();
+                    updateMyReportsCount(myCount);
+                    Log.d(TAG, "My reports count (" + collectionName + "): " + myCount);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error fetching my reports from '" + collectionName + "': " + e.getMessage());
+                    if (allowFallback && !"Reports".equals(collectionName)) {
+                        fetchMyReportsCountFromCollection(db, "Reports", userId, false);
+                    } else {
+                        updateMyReportsCount(0);
+                    }
+                });
     }
     
     /**
@@ -1553,41 +1942,89 @@ public class MainDashboard extends AppCompatActivity {
                 return;
             }
 
-            // Sample data for report types
+            reportTypePieChart.setDescription(null);
+            reportTypePieChart.setDrawHoleEnabled(true);
+            reportTypePieChart.setHoleColor(getColorSafe(R.color.white, android.R.color.white));
+            reportTypePieChart.setTransparentCircleRadius(0f);
+            reportTypePieChart.setRotationEnabled(false);
+            reportTypePieChart.setHighlightPerTapEnabled(true);
+            reportTypePieChart.setDrawEntryLabels(false);
+            reportTypePieChart.getLegend().setEnabled(false);
+
+            updatePieChartData();
+            setupPieChartMarker();
+
+            Log.d(TAG, "✅ Pie chart setup completed");
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Error setting up pie chart: " + e.getMessage(), e);
+        }
+    }
+
+    private void updatePieChartData() {
+        try {
+            if (reportTypePieChart == null) {
+                return;
+            }
+
+            if (typeReportCounts.isEmpty()) {
+                reportTypePieChart.clear();
+                reportTypePieChart.invalidate();
+                return;
+            }
+
             ArrayList<PieEntry> entries = new ArrayList<>();
-            entries.add(new PieEntry(35f, "Accident"));
-            entries.add(new PieEntry(25f, "Fire"));
-            entries.add(new PieEntry(20f, "Medical"));
-            entries.add(new PieEntry(15f, "Crime"));
-            entries.add(new PieEntry(5f, "Other"));
+            for (Map.Entry<String, Integer> entry : typeReportCounts.entrySet()) {
+                entries.add(new PieEntry(entry.getValue(), entry.getKey()));
+            }
 
             PieDataSet dataSet = new PieDataSet(entries, "");
-            dataSet.setColors(new int[]{
-                getColorSafe(R.color.colorPrimary, android.R.color.holo_orange_dark),
-                getColorSafe(R.color.red_primary, android.R.color.holo_red_dark),
-                getColorSafe(R.color.rhu_green, android.R.color.holo_green_dark),
-                getColorSafe(R.color.pnp_blue, android.R.color.holo_blue_dark),
-                getColorSafe(R.color.gray_medium, android.R.color.darker_gray)
-            });
+            int[] paletteRes = new int[]{
+                R.color.colorPrimary,
+                R.color.red_primary,
+                R.color.rhu_green,
+                R.color.pnp_blue,
+                R.color.gray_medium
+            };
+            int[] fallbackRes = new int[]{
+                android.R.color.holo_orange_dark,
+                android.R.color.holo_red_dark,
+                android.R.color.holo_green_dark,
+                android.R.color.holo_blue_dark,
+                android.R.color.darker_gray
+            };
+            List<Integer> colors = new ArrayList<>();
+            for (int i = 0; i < entries.size(); i++) {
+                int paletteIndex = i % paletteRes.length;
+                colors.add(getColorSafe(paletteRes[paletteIndex], fallbackRes[paletteIndex]));
+            }
+            dataSet.setColors(colors);
+            dataSet.setSliceSpace(2f);
+            dataSet.setSelectionShift(6f);
 
             PieData pieData = new PieData(dataSet);
             pieData.setValueTextSize(12f);
             pieData.setValueTextColor(getColorSafe(R.color.black, android.R.color.black));
 
             reportTypePieChart.setData(pieData);
-            reportTypePieChart.setDescription(null);
-            reportTypePieChart.setDrawHoleEnabled(true);
-            reportTypePieChart.setHoleColor(getColorSafe(R.color.white, android.R.color.white));
-            reportTypePieChart.setTransparentCircleRadius(0f);
-            reportTypePieChart.setRotationEnabled(false);
-            reportTypePieChart.setHighlightPerTapEnabled(false);
-            reportTypePieChart.setDrawEntryLabels(false);
-            reportTypePieChart.getLegend().setEnabled(false);
+            reportTypePieChart.highlightValues(null);
             reportTypePieChart.invalidate();
-
-            Log.d(TAG, "✅ Pie chart setup completed");
         } catch (Exception e) {
-            Log.e(TAG, "❌ Error setting up pie chart: " + e.getMessage(), e);
+            Log.e(TAG, "Error updating pie chart data: " + e.getMessage(), e);
+        }
+    }
+
+    private void setupPieChartMarker() {
+        try {
+            if (reportTypePieChart == null) {
+                return;
+            }
+
+            if (reportTypePieChart.getMarker() == null) {
+                PieChartMarkerView markerView = new PieChartMarkerView(this, R.layout.marker_pie_chart, reportTypePieChart);
+                reportTypePieChart.setMarker(markerView);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up pie chart marker: " + e.getMessage(), e);
         }
     }
 
@@ -1597,40 +2034,69 @@ public class MainDashboard extends AppCompatActivity {
     private void updateTopBarangayStatistics() {
         try {
             Log.d(TAG, "📊 Updating top barangay statistics...");
-            
-            // Fetch top barangay data from Firestore
+
             FirebaseFirestore db = FirebaseFirestore.getInstance();
-            
-            db.collection("reports")
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    Map<String, Integer> barangayCounts = new HashMap<>();
-                    
-                    // Count reports by barangay
-                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
-                        String barangay = document.getString("barangay");
-                        if (barangay != null && !barangay.isEmpty()) {
-                            barangayCounts.put(barangay, barangayCounts.getOrDefault(barangay, 0) + 1);
-                        }
-                    }
-                    
-                    // Sort barangays by count and get top 3
-                    String[] topBarangays = barangayCounts.entrySet().stream()
-                        .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-                        .limit(3)
-                        .map(Map.Entry::getKey)
-                        .toArray(String[]::new);
-                    
-                    // Update UI with top 3 barangays
-                    updateTopBarangayUI(topBarangays, barangayCounts);
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error fetching barangay statistics: " + e.getMessage());
-                    setDefaultTopBarangayStatistics();
-                });
-                
+            String collection = activeReportsCollection != null ? activeReportsCollection : "reports";
+            fetchTopBarangayFromCollection(db, collection, activeReportsCollection == null);
         } catch (Exception e) {
             Log.e(TAG, "Error updating top barangay statistics: " + e.getMessage(), e);
+            setDefaultTopBarangayStatistics();
+        }
+    }
+
+    private void fetchTopBarangayFromCollection(FirebaseFirestore db,
+                                                String collectionName,
+                                                boolean allowFallback) {
+        db.collection(collectionName)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots.isEmpty() && allowFallback && !"Reports".equals(collectionName)) {
+                        fetchTopBarangayFromCollection(db, "Reports", false);
+                        return;
+                    }
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        activeReportsCollection = collectionName;
+                    }
+                    processTopBarangaySnapshot(queryDocumentSnapshots);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error fetching barangay statistics from '" + collectionName + "': " + e.getMessage());
+                    if (allowFallback && !"Reports".equals(collectionName)) {
+                        fetchTopBarangayFromCollection(db, "Reports", false);
+                    } else {
+                        setDefaultTopBarangayStatistics();
+                    }
+                });
+    }
+
+    private void processTopBarangaySnapshot(QuerySnapshot queryDocumentSnapshots) {
+        try {
+            Map<String, Integer> barangayCounts = new HashMap<>();
+            Map<String, String> barangayKeyToDisplay = new HashMap<>();
+
+            for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                String rawBarangay = resolveBarangayName(document);
+                if (rawBarangay == null || rawBarangay.isEmpty()) {
+                    continue;
+                }
+                String key = rawBarangay.toLowerCase(Locale.ROOT);
+                barangayCounts.put(key, barangayCounts.getOrDefault(key, 0) + 1);
+                barangayKeyToDisplay.putIfAbsent(key, formatBarangayDisplay(rawBarangay));
+            }
+
+            LinkedHashMap<String, Integer> orderedBarangayCounts = barangayCounts.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                    .limit(3)
+                    .collect(Collectors.toMap(
+                            entry -> barangayKeyToDisplay.getOrDefault(entry.getKey(), formatBarangayDisplay(entry.getKey())),
+                            Map.Entry::getValue,
+                            (existing, replacement) -> existing,
+                            LinkedHashMap::new
+                    ));
+
+            updateTopBarangayUI(new ArrayList<>(orderedBarangayCounts.keySet()), orderedBarangayCounts);
+        } catch (Exception e) {
+            Log.e(TAG, "Error processing barangay statistics: " + e.getMessage(), e);
             setDefaultTopBarangayStatistics();
         }
     }
@@ -1638,26 +2104,38 @@ public class MainDashboard extends AppCompatActivity {
     /**
      * Update UI with top barangay data
      */
-    private void updateTopBarangayUI(String[] topBarangays, Map<String, Integer> barangayCounts) {
+    private void updateTopBarangayUI(List<String> topBarangays, Map<String, Integer> barangayCounts) {
         try {
-            // Update first barangay
-            if (topBarangays.length > 0 && topBarangay1Name != null && topBarangay1Count != null) {
-                topBarangay1Name.setText(topBarangays[0]);
-                topBarangay1Count.setText(String.valueOf(barangayCounts.get(topBarangays[0])));
+            TextView[] nameViews = new TextView[]{
+                    topBarangay1Name,
+                    topBarangay2Name,
+                    topBarangay3Name
+            };
+
+            TextView[] countViews = new TextView[]{
+                    topBarangay1Count,
+                    topBarangay2Count,
+                    topBarangay3Count
+            };
+
+            for (int i = 0; i < nameViews.length; i++) {
+                TextView nameView = nameViews[i];
+                TextView countView = countViews[i];
+                if (nameView == null || countView == null) {
+                    continue;
+                }
+
+                if (i < topBarangays.size()) {
+                    String barangay = topBarangays.get(i);
+                    nameView.setText(barangay);
+                    int count = barangayCounts.getOrDefault(barangay, 0);
+                    countView.setText(String.valueOf(count));
+                } else {
+                    nameView.setText("—");
+                    countView.setText("0");
+                }
             }
-            
-            // Update second barangay
-            if (topBarangays.length > 1 && topBarangay2Name != null && topBarangay2Count != null) {
-                topBarangay2Name.setText(topBarangays[1]);
-                topBarangay2Count.setText(String.valueOf(barangayCounts.get(topBarangays[1])));
-            }
-            
-            // Update third barangay
-            if (topBarangays.length > 2 && topBarangay3Name != null && topBarangay3Count != null) {
-                topBarangay3Name.setText(topBarangays[2]);
-                topBarangay3Count.setText(String.valueOf(barangayCounts.get(topBarangays[2])));
-            }
-            
+
             Log.d(TAG, "✅ Top barangay UI updated");
         } catch (Exception e) {
             Log.e(TAG, "Error updating top barangay UI: " + e.getMessage(), e);
@@ -1669,12 +2147,28 @@ public class MainDashboard extends AppCompatActivity {
      */
     private void setDefaultTopBarangayStatistics() {
         try {
-            if (topBarangay1Name != null) topBarangay1Name.setText("Kulapi");
-            if (topBarangay1Count != null) topBarangay1Count.setText("15");
-            if (topBarangay2Name != null) topBarangay2Name.setText("Rizal");
-            if (topBarangay2Count != null) topBarangay2Count.setText("12");
-            if (topBarangay3Name != null) topBarangay3Name.setText("Sampaloc");
-            if (topBarangay3Count != null) topBarangay3Count.setText("8");
+            String[] defaultNames = {"Kulapi", "Rizal", "Sampaloc"};
+            String[] defaultCounts = {"15", "12", "8"};
+
+            TextView[] nameViews = new TextView[]{
+                    topBarangay1Name,
+                    topBarangay2Name,
+                    topBarangay3Name
+            };
+            TextView[] countViews = new TextView[]{
+                    topBarangay1Count,
+                    topBarangay2Count,
+                    topBarangay3Count
+            };
+
+            for (int i = 0; i < nameViews.length; i++) {
+                if (nameViews[i] != null) {
+                    nameViews[i].setText(defaultNames[i]);
+                }
+                if (countViews[i] != null) {
+                    countViews[i].setText(defaultCounts[i]);
+                }
+            }
             
             Log.d(TAG, "✅ Default top barangay statistics set");
         } catch (Exception e) {
@@ -1686,57 +2180,142 @@ public class MainDashboard extends AppCompatActivity {
         try {
             if (reportChart == null) return;
 
-            ArrayList<Entry> entries = buildEntriesForCurrentFilter();
-            LineDataSet dataSet = new LineDataSet(entries, "Reports");
+            ArrayList<BarEntry> entries = buildMonthlyEntriesForCurrentFilter();
 
+            if (entries.isEmpty()) {
+                reportChart.clear();
+                reportChart.invalidate();
+                return;
+            }
+
+            String dataSetLabel = "All Types".equals(currentTypeFilter)
+                    ? "Reports by Month"
+                    : currentTypeFilter + " Reports";
+
+            BarDataSet dataSet = new BarDataSet(entries, dataSetLabel);
             int primaryColor = getColorSafe(R.color.colorPrimary, android.R.color.holo_orange_dark);
-            int lightColor = getColorSafe(R.color.orange_light, android.R.color.holo_orange_light);
-
             dataSet.setColor(primaryColor);
-            dataSet.setCircleColor(primaryColor);
-            dataSet.setLineWidth(3f);
-            dataSet.setCircleRadius(4f);
+            dataSet.setHighLightAlpha(90);
+            dataSet.setHighLightColor(ColorUtils.setAlphaComponent(primaryColor, 180));
             dataSet.setDrawValues(false);
-            dataSet.setDrawFilled(true);
-            dataSet.setFillColor(lightColor);
-            dataSet.setDrawCircleHole(false);
 
-            reportChart.setData(new LineData(dataSet));
+            BarData barData = new BarData(dataSet);
+            barData.setBarWidth(0.8f);
+
+            reportChart.setData(barData);
+
+            XAxis xAxis = reportChart.getXAxis();
+            xAxis.setLabelRotationAngle(0f);
+            xAxis.setAxisMinimum(-0.5f);
+            xAxis.setAxisMaximum(11.5f);
+            reportChart.getAxisLeft().setAxisMinimum(0f);
+
+            reportChart.setScaleEnabled(false);
+            reportChart.setTouchEnabled(true);
+            reportChart.setDragEnabled(true);
+            reportChart.setPinchZoom(false);
+
+            reportChart.notifyDataSetChanged();
             reportChart.invalidate();
         } catch (Exception e) {
             Log.e(TAG, "Error updating chart data: " + e.getMessage(), e);
         }
     }
 
-    private ArrayList<Entry> buildEntriesForCurrentFilter() {
-        ArrayList<Entry> entries = new ArrayList<>();
+    private ArrayList<BarEntry> buildMonthlyEntriesForCurrentFilter() {
+        ArrayList<BarEntry> entries = new ArrayList<>();
         try {
-            if ("Per Type".equals(currentReportFilter)) {
-                // Example: 5 types
-                entries.add(new Entry(0, 4));
-                entries.add(new Entry(1, 7));
-                entries.add(new Entry(2, 3));
-                entries.add(new Entry(3, 6));
-                entries.add(new Entry(4, 2));
+            Map<Integer, Integer> workingTotals = new HashMap<>();
+            if ("All Types".equals(currentTypeFilter)) {
+                if (!monthlyCountsByType.isEmpty()) {
+                    for (Map<Integer, Integer> typeMap : monthlyCountsByType.values()) {
+                        for (Map.Entry<Integer, Integer> entry : typeMap.entrySet()) {
+                            workingTotals.merge(entry.getKey(), entry.getValue(), Integer::sum);
+                        }
+                    }
+                }
+                if (workingTotals.isEmpty()) {
+                    workingTotals.putAll(monthlyReportCounts);
+                }
             } else {
-                // Default: Per Barangay (12 months sample as before)
-                entries.add(new Entry(0, 2));
-                entries.add(new Entry(1, 3));
-                entries.add(new Entry(2, 1));
-                entries.add(new Entry(3, 4));
-                entries.add(new Entry(4, 2));
-                entries.add(new Entry(5, 5));
-                entries.add(new Entry(6, 3));
-                entries.add(new Entry(7, 6));
-                entries.add(new Entry(8, 4));
-                entries.add(new Entry(9, 7));
-                entries.add(new Entry(10, 5));
-                entries.add(new Entry(11, 8));
+                Map<Integer, Integer> specific = monthlyCountsByType.get(currentTypeFilter);
+                if (specific != null) {
+                    workingTotals.putAll(specific);
+                }
+            }
+
+            updateReportChartSummary(workingTotals);
+
+            currentChartMonthlyValues.clear();
+
+            boolean hasData = false;
+            for (int month = 0; month < 12; month++) {
+                int value = workingTotals.getOrDefault(month, 0);
+                currentChartMonthlyValues.put(month, value);
+                if (value > 0) {
+                    hasData = true;
+                    entries.add(new BarEntry(month, value));
+                }
+            }
+
+            if (!hasData) {
+                entries.clear();
             }
         } catch (Exception e) {
-            Log.e(TAG, "Error building entries: " + e.getMessage(), e);
+            Log.e(TAG, "Error building monthly entries: " + e.getMessage(), e);
         }
         return entries;
+    }
+
+    private void updateReportChartSummary(Map<Integer, Integer> totals) {
+        if (reportChartSummaryText == null) {
+            return;
+        }
+        if (totals == null || totals.isEmpty()) {
+            reportChartSummaryText.setText("No reports recorded yet.");
+            return;
+        }
+
+        int overallTotal = 0;
+        for (Integer value : totals.values()) {
+            if (value != null) {
+                overallTotal += value;
+            }
+        }
+
+        if (overallTotal == 0) {
+            reportChartSummaryText.setText(
+                    String.format(Locale.getDefault(),
+                            "No %s reports recorded yet.",
+                            currentTypeFilter.equals("All Types") ? "report" : currentTypeFilter.toLowerCase(Locale.getDefault()))
+            );
+            return;
+        }
+
+        StringBuilder builder = new StringBuilder();
+        String header = "All Types".equals(currentTypeFilter)
+                ? "All reports"
+                : currentTypeFilter + " reports";
+        builder.append(String.format(Locale.getDefault(), "%s this year: %d total", header, overallTotal));
+
+        DateFormatSymbols symbols = new DateFormatSymbols(Locale.getDefault());
+        String[] months = symbols.getShortMonths();
+        boolean firstDetail = true;
+        for (int month = 0; month < 12; month++) {
+            int count = totals.getOrDefault(month, 0);
+            if (count <= 0) {
+                continue;
+            }
+            if (firstDetail) {
+                builder.append(" • ");
+                firstDetail = false;
+            } else {
+                builder.append(" · ");
+            }
+            builder.append(months[month]).append(' ').append(count);
+        }
+
+        reportChartSummaryText.setText(builder.toString());
     }
 
     private int getColorSafe(int colorRes, int fallbackColorRes) {

@@ -9,6 +9,7 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -532,6 +533,42 @@ public class WeatherManager {
      */
     public static String formatHumidity(int humidity) {
         return humidity + "%";
+    }
+    
+    /**
+     * Format precipitation using values returned by OpenWeatherMap.
+     * Falls back to "0 mm" if no rain/snow volume is reported.
+     */
+    public static String formatPrecipitation(WeatherData weatherData) {
+        double millimeters = 0.0;
+
+        if (weatherData != null) {
+            WeatherData.Rain rain = weatherData.getRain();
+            if (rain != null) {
+                if (rain.getOneHour() != null) {
+                    millimeters = rain.getOneHour();
+                } else if (rain.getThreeHour() != null) {
+                    millimeters = rain.getThreeHour();
+                }
+            }
+
+            if (millimeters <= 0) {
+                WeatherData.Snow snow = weatherData.getSnow();
+                if (snow != null) {
+                    if (snow.getOneHour() != null) {
+                        millimeters = snow.getOneHour();
+                    } else if (snow.getThreeHour() != null) {
+                        millimeters = snow.getThreeHour();
+                    }
+                }
+            }
+        }
+
+        if (millimeters <= 0) {
+            return "0 mm";
+        }
+
+        return String.format(Locale.getDefault(), "%.1f mm", millimeters);
     }
     
     /**

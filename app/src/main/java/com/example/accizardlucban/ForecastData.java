@@ -46,7 +46,16 @@ public class ForecastData {
         
         @SerializedName("wind")
         private Wind wind;
-        
+
+        @SerializedName("pop")
+        private double pop;
+
+        @SerializedName("rain")
+        private Rain rain;
+
+        @SerializedName("snow")
+        private Snow snow;
+
         @SerializedName("dt_txt")
         private String dtTxt;
         
@@ -82,7 +91,31 @@ public class ForecastData {
         public void setWind(Wind wind) {
             this.wind = wind;
         }
-        
+
+        public double getPop() {
+            return pop;
+        }
+
+        public void setPop(double pop) {
+            this.pop = pop;
+        }
+
+        public Rain getRain() {
+            return rain;
+        }
+
+        public void setRain(Rain rain) {
+            this.rain = rain;
+        }
+
+        public Snow getSnow() {
+            return snow;
+        }
+
+        public void setSnow(Snow snow) {
+            this.snow = snow;
+        }
+
         public String getDtTxt() {
             return dtTxt;
         }
@@ -217,6 +250,38 @@ public class ForecastData {
         
         public void setDeg(int deg) {
             this.deg = deg;
+        }
+    }
+
+    /**
+     * Rain data (precipitation volume)
+     */
+    public static class Rain {
+        @SerializedName("3h")
+        private Double threeHour;
+
+        public Double getThreeHour() {
+            return threeHour;
+        }
+
+        public void setThreeHour(Double threeHour) {
+            this.threeHour = threeHour;
+        }
+    }
+
+    /**
+     * Snow data (precipitation volume)
+     */
+    public static class Snow {
+        @SerializedName("3h")
+        private Double threeHour;
+
+        public Double getThreeHour() {
+            return threeHour;
+        }
+
+        public void setThreeHour(Double threeHour) {
+            this.threeHour = threeHour;
         }
     }
     

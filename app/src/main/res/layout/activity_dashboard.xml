@@ -341,7 +341,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Precip"
+                            android:text="Precipitation"
                             android:textColor="@android:color/white"
                             android:textSize="@dimen/dashboard_weather_detail_label_size"
                             android:fontFamily="@font/dmsans"
@@ -1121,32 +1121,14 @@
             </HorizontalScrollView>
 
             <!-- Report Statistics Section -->
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="@dimen/spacing_small">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Report Statistics"
-                    android:textColor="@color/black"
-                    android:textSize="@dimen/dashboard_section_title_size"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/reportFilterText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Per Barangay ▼"
-                    android:textColor="@color/gray_text"
-                    android:textSize="@dimen/text_size_medium"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:foreground="?android:attr/selectableItemBackgroundBorderless" />
-            </LinearLayout>
+                android:text="2025 Report Trends"
+                android:textColor="@color/black"
+                android:textSize="@dimen/dashboard_section_title_size"
+                android:textStyle="bold"
+                android:layout_marginBottom="@dimen/spacing_small" />
 
             <!-- Statistics Section (Horizontally Scrollable, Outside Box) -->
             <HorizontalScrollView
@@ -1311,8 +1293,37 @@
                     android:background="@drawable/statistics_cards_background"
                     android:padding="@dimen/padding_large">
 
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="@dimen/spacing_small">
+
+                        <TextView
+                            android:id="@+id/reportFilterText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="All Types ▼"
+                            android:textColor="@color/black"
+                            android:textSize="@dimen/text_size_medium"
+                            android:textStyle="bold"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?android:attr/selectableItemBackgroundBorderless" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/reportChartSummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="No reports recorded yet."
+                        android:textColor="@color/gray_text"
+                        android:textSize="@dimen/text_size_small"
+                        android:layout_marginBottom="@dimen/spacing_small" />
+
                     <!-- Chart Section -->
-                    <com.github.mikephil.charting.charts.LineChart
+                    <com.github.mikephil.charting.charts.BarChart
                         android:id="@+id/reportChart"
                         android:layout_width="match_parent"
                         android:layout_height="@dimen/dashboard_chart_height" />
@@ -1336,16 +1347,6 @@
                         android:layout_weight="1"
                         android:orientation="vertical"
                         android:layout_marginEnd="@dimen/margin_large">
-
-                        <!-- Report Type Statistics Title -->
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Report Type Statistics"
-                            android:textColor="@color/black"
-                            android:textSize="@dimen/text_size_large"
-                            android:textStyle="bold"
-                            android:layout_marginBottom="@dimen/spacing_medium" />
 
                         <!-- Pie Chart -->
                         <com.github.mikephil.charting.charts.PieChart
@@ -1383,7 +1384,6 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal"
-                                android:background="@drawable/statistics_item_background"
                                 android:padding="@dimen/spacing_medium"
                                 android:layout_marginBottom="@dimen/spacing_small">
 
@@ -1412,7 +1412,6 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal"
-                                android:background="@drawable/statistics_item_background"
                                 android:padding="@dimen/spacing_medium"
                                 android:layout_marginBottom="@dimen/spacing_small">
 
@@ -1441,8 +1440,8 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal"
-                                android:background="@drawable/statistics_item_background"
-                                android:padding="@dimen/spacing_medium">
+                                android:padding="@dimen/spacing_medium"
+                                android:layout_marginBottom="@dimen/spacing_small">
 
                                 <TextView
                                     android:id="@+id/topBarangay3Name"
@@ -1463,6 +1462,7 @@
                                     android:textSize="@dimen/text_size_large"
                                     android:textStyle="bold" />
                             </LinearLayout>
+
                         </LinearLayout>
                     </LinearLayout>
             </LinearLayout>
