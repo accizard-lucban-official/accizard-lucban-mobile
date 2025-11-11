@@ -18,3 +18,4 @@
     app:ensureMinTouchTargetSize="false"
     app:rippleColor="@color/chip_report_ripple" />
 
+
