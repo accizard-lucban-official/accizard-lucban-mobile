@@ -379,3 +379,8 @@ If you've followed all steps and badge still doesn't appear, share your Logcat o
 
 
 
+
+
+
+
+

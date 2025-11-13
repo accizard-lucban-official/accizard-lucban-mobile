@@ -1,5 +1,6 @@
 package com.example.accizardlucban;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -272,7 +273,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
 
     private void setupReportLogRecyclerView() {
         // Setup RecyclerView with LinearLayoutManager
-        reportLogRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        reportLogRecyclerView.setLayoutManager(new NonScrollableLinearLayoutManager(this));
         reportLogRecyclerView.setNestedScrollingEnabled(false);
 
         // Initialize adapter
@@ -1867,6 +1868,22 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             
         } catch (Exception e) {
             Log.e(TAG, "Error updating status count TextViews", e);
+        }
+    }
+
+    /**
+     * Custom LinearLayoutManager that disables internal vertical scrolling so the RecyclerView
+     * expands to show all items inside the parent ScrollView.
+     */
+    private static class NonScrollableLinearLayoutManager extends LinearLayoutManager {
+        NonScrollableLinearLayoutManager(Context context) {
+            super(context);
+            setOrientation(VERTICAL);
+        }
+
+        @Override
+        public boolean canScrollVertically() {
+            return false;
         }
     }
     

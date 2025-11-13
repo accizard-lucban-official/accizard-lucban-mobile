@@ -101,13 +101,7 @@ public class PasswordResetConfirmActivity extends AppCompatActivity {
         }
 
         if (newPassword.length() < 8) {
-            etNewPassword.setError("Password must be at least 8 characters");
-            etNewPassword.requestFocus();
-            return;
-        }
-
-        if (!isStrongPassword(newPassword)) {
-            etNewPassword.setError("Password must include uppercase, lowercase, number, and symbol");
+            etNewPassword.setError("Password must be at least 8 characters long");
             etNewPassword.requestFocus();
             return;
         }
@@ -137,17 +131,6 @@ public class PasswordResetConfirmActivity extends AppCompatActivity {
         finish();
     }
 
-    private boolean isStrongPassword(String password) {
-        if (password.length() < 8) return false;
-        boolean hasUpper = false, hasLower = false, hasDigit = false, hasSymbol = false;
-        for (char c : password.toCharArray()) {
-            if (Character.isUpperCase(c)) hasUpper = true;
-            else if (Character.isLowerCase(c)) hasLower = true;
-            else if (Character.isDigit(c)) hasDigit = true;
-            else if ("!@#$%^&*()-_=+[{]}|;:'\",<.>/?`~".indexOf(c) >= 0) hasSymbol = true;
-        }
-        return hasUpper && hasLower && hasDigit && hasSymbol;
-    }
 
     private void setLoadingState(boolean isLoading) {
         btnResetPassword.setEnabled(!isLoading);

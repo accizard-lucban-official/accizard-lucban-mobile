@@ -593,17 +593,52 @@ public class ProfileActivity extends AppCompatActivity {
         builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                // TODO: Clear user session and navigate to login
-                Toast.makeText(ProfileActivity.this, "Signed out successfully", Toast.LENGTH_SHORT).show();
-                // Navigate to Login Activity or Main Activity
-                Intent intent = new Intent(ProfileActivity.this, MainActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
+                performSignOut();
             }
         });
         builder.setNegativeButton("Cancel", null);
         builder.show();
+    }
+    
+    /**
+     * Performs the actual sign out process:
+     * 1. Sign out from Firebase Auth
+     * 2. Clear saved credentials
+     * 3. Clear user data
+     * 4. Delete FCM token
+     * 5. Navigate to login screen
+     */
+    private void performSignOut() {
+        try {
+            // Sign out from Firebase Auth
+            FirebaseAuth.getInstance().signOut();
+            Log.d(TAG, "✅ Signed out from Firebase Auth");
+            
+            // Clear saved credentials for persistent login
+            MainActivity.clearSavedCredentials(this);
+            
+            // Clear all user data
+            clearUserData();
+            
+            // Delete FCM token from Firestore
+            try {
+                FCMTokenManager tokenManager = new FCMTokenManager(this);
+                tokenManager.deleteFCMTokenFromFirestore();
+            } catch (Exception e) {
+                Log.w(TAG, "Could not delete FCM token: " + e.getMessage());
+            }
+            
+            Toast.makeText(ProfileActivity.this, "Signed out successfully", Toast.LENGTH_SHORT).show();
+            
+            // Navigate to Login Activity
+            Intent intent = new Intent(ProfileActivity.this, MainActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+        } catch (Exception e) {
+            Log.e(TAG, "Error during sign out: " + e.getMessage(), e);
+            Toast.makeText(ProfileActivity.this, "Error signing out: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void showDeleteAccountDialog() {
@@ -712,6 +747,9 @@ public class ProfileActivity extends AppCompatActivity {
                                 if (task.isSuccessful()) {
                                     // Clear local data
                                     clearUserData();
+                                    
+                                    // Clear saved credentials for persistent login
+                                    MainActivity.clearSavedCredentials(ProfileActivity.this);
                                     
                                     // Show success message
                                     Toast.makeText(ProfileActivity.this, "✅ Account deleted successfully", Toast.LENGTH_LONG).show();

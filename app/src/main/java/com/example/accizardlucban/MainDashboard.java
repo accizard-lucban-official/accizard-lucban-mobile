@@ -27,6 +27,9 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.GridLayout;
+import android.graphics.Typeface;
+import android.view.Gravity;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -129,7 +132,7 @@ public class MainDashboard extends AppCompatActivity {
     private LinearLayout emergencyContactsLayout;
     private BarChart reportChart;
     private TextView reportFilterText;
-    private TextView reportChartSummaryText;
+    private GridLayout reportLegendGrid;
     
     // Statistics views
     private TextView totalReportsCount;
@@ -165,6 +168,24 @@ public class MainDashboard extends AppCompatActivity {
             "Environmental Hazard",
             "Obstructions"
     };
+    private static final String[] LEGEND_ORDER = new String[]{
+            "Road Crash",
+            "Fire",
+            "Medical Emergency",
+            "Flooding",
+            "Earthquake",
+            "Landslide",
+            "Volcanic Activity",
+            "Civil Disturbance",
+            "Armed Conflict",
+            "Infectious Disease",
+            "Poor Infrastructure",
+            "Electrical Hazard",
+            "Environmental Hazard",
+            "Obstructions",
+            "Others"
+    };
+    private static final Map<String, Integer> REPORT_TYPE_COLOR_MAP = createReportTypeColorMap();
     private static final String[] DATE_PATTERNS = new String[]{
             "MM/dd/yyyy",
             "yyyy-MM-dd",
@@ -413,7 +434,7 @@ public class MainDashboard extends AppCompatActivity {
             emergencyContactsLayout = findViewById(R.id.emergencyContactsLayout);
             reportChart = findViewById(R.id.reportChart);
             reportFilterText = findViewById(R.id.reportFilterText);
-            reportChartSummaryText = findViewById(R.id.reportChartSummary);
+            reportLegendGrid = findViewById(R.id.reportLegendGrid);
             
             // Statistics views
             totalReportsCount = findViewById(R.id.totalReportsCount);
@@ -550,6 +571,26 @@ public class MainDashboard extends AppCompatActivity {
         return sb.toString();
     }
 
+    private static Map<String, Integer> createReportTypeColorMap() {
+        Map<String, Integer> map = new HashMap<>();
+        map.put("Road Crash", R.color.report_road_crash);
+        map.put("Fire", R.color.report_fire);
+        map.put("Medical Emergency", R.color.report_medical_emergency);
+        map.put("Flooding", R.color.report_flooding);
+        map.put("Earthquake", R.color.report_earthquake);
+        map.put("Landslide", R.color.report_landslide);
+        map.put("Volcanic Activity", R.color.report_volcanic_activity);
+        map.put("Civil Disturbance", R.color.report_civil_disturbance);
+        map.put("Armed Conflict", R.color.report_armed_conflict);
+        map.put("Infectious Disease", R.color.report_infectious_disease);
+        map.put("Poor Infrastructure", R.color.report_poor_infrastructure);
+        map.put("Electrical Hazard", R.color.report_electrical_hazard);
+        map.put("Environmental Hazard", R.color.report_environmental_hazard);
+        map.put("Obstructions", R.color.report_obstructions);
+        map.put("Others", R.color.report_others);
+        return map;
+    }
+
     private String resolveDisplayLabel(String rawType) {
         if (rawType == null || rawType.trim().isEmpty()) {
             return "Others";
@@ -591,6 +632,18 @@ public class MainDashboard extends AppCompatActivity {
             default:
                 return formatTypeDisplay(rawType);
         }
+    }
+
+    private int getColorForType(String label) {
+        String key = formatTypeDisplay(label);
+        Integer resId = REPORT_TYPE_COLOR_MAP.get(key);
+        if (resId == null) {
+            resId = REPORT_TYPE_COLOR_MAP.get("Others");
+        }
+        if (resId == null) {
+            return getColorSafe(R.color.colorPrimary, android.R.color.darker_gray);
+        }
+        return getColorSafe(resId, android.R.color.darker_gray);
     }
 
     private Long extractMillisFromDocument(DocumentSnapshot document) {
@@ -1969,6 +2022,7 @@ public class MainDashboard extends AppCompatActivity {
             if (typeReportCounts.isEmpty()) {
                 reportTypePieChart.clear();
                 reportTypePieChart.invalidate();
+                clearReportLegend();
                 return;
             }
 
@@ -1978,24 +2032,9 @@ public class MainDashboard extends AppCompatActivity {
             }
 
             PieDataSet dataSet = new PieDataSet(entries, "");
-            int[] paletteRes = new int[]{
-                R.color.colorPrimary,
-                R.color.red_primary,
-                R.color.rhu_green,
-                R.color.pnp_blue,
-                R.color.gray_medium
-            };
-            int[] fallbackRes = new int[]{
-                android.R.color.holo_orange_dark,
-                android.R.color.holo_red_dark,
-                android.R.color.holo_green_dark,
-                android.R.color.holo_blue_dark,
-                android.R.color.darker_gray
-            };
             List<Integer> colors = new ArrayList<>();
-            for (int i = 0; i < entries.size(); i++) {
-                int paletteIndex = i % paletteRes.length;
-                colors.add(getColorSafe(paletteRes[paletteIndex], fallbackRes[paletteIndex]));
+            for (PieEntry entry : entries) {
+                colors.add(getColorForType(entry.getLabel()));
             }
             dataSet.setColors(colors);
             dataSet.setSliceSpace(2f);
@@ -2008,6 +2047,7 @@ public class MainDashboard extends AppCompatActivity {
             reportTypePieChart.setData(pieData);
             reportTypePieChart.highlightValues(null);
             reportTypePieChart.invalidate();
+            populateReportLegend();
         } catch (Exception e) {
             Log.e(TAG, "Error updating pie chart data: " + e.getMessage(), e);
         }
@@ -2025,6 +2065,73 @@ public class MainDashboard extends AppCompatActivity {
             }
         } catch (Exception e) {
             Log.e(TAG, "Error setting up pie chart marker: " + e.getMessage(), e);
+        }
+    }
+
+    private void clearReportLegend() {
+        try {
+            if (reportLegendGrid != null) {
+                reportLegendGrid.removeAllViews();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error clearing report legend: " + e.getMessage(), e);
+        }
+    }
+
+    private void populateReportLegend() {
+        try {
+            if (reportLegendGrid == null) {
+                return;
+            }
+
+            reportLegendGrid.removeAllViews();
+
+            int margin = (int) TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP,
+                    4,
+                    getResources().getDisplayMetrics()
+            );
+
+            for (int index = 0; index < LEGEND_ORDER.length; index++) {
+                String label = LEGEND_ORDER[index];
+
+                LinearLayout legendItem = new LinearLayout(this);
+                legendItem.setOrientation(LinearLayout.HORIZONTAL);
+                legendItem.setGravity(Gravity.CENTER_VERTICAL);
+
+                View colorDot = new View(this);
+                int dotSize = (int) TypedValue.applyDimension(
+                        TypedValue.COMPLEX_UNIT_DIP,
+                        10,
+                        getResources().getDisplayMetrics()
+                );
+                LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
+                dotParams.setMargins(0, 0, margin, 0);
+                colorDot.setLayoutParams(dotParams);
+                colorDot.setBackgroundResource(R.drawable.legend_color_dot_background);
+                int color = getColorForType(label);
+                colorDot.getBackground().setTint(color);
+
+                TextView labelView = new TextView(this);
+                labelView.setText(label);
+                labelView.setTextColor(getColorSafe(R.color.black, android.R.color.black));
+                labelView.setTypeface(Typeface.DEFAULT_BOLD);
+                labelView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+
+                legendItem.addView(colorDot);
+                legendItem.addView(labelView);
+
+                GridLayout.Spec rowSpec = GridLayout.spec(index / 3);
+                GridLayout.Spec columnSpec = GridLayout.spec(index % 3, 1f);
+                GridLayout.LayoutParams params = new GridLayout.LayoutParams(rowSpec, columnSpec);
+                params.width = 0;
+                params.setMargins(margin, margin, margin, margin);
+                legendItem.setLayoutParams(params);
+
+                reportLegendGrid.addView(legendItem);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error populating report legend: " + e.getMessage(), e);
         }
     }
 
@@ -2188,15 +2295,18 @@ public class MainDashboard extends AppCompatActivity {
                 return;
             }
 
-            String dataSetLabel = "All Types".equals(currentTypeFilter)
+            boolean isAllTypes = "All Types".equals(currentTypeFilter);
+            String dataSetLabel = isAllTypes
                     ? "Reports by Month"
                     : currentTypeFilter + " Reports";
 
             BarDataSet dataSet = new BarDataSet(entries, dataSetLabel);
-            int primaryColor = getColorSafe(R.color.colorPrimary, android.R.color.holo_orange_dark);
-            dataSet.setColor(primaryColor);
+            int dataSetColor = isAllTypes
+                    ? getColorSafe(R.color.colorPrimary, android.R.color.holo_orange_dark)
+                    : getColorForType(currentTypeFilter);
+            dataSet.setColor(dataSetColor);
             dataSet.setHighLightAlpha(90);
-            dataSet.setHighLightColor(ColorUtils.setAlphaComponent(primaryColor, 180));
+            dataSet.setHighLightColor(ColorUtils.setAlphaComponent(dataSetColor, 180));
             dataSet.setDrawValues(false);
 
             BarData barData = new BarData(dataSet);
@@ -2244,8 +2354,6 @@ public class MainDashboard extends AppCompatActivity {
                 }
             }
 
-            updateReportChartSummary(workingTotals);
-
             currentChartMonthlyValues.clear();
 
             boolean hasData = false;
@@ -2268,54 +2376,6 @@ public class MainDashboard extends AppCompatActivity {
     }
 
     private void updateReportChartSummary(Map<Integer, Integer> totals) {
-        if (reportChartSummaryText == null) {
-            return;
-        }
-        if (totals == null || totals.isEmpty()) {
-            reportChartSummaryText.setText("No reports recorded yet.");
-            return;
-        }
-
-        int overallTotal = 0;
-        for (Integer value : totals.values()) {
-            if (value != null) {
-                overallTotal += value;
-            }
-        }
-
-        if (overallTotal == 0) {
-            reportChartSummaryText.setText(
-                    String.format(Locale.getDefault(),
-                            "No %s reports recorded yet.",
-                            currentTypeFilter.equals("All Types") ? "report" : currentTypeFilter.toLowerCase(Locale.getDefault()))
-            );
-            return;
-        }
-
-        StringBuilder builder = new StringBuilder();
-        String header = "All Types".equals(currentTypeFilter)
-                ? "All reports"
-                : currentTypeFilter + " reports";
-        builder.append(String.format(Locale.getDefault(), "%s this year: %d total", header, overallTotal));
-
-        DateFormatSymbols symbols = new DateFormatSymbols(Locale.getDefault());
-        String[] months = symbols.getShortMonths();
-        boolean firstDetail = true;
-        for (int month = 0; month < 12; month++) {
-            int count = totals.getOrDefault(month, 0);
-            if (count <= 0) {
-                continue;
-            }
-            if (firstDetail) {
-                builder.append(" • ");
-                firstDetail = false;
-            } else {
-                builder.append(" · ");
-            }
-            builder.append(months[month]).append(' ').append(count);
-        }
-
-        reportChartSummaryText.setText(builder.toString());
     }
 
     private int getColorSafe(int colorRes, int fallbackColorRes) {
@@ -3301,6 +3361,12 @@ public class MainDashboard extends AppCompatActivity {
         if (bfpIcon != null) {
             bfpIcon.setOnClickListener(v -> showEmergencyContactDialog("BFP", "Bureau of Fire Protection", "0932 603 1222"));
         }
+
+        // Philippine Red Cross contact
+        ImageView prcIcon = findViewById(R.id.prcIcon);
+        if (prcIcon != null) {
+            prcIcon.setOnClickListener(v -> showEmergencyContactDialog("Philippine Red Cross", "143 Emergency Hotline", "143"));
+        }
     }
 
     /**
@@ -3598,6 +3664,8 @@ public class MainDashboard extends AppCompatActivity {
                 return R.drawable.ic_pnp; // PNP specific icon
             case "BFP":
                 return R.drawable.ic_bfp; // BFP specific icon
+            case "Philippine Red Cross":
+                return R.drawable.prc; // Philippine Red Cross icon
             default:
                 return R.drawable.ic_emergency; // Default emergency icon
         }
@@ -4337,6 +4405,9 @@ public class MainDashboard extends AppCompatActivity {
                                 if (task.isSuccessful()) {
                                     // Clear local data
                                     clearUserData();
+                                    
+                                    // Clear saved credentials for persistent login
+                                    MainActivity.clearSavedCredentials(MainDashboard.this);
                                     
                                     // Show success message
                                     Toast.makeText(MainDashboard.this, "Account deleted successfully", Toast.LENGTH_SHORT).show();

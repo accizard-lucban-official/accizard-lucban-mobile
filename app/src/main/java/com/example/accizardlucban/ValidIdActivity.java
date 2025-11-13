@@ -12,9 +12,11 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.LinearLayout;
@@ -65,7 +67,7 @@ public class ValidIdActivity extends AppCompatActivity {
     private CardView btnUpload;
     private Button btnNext;
     private ImageButton btnBack;
-    private TextView tvValidIdList;
+    private Spinner spinnerValidIdType;
     private ImageView ivValidId;
     private LinearLayout placeholderContainer;
     
@@ -99,6 +101,7 @@ public class ValidIdActivity extends AppCompatActivity {
             
             initializeViews();
             getIntentData();
+            setupSpinner();
             restoreValidIdData(); // Restore previously saved valid ID
             setupClickListeners();
         } catch (Exception e) {
@@ -112,7 +115,7 @@ public class ValidIdActivity extends AppCompatActivity {
             // Initialize navigation buttons
             btnNext = findViewById(R.id.btn_next);
             btnBack = findViewById(R.id.btn_back);
-            tvValidIdList = findViewById(R.id.tv_valid_ids_list);
+            spinnerValidIdType = findViewById(R.id.spinnerValidIdType);
             
             // Initialize upload button
             btnUpload = findViewById(R.id.btn_upload);
@@ -120,11 +123,6 @@ public class ValidIdActivity extends AppCompatActivity {
             
             // Initialize placeholder container
             placeholderContainer = findViewById(R.id.placeholder_container);
-            
-            // Add underline to "See list of Valid IDs" text
-            if (tvValidIdList != null) {
-                tvValidIdList.setPaintFlags(tvValidIdList.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-            }
 
             // Enable click on image view to re-upload: open camera directly
             ivValidId.setOnClickListener(new View.OnClickListener() {
@@ -255,10 +253,21 @@ public class ValidIdActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
                         try {
-                            if (!hasValidId) {
-                                Toast.makeText(ValidIdActivity.this, "Please upload a valid ID to continue", Toast.LENGTH_SHORT).show();
+                            // Validate valid ID type selection
+                            if (spinnerValidIdType == null || spinnerValidIdType.getSelectedItemPosition() == 0) {
+                                Toast.makeText(ValidIdActivity.this, "Please select a valid ID type", Toast.LENGTH_SHORT).show();
+                                if (spinnerValidIdType != null) {
+                                    spinnerValidIdType.requestFocus();
+                                }
                                 return;
                             }
+                            
+                            // Validate image upload
+                            if (!hasValidId || validIdBitmap == null) {
+                                Toast.makeText(ValidIdActivity.this, "Please upload or take a photo of your valid ID", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            
                             // Create user account and save to Firestore
                             createUserAccount();
                         } catch (Exception e) {
@@ -284,19 +293,7 @@ public class ValidIdActivity extends AppCompatActivity {
                 });
             }
 
-            if (tvValidIdList != null) {
-                tvValidIdList.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        try {
-                            showValidIdList();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            Toast.makeText(ValidIdActivity.this, "Error showing valid ID list: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
-            }
+            // Spinner selection listener is set up in setupSpinner() method
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error setting up click listeners: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -356,9 +353,14 @@ public class ValidIdActivity extends AppCompatActivity {
         }
     }
 
-    private void showValidIdList() {
+    /**
+     * Setup spinner for valid ID type selection
+     */
+    private void setupSpinner() {
         try {
-            final String[] idTypes = new String[]{
+            // Add a placeholder as first item to indicate selection is required
+            String[] idTypes = new String[]{
+                    "Select Valid ID Type", // Placeholder - position 0
                     "National ID (PhilID)",
                     "Driver's License",
                     "Passport",
@@ -371,34 +373,59 @@ public class ValidIdActivity extends AppCompatActivity {
                     "Others"
             };
 
-            int checkedItem = -1;
-            if (selectedValidIdType != null) {
-                for (int i = 0; i < idTypes.length; i++) {
-                    if (idTypes[i].equalsIgnoreCase(selectedValidIdType)) {
-                        checkedItem = i;
-                        break;
-                    }
-                }
-            }
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, idTypes);
+            spinnerValidIdType.setAdapter(adapter);
+            
+            // Set default selection to placeholder (position 0)
+            spinnerValidIdType.setSelection(0);
 
-            new AlertDialog.Builder(this)
-                    .setTitle("Select Valid ID Type")
-                    .setSingleChoiceItems(idTypes, checkedItem, (dialog, which) -> {
-                        selectedValidIdType = idTypes[which];
-                    })
-                    .setPositiveButton("Confirm", (dialog, which) -> {
-                        // Persist selection for retention
-                        saveValidIdData();
-                        // Reflect selection in the UI text
-                        if (tvValidIdList != null && selectedValidIdType != null) {
-                            tvValidIdList.setText("Selected: " + selectedValidIdType);
-                        }
-                    })
-                    .setNegativeButton("Cancel", null)
-                    .show();
+            // Set selection listener to save when user selects an ID type
+            setupSpinnerSelectionListener();
         } catch (Exception e) {
             e.printStackTrace();
-            Toast.makeText(this, "Error showing valid ID list: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Error setting up valid ID spinner: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * Setup spinner selection listener
+     */
+    private void setupSpinnerSelectionListener() {
+        try {
+            String[] idTypes = new String[]{
+                    "Select Valid ID Type", // Placeholder - position 0
+                    "National ID (PhilID)",
+                    "Driver's License",
+                    "Passport",
+                    "UMID",
+                    "SSS",
+                    "PhilHealth",
+                    "Voter's ID",
+                    "Postal ID",
+                    "Student ID",
+                    "Others"
+            };
+
+            spinnerValidIdType.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                    // Only save if a valid selection is made (not placeholder)
+                    if (position > 0) {
+                        selectedValidIdType = idTypes[position];
+                        saveValidIdData(); // Save selection immediately
+                    } else {
+                        selectedValidIdType = null; // Clear selection if placeholder is selected
+                    }
+                }
+
+                @Override
+                public void onNothingSelected(android.widget.AdapterView<?> parent) {
+                    // Do nothing
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, "Error setting up spinner selection listener: " + e.getMessage(), e);
         }
     }
 
@@ -1059,10 +1086,28 @@ public class ValidIdActivity extends AppCompatActivity {
             }
 
             // Restore selected valid ID type and reflect in UI
-            if (savedValidIdType != null) {
+            if (savedValidIdType != null && spinnerValidIdType != null) {
                 selectedValidIdType = savedValidIdType;
-                if (tvValidIdList != null) {
-                    tvValidIdList.setText("Selected: " + selectedValidIdType);
+                ArrayAdapter<String> adapter = (ArrayAdapter<String>) spinnerValidIdType.getAdapter();
+                if (adapter != null) {
+                    int position = adapter.getPosition(savedValidIdType);
+                    if (position >= 0) {
+                        // Temporarily remove listener to prevent triggering save during restore
+                        spinnerValidIdType.setOnItemSelectedListener(null);
+                        spinnerValidIdType.setSelection(position);
+                        // Re-add listener after setting selection
+                        setupSpinnerSelectionListener();
+                        Log.d(TAG, "Valid ID type restored: " + savedValidIdType);
+                    } else {
+                        // If saved type not found, set to placeholder
+                        spinnerValidIdType.setSelection(0);
+                        selectedValidIdType = null;
+                    }
+                }
+            } else {
+                // No saved type, set to placeholder
+                if (spinnerValidIdType != null) {
+                    spinnerValidIdType.setSelection(0);
                 }
             }
         } catch (Exception e) {

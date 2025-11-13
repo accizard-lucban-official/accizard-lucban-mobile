@@ -421,6 +421,7 @@
                                 android:layout_width="@dimen/dashboard_forecast_icon_size"
                                 android:layout_height="@dimen/dashboard_forecast_icon_size"
                                 android:src="@drawable/fluent__weather_partly_cloudy_day_48_filled"
+                                android:tint="@color/colorPrimary"
                                 android:layout_marginBottom="@dimen/margin_medium"
                                 android:contentDescription="Today Weather" />
 
@@ -474,6 +475,7 @@
                                 android:layout_width="@dimen/dashboard_forecast_icon_size"
                                 android:layout_height="@dimen/dashboard_forecast_icon_size"
                                 android:src="@drawable/fluent__weather_partly_cloudy_day_48_filled"
+                                android:tint="@color/colorPrimary"
                                 android:layout_marginBottom="@dimen/margin_medium"
                                 android:contentDescription="Day 1 Weather" />
 
@@ -527,6 +529,7 @@
                                 android:layout_width="@dimen/dashboard_forecast_icon_size"
                                 android:layout_height="@dimen/dashboard_forecast_icon_size"
                                 android:src="@drawable/fluent__weather_partly_cloudy_day_48_filled"
+                                android:tint="@color/colorPrimary"
                                 android:layout_marginBottom="@dimen/margin_medium"
                                 android:contentDescription="Day 2 Weather" />
 
@@ -580,6 +583,7 @@
                                 android:layout_width="@dimen/dashboard_forecast_icon_size"
                                 android:layout_height="@dimen/dashboard_forecast_icon_size"
                                 android:src="@drawable/fluent__weather_partly_cloudy_day_48_filled"
+                                android:tint="@color/colorPrimary"
                                 android:layout_marginBottom="@dimen/margin_medium"
                                 android:contentDescription="Day 3 Weather" />
 
@@ -633,6 +637,7 @@
                                 android:layout_width="@dimen/dashboard_forecast_icon_size"
                                 android:layout_height="@dimen/dashboard_forecast_icon_size"
                                 android:src="@drawable/ic_cloud_rain"
+                                android:tint="@color/colorPrimary"
                                 android:layout_marginBottom="@dimen/margin_medium"
                                 android:contentDescription="Day 4 Weather" />
 
@@ -685,6 +690,7 @@
                                 android:layout_width="@dimen/dashboard_forecast_icon_size"
                                 android:layout_height="@dimen/dashboard_forecast_icon_size"
                                 android:src="@drawable/ic_cloud_rain"
+                                android:tint="@color/colorPrimary"
                                 android:layout_marginBottom="@dimen/margin_medium"
                                 android:contentDescription="Day 5 Weather" />
 
@@ -878,6 +884,36 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="BFP"
+                        android:textColor="@color/black"
+                        android:textSize="@dimen/dashboard_emergency_label_size"
+                        android:textStyle="bold"
+                        android:gravity="center" />
+                </LinearLayout>
+
+                <!-- Philippine Red Cross -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <ImageView
+                        android:id="@+id/prcIcon"
+                        android:layout_width="@dimen/dashboard_emergency_contact_size"
+                        android:layout_height="@dimen/dashboard_emergency_contact_size"
+                        android:src="@drawable/prc"
+                        android:padding="@dimen/spacing_medium"
+                        android:layout_marginBottom="@dimen/spacing_small"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="@drawable/selectable_orange_background"
+                        android:contentDescription="Philippine Red Cross Contact" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Red Cross"
                         android:textColor="@color/black"
                         android:textSize="@dimen/dashboard_emergency_label_size"
                         android:textStyle="bold"
@@ -1313,15 +1349,6 @@
                             android:foreground="?android:attr/selectableItemBackgroundBorderless" />
                     </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/reportChartSummary"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="No reports recorded yet."
-                        android:textColor="@color/gray_text"
-                        android:textSize="@dimen/text_size_small"
-                        android:layout_marginBottom="@dimen/spacing_small" />
-
                     <!-- Chart Section -->
                     <com.github.mikephil.charting.charts.BarChart
                         android:id="@+id/reportChart"
@@ -1466,6 +1493,17 @@
                         </LinearLayout>
                     </LinearLayout>
             </LinearLayout>
+
+            <GridLayout
+                android:id="@+id/reportLegendGrid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:alignmentMode="alignMargins"
+                android:columnCount="3"
+                android:rowCount="5"
+                android:layout_marginTop="@dimen/spacing_small"
+                android:layout_marginBottom="@dimen/spacing_medium"
+                android:useDefaultMargins="false" />
         </LinearLayout>
     </ScrollView>
 

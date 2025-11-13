@@ -341,8 +341,8 @@ public class EditProfileActivity extends AppCompatActivity {
 
         // Validate password strength
         if (!isStrongPassword(newPassword)) {
-            passwordEdit.setError("Password must be at least 8 characters long and contain at least one uppercase, one lowercase, one digit, and one special character");
-            Toast.makeText(this, "Password does not meet security requirements", Toast.LENGTH_LONG).show();
+            passwordEdit.setError("Password must be at least 8 characters long");
+            Toast.makeText(this, "Password must be at least 8 characters long", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -373,15 +373,8 @@ public class EditProfileActivity extends AppCompatActivity {
     }
 
     private boolean isStrongPassword(String password) {
-        if (password.length() < 8) return false;
-        boolean hasUpper = false, hasLower = false, hasDigit = false, hasSymbol = false;
-        for (char c : password.toCharArray()) {
-            if (Character.isUpperCase(c)) hasUpper = true;
-            else if (Character.isLowerCase(c)) hasLower = true;
-            else if (Character.isDigit(c)) hasDigit = true;
-            else if ("!@#$%^&*()-_=+[{]}|;:'\",<.>/?`~".indexOf(c) >= 0) hasSymbol = true;
-        }
-        return hasUpper && hasLower && hasDigit && hasSymbol;
+        // Only require password to be at least 8 characters long
+        return password.length() >= 8;
     }
 
     private void syncProfileToFirestore(String firstName, String lastName, String mobileNumber,
@@ -494,7 +487,7 @@ public class EditProfileActivity extends AppCompatActivity {
         // Validate password (if provided, must meet strength requirements)
         String password = passwordEdit.getText().toString().trim();
         if (!password.isEmpty() && !isStrongPassword(password)) {
-            passwordEdit.setError("Password must be at least 8 characters long and contain at least one uppercase, one lowercase, one digit, and one special character");
+            passwordEdit.setError("Password must be at least 8 characters long");
             isValid = false;
         }
 

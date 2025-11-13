@@ -14,7 +14,8 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHeight_percent="0.25"
+        app:layout_constraintHeight_percent="0.20"
+        app:layout_constraintHeight_min="140dp"
         app:layout_constraintWidth_percent="1.0">
 
         <!-- Background Image -->
@@ -63,32 +64,28 @@
     </FrameLayout>
 
     <!-- Content Section -->
-    <ScrollView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:fillViewport="true"
-        android:scrollbars="none"
+        android:background="@drawable/rounded_top_background"
+        android:orientation="vertical"
+        android:paddingLeft="32dp"
+        android:paddingRight="32dp"
+        android:paddingTop="32dp"
+        android:paddingBottom="24dp"
+        android:clipToPadding="false"
+        android:clipChildren="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/header_frame">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/buttom_sheet_background"
-            android:orientation="vertical"
-            android:paddingLeft="32dp"
-            android:paddingRight="32dp"
-            android:paddingTop="32dp"
-            android:paddingBottom="@dimen/padding_xxlarge">
 
         <!-- Logo -->
         <ImageView
             android:layout_width="@dimen/main_logo_size"
             android:layout_height="@dimen/main_logo_size"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="@dimen/margin_large"
+            android:layout_marginBottom="4dp"
             android:adjustViewBounds="true"
             android:scaleType="fitCenter"
             android:src="@drawable/accizard_logo_svg" />
@@ -98,7 +95,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="@dimen/margin_tiny"
+            android:layout_marginBottom="2dp"
             android:fontFamily="@font/dmsans"
             android:text="Welcome Back"
             android:textColor="@color/dark_gray"
@@ -109,7 +106,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="@dimen/margin_xxlarge"
+            android:layout_marginBottom="12dp"
             android:text="Sign in to continue"
             android:fontFamily="@font/dmsans"
             android:textColor="@color/medium_gray"
@@ -119,7 +116,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/margin_tiny"
+            android:layout_marginBottom="4dp"
             android:text="Email"
             android:fontFamily="@font/dmsans"
             android:textColor="@color/dark_gray"
@@ -129,7 +126,7 @@
             android:id="@+id/email_edit_text"
             android:layout_width="match_parent"
             android:layout_height="@dimen/input_height_large"
-            android:layout_marginBottom="@dimen/margin_large"
+            android:layout_marginBottom="8dp"
             android:background="@drawable/edittext_background"
             android:gravity="center_vertical"
             android:hint="Your@email.com"
@@ -147,7 +144,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/margin_tiny"
+            android:layout_marginBottom="4dp"
             android:text="Password"
             android:fontFamily="@font/dmsans"
             android:textColor="@color/dark_gray"
@@ -156,7 +153,7 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="@dimen/input_height_large"
-            android:layout_marginBottom="@dimen/margin_small">
+            android:layout_marginBottom="6dp">
 
             <EditText
                 android:id="@+id/password_edit_text"
@@ -195,7 +192,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end"
-            android:layout_marginBottom="@dimen/margin_xxlarge"
+            android:layout_marginBottom="8dp"
             android:text="Forgot Password?"
             android:fontFamily="@font/dmsans_semibold"
             android:fontWeight="600"
@@ -208,7 +205,7 @@
             android:layout_width="match_parent"
             android:layout_height="@dimen/button_height_medium"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="@dimen/margin_small"
+            android:layout_marginBottom="6dp"
             android:background="@drawable/button_background"
             android:text="Login"
             android:fontFamily="@font/dmsans"
@@ -216,17 +213,18 @@
             android:textSize="@dimen/text_size_medium"
             android:textStyle="bold" />
 
+        <!-- Sign Up Link -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="@dimen/margin_xxlarge"
+            android:layout_marginBottom="6dp"
             android:orientation="horizontal">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Don't have an account?"
+                android:text="Don't have an account? "
                 android:fontFamily="@font/dmsans"
                 android:textColor="@color/medium_gray"
                 android:textSize="@dimen/text_size_medium" />
@@ -240,13 +238,7 @@
                 android:fontWeight="600"
                 android:textColor="@color/orange_primary"
                 android:textSize="@dimen/text_size_medium" />
-
         </LinearLayout>
-
-        <!-- Spacer to push emergency section lower -->
-        <Space
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/main_emergency_margin_top" />
 
         <!-- Emergency -->
         <TextView
@@ -254,7 +246,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="@dimen/margin_small"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
             android:text="Emergency?"
             android:fontFamily="@font/dmsans"
             android:textColor="@color/medium_gray"
@@ -265,7 +258,7 @@
             android:id="@+id/call_lucban_text"
             android:layout_width="match_parent"
             android:layout_height="@dimen/button_height_medium"
-            android:layout_marginBottom="@dimen/margin_medium"
+            android:layout_marginBottom="0dp"
             android:background="@drawable/call_button_background"
             android:gravity="center_vertical|start"
             android:orientation="horizontal"
@@ -297,7 +290,6 @@
 
         </LinearLayout>
 
-        </LinearLayout>
-    </ScrollView>
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -283,7 +283,7 @@ public class RegistrationActivity extends AppCompatActivity {
         }
         
         if (!isStrongPassword(password)) {
-            etPassword.setError("Your password must be at least 8 characters long and contain at least one special character (e.g., !, @, #, $)");
+            etPassword.setError("Password must be at least 8 characters long");
             etPassword.requestFocus();
             android.util.Log.d("RegistrationActivity", "Validation failed: Password not strong enough: " + password);
             return false;
@@ -327,15 +327,8 @@ public class RegistrationActivity extends AppCompatActivity {
     }
 
     private boolean isStrongPassword(String password) {
-        if (password.length() < 8) return false;
-        boolean hasUpper = false, hasLower = false, hasDigit = false, hasSymbol = false;
-        for (char c : password.toCharArray()) {
-            if (Character.isUpperCase(c)) hasUpper = true;
-            else if (Character.isLowerCase(c)) hasLower = true;
-            else if (Character.isDigit(c)) hasDigit = true;
-            else if ("!@#$%^&*()-_=+[{]}|;:'\",<.>/?`~".indexOf(c) >= 0) hasSymbol = true;
-        }
-        return hasUpper && hasLower && hasDigit && hasSymbol;
+        // Only require password to be at least 8 characters long
+        return password.length() >= 8;
     }
 
     private void proceedToPersonalInfo() {

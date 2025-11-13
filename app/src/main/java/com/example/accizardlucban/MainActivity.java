@@ -1,6 +1,7 @@
 package com.example.accizardlucban;
 
 import android.content.Intent;
+import android.content.Context;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -33,8 +34,11 @@ import androidx.annotation.NonNull;
 import android.content.SharedPreferences;
 
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.FirebaseAuth.AuthStateListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import android.os.Handler;
+import android.os.Looper;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -57,6 +61,12 @@ public class MainActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "user_profile_prefs";
     private static final String KEY_EMAIL = "email";
     private static final String KEY_PASSWORD = "password";
+    private static final String KEY_USER_LOGGED_OUT = "user_logged_out";
+    
+    private FirebaseAuth mAuth;
+    private AuthStateListener authStateListener;
+    private boolean hasCheckedAuth = false;
+    private Handler authCheckHandler = new Handler(Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,9 +78,22 @@ public class MainActivity extends AppCompatActivity {
         FirebaseApp.initializeApp(this);
 
         // FirebaseAuth instance
-        FirebaseAuth mAuth = FirebaseAuth.getInstance();
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        mAuth = FirebaseAuth.getInstance();
+        
+        // Check if user explicitly logged out
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean userLoggedOut = prefs.getBoolean(KEY_USER_LOGGED_OUT, false);
+        
+        if (userLoggedOut) {
+            // User explicitly logged out, show login screen
+            Log.d(TAG, "User explicitly logged out. Showing login screen.");
+            prefs.edit().putBoolean(KEY_USER_LOGGED_OUT, false).apply(); // Reset flag
+            setupLoginScreen();
+            return;
+        }
 
+        // Check if user is already authenticated immediately
+        FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             try {
                 currentUser.reload();
@@ -78,18 +101,68 @@ public class MainActivity extends AppCompatActivity {
 
             if (currentUser.isEmailVerified()) {
                 Log.d(TAG, "User already authenticated. Skipping MainActivity login screen.");
-                initializeNotificationChannels();
-                initializeFCMToken();
                 String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
-                navigateAfterLoginFast(email);
+                checkUserSuspensionStatus(email, () -> {
+                    // User not suspended, proceed with login
+                    initializeNotificationChannels();
+                    initializeFCMToken();
+                    navigateAfterLoginFast(email);
+                });
                 return;
             } else {
                 Log.w(TAG, "Authenticated user found but email not verified. Showing login screen.");
             }
         }
-        // Remove or comment out the anonymous sign-in example
-        // mAuth.signInAnonymously() ...
 
+        // Set up AuthStateListener to wait for Firebase Auth to restore session
+        setupAuthStateListener();
+        
+        // Also set up login screen in case auth doesn't restore
+        setupLoginScreen();
+        
+        // Wait a bit for Firebase Auth to restore session, then check for saved credentials
+        authCheckHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!hasCheckedAuth) {
+                    checkAndAutoLogin();
+                }
+            }
+        }, 500); // Wait 500ms for Firebase Auth to restore
+    }
+    
+    /**
+     * Sets up AuthStateListener to detect when Firebase Auth restores the session
+     */
+    private void setupAuthStateListener() {
+        authStateListener = new AuthStateListener() {
+            @Override
+            public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
+                if (!hasCheckedAuth) {
+                    FirebaseUser user = firebaseAuth.getCurrentUser();
+                    if (user != null && user.isEmailVerified()) {
+                        hasCheckedAuth = true;
+                        Log.d(TAG, "Firebase Auth session restored. User authenticated.");
+                        // Remove listener to prevent multiple calls
+                        mAuth.removeAuthStateListener(authStateListener);
+                        String email = user.getEmail() != null ? user.getEmail() : "";
+                        checkUserSuspensionStatus(email, () -> {
+                            // User not suspended, proceed with login
+                            initializeNotificationChannels();
+                            initializeFCMToken();
+                            navigateAfterLoginFast(email);
+                        });
+                    }
+                }
+            }
+        };
+        mAuth.addAuthStateListener(authStateListener);
+    }
+    
+    /**
+     * Sets up the login screen UI
+     */
+    private void setupLoginScreen() {
         try {
             setContentView(R.layout.activity_main);
             
@@ -105,15 +178,84 @@ public class MainActivity extends AppCompatActivity {
             
             // Initialize push notification channels
             initializeNotificationChannels();
-            
-            // Initialize FCM token if user is already logged in
-            if (mAuth.getCurrentUser() != null) {
-                initializeFCMToken();
-            }
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error loading main activity: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
+    }
+    
+    /**
+     * Checks for saved credentials and attempts auto-login if Firebase Auth session wasn't restored
+     */
+    private void checkAndAutoLogin() {
+        if (hasCheckedAuth) {
+            return; // Already handled
+        }
+        
+        hasCheckedAuth = true;
+        
+        // Remove auth state listener since we're handling it manually now
+        if (authStateListener != null) {
+            mAuth.removeAuthStateListener(authStateListener);
+        }
+        
+        // Check if Firebase Auth has a user now
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null && currentUser.isEmailVerified()) {
+            Log.d(TAG, "Firebase Auth session found during delayed check.");
+            String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
+            checkUserSuspensionStatus(email, () -> {
+                // User not suspended, proceed with login
+                initializeNotificationChannels();
+                initializeFCMToken();
+                navigateAfterLoginFast(email);
+            });
+            return;
+        }
+        
+        // If no Firebase Auth session, try auto-login with saved credentials
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String savedEmail = prefs.getString(KEY_EMAIL, null);
+        String savedPassword = prefs.getString(KEY_PASSWORD, null);
+        
+        if (savedEmail != null && savedPassword != null && !savedEmail.isEmpty() && !savedPassword.isEmpty()) {
+            Log.d(TAG, "Attempting auto-login with saved credentials.");
+            autoLogin(savedEmail, savedPassword);
+        } else {
+            Log.d(TAG, "No saved credentials found. User must login manually.");
+        }
+    }
+    
+    /**
+     * Attempts to auto-login using saved credentials
+     */
+    private void autoLogin(String email, String password) {
+        mAuth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                @Override
+                public void onComplete(@NonNull Task<AuthResult> task) {
+                    if (task.isSuccessful()) {
+                        FirebaseUser user = mAuth.getCurrentUser();
+                        if (user != null && user.isEmailVerified()) {
+                            Log.d(TAG, "✅ Auto-login successful - email verified");
+                            checkUserSuspensionStatus(email, () -> {
+                                // User not suspended, proceed with login
+                                initializeNotificationChannels();
+                                initializeFCMToken();
+                                navigateAfterLoginFast(email);
+                            });
+                        } else {
+                            Log.w(TAG, "Auto-login failed - email not verified");
+                            // Show login screen - user needs to verify email
+                        }
+                    } else {
+                        Log.w(TAG, "Auto-login failed: " + (task.getException() != null ? task.getException().getMessage() : "Unknown error"));
+                        // Clear invalid credentials
+                        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                        prefs.edit().remove(KEY_EMAIL).remove(KEY_PASSWORD).apply();
+                    }
+                }
+            });
     }
 
     private void initializeViews() {
@@ -138,6 +280,24 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadSavedCredentials() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String savedEmail = prefs.getString(KEY_EMAIL, "");
+        // Don't auto-fill password for security reasons
+        if (emailEditText != null && !savedEmail.isEmpty()) {
+            emailEditText.setText(savedEmail);
+        }
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Remove auth state listener when activity is destroyed
+        if (authStateListener != null && mAuth != null) {
+            mAuth.removeAuthStateListener(authStateListener);
+        }
+        // Cancel any pending handlers
+        if (authCheckHandler != null) {
+            authCheckHandler.removeCallbacksAndMessages(null);
+        }
     }
     
     private void initializeReportCounter() {
@@ -187,17 +347,20 @@ public class MainActivity extends AppCompatActivity {
                                     FirebaseAuth auth = FirebaseAuth.getInstance();
                                     if (auth.getCurrentUser() != null) {
                                         if (auth.getCurrentUser().isEmailVerified()) {
-                                            // Email is verified, proceed with login
+                                            // Email is verified, check suspension status before proceeding
                                             Log.d(TAG, "✅ Login successful - email verified");
-                                            Toast.makeText(MainActivity.this, "Login successful!", Toast.LENGTH_SHORT).show();
-                                            saveCredentials(email, password);
-                                            
-                                            // Initialize FCM token for push notifications
-                                            initializeFCMToken();
-                                            
-                                            // Navigate immediately to avoid white screen
-                                            // Data will be loaded in the background in the target activity
-                                            navigateAfterLoginFast(email);
+                                            checkUserSuspensionStatus(email, () -> {
+                                                // User not suspended, proceed with login
+                                                Toast.makeText(MainActivity.this, "Login successful!", Toast.LENGTH_SHORT).show();
+                                                saveCredentials(email, password);
+                                                
+                                                // Initialize FCM token for push notifications
+                                                initializeFCMToken();
+                                                
+                                                // Navigate immediately to avoid white screen
+                                                // Data will be loaded in the background in the target activity
+                                                navigateAfterLoginFast(email);
+                                            });
                                         } else {
                                             // Email not verified, show verification dialog
                                             Log.w(TAG, "Email not verified");
@@ -315,17 +478,20 @@ public class MainActivity extends AppCompatActivity {
                             if (auth.getCurrentUser() != null) {
                                 // Check if email is verified
                                 if (auth.getCurrentUser().isEmailVerified()) {
-                                    // Email is verified, proceed with login
+                                    // Email is verified, check suspension status before proceeding
                                     Log.d(TAG, "✅ Login successful - email verified");
-                                    Toast.makeText(MainActivity.this, "Login successful!", Toast.LENGTH_SHORT).show();
-                                    saveCredentials(finalEmail, finalPassword);
-                                    
-                                    // Initialize FCM token for push notifications
-                                    initializeFCMToken();
-                                    
-                                    // Navigate immediately to avoid white screen
-                                    // Data will be loaded in the background in the target activity
-                                    navigateAfterLoginFast(finalEmail);
+                                    checkUserSuspensionStatus(finalEmail, () -> {
+                                        // User not suspended, proceed with login
+                                        Toast.makeText(MainActivity.this, "Login successful!", Toast.LENGTH_SHORT).show();
+                                        saveCredentials(finalEmail, finalPassword);
+                                        
+                                        // Initialize FCM token for push notifications
+                                        initializeFCMToken();
+                                        
+                                        // Navigate immediately to avoid white screen
+                                        // Data will be loaded in the background in the target activity
+                                        navigateAfterLoginFast(finalEmail);
+                                    });
                                 } else {
                                     // Email not verified, show verification dialog
                                     Log.w(TAG, "Email not verified");
@@ -584,9 +750,131 @@ public class MainActivity extends AppCompatActivity {
             SharedPreferences.Editor editor = prefs.edit();
             editor.putString(KEY_EMAIL, email);
             editor.putString(KEY_PASSWORD, password);
+            editor.putBoolean(KEY_USER_LOGGED_OUT, false); // Ensure logout flag is false
             editor.apply();
+            Log.d(TAG, "✅ Credentials saved for persistent login");
         } catch (Exception e) {
             Log.e(TAG, "Error saving credentials: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Clears saved credentials - called when user explicitly logs out
+     */
+    public static void clearSavedCredentials(Context context) {
+        try {
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.remove(KEY_EMAIL);
+            editor.remove(KEY_PASSWORD);
+            editor.putBoolean(KEY_USER_LOGGED_OUT, true); // Mark as logged out
+            editor.apply();
+            Log.d(TAG, "✅ Saved credentials cleared");
+        } catch (Exception e) {
+            Log.e(TAG, "Error clearing credentials: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Checks if user account is suspended in Firestore
+     * @param email User's email address
+     * @param onNotSuspended Callback to execute if user is not suspended
+     */
+    private void checkUserSuspensionStatus(String email, Runnable onNotSuspended) {
+        try {
+            if (email == null || email.isEmpty()) {
+                Log.w(TAG, "Email is empty, cannot check suspension status");
+                if (onNotSuspended != null) {
+                    onNotSuspended.run();
+                }
+                return;
+            }
+            
+            Log.d(TAG, "Checking suspension status for email: " + email);
+            
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            db.collection("users")
+                .whereEqualTo("email", email)
+                .limit(1)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                        for (QueryDocumentSnapshot doc : task.getResult()) {
+                            // Check if user is suspended
+                            Boolean isSuspended = doc.getBoolean("suspended");
+                            
+                            if (isSuspended != null && isSuspended) {
+                                // User is suspended
+                                String suspensionReason = doc.getString("suspensionReason");
+                                if (suspensionReason == null || suspensionReason.isEmpty()) {
+                                    suspensionReason = "Your account has been suspended by the administrators.";
+                                }
+                                
+                                Log.w(TAG, "User account is suspended. Reason: " + suspensionReason);
+                                
+                                // Sign out the user
+                                mAuth.signOut();
+                                
+                                // Show suspension dialog
+                                showSuspensionDialog(suspensionReason);
+                                return;
+                            } else {
+                                // User is not suspended, proceed with login
+                                Log.d(TAG, "User account is not suspended, proceeding with login");
+                                if (onNotSuspended != null) {
+                                    onNotSuspended.run();
+                                }
+                                return;
+                            }
+                        }
+                    } else {
+                        // User document not found or error - allow login (might be new user or Firestore issue)
+                        Log.w(TAG, "Could not find user document or error checking suspension: " + 
+                            (task.getException() != null ? task.getException().getMessage() : "Unknown error"));
+                        if (onNotSuspended != null) {
+                            onNotSuspended.run();
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    // Error checking suspension - allow login (don't block user due to Firestore issues)
+                    Log.e(TAG, "Error checking suspension status: " + e.getMessage(), e);
+                    if (onNotSuspended != null) {
+                        onNotSuspended.run();
+                    }
+                });
+        } catch (Exception e) {
+            Log.e(TAG, "Exception checking suspension status: " + e.getMessage(), e);
+            // On error, allow login (don't block user due to exceptions)
+            if (onNotSuspended != null) {
+                onNotSuspended.run();
+            }
+        }
+    }
+    
+    /**
+     * Shows a modal dialog informing user their account is suspended
+     * @param suspensionReason Reason for suspension
+     */
+    private void showSuspensionDialog(String suspensionReason) {
+        try {
+            String message = suspensionReason + "\n\n" +
+                    "To regain access to your account, please contact the administrators:\n\n" +
+                    "Email: lucbanmdrrm@gmail.com\n" +
+                    "Phone: 0917 520 4211";
+            
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("Account Suspended")
+                    .setMessage(message)
+                    .setPositiveButton("OK", (dialog, which) -> {
+                        dialog.dismiss();
+                        // User stays on login screen
+                    })
+                    .setCancelable(false)
+                    .show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing suspension dialog: " + e.getMessage(), e);
+            Toast.makeText(this, "Your account has been suspended. Please contact administrators.", Toast.LENGTH_LONG).show();
         }
     }
 

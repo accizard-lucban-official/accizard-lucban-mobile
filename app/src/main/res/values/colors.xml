@@ -61,4 +61,19 @@
     <color name="status_submitted">#4CAF50</color>
     <color name="status_pending">#FF9800</color>
     <color name="status_redundant">#9C27B0</color>
+    <color name="report_road_crash">#E53935</color>
+    <color name="report_fire">#FB8C00</color>
+    <color name="report_medical_emergency">#FDD835</color>
+    <color name="report_flooding">#1E88E5</color>
+    <color name="report_earthquake">#F4511E</color>
+    <color name="report_landslide">#43A047</color>
+    <color name="report_volcanic_activity">#8E24AA</color>
+    <color name="report_civil_disturbance">#EF5350</color>
+    <color name="report_armed_conflict">#5D4037</color>
+    <color name="report_infectious_disease">#00ACC1</color>
+    <color name="report_poor_infrastructure">#8D6E63</color>
+    <color name="report_electrical_hazard">#FFEE58</color>
+    <color name="report_environmental_hazard">#26A69A</color>
+    <color name="report_obstructions">#FFA726</color>
+    <color name="report_others">#9E9E9E</color>
 </resources>

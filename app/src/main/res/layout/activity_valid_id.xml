@@ -202,7 +202,24 @@
                 android:text="Upload a clear photo of your valid government-issued ID for verification"
                 android:textColor="@color/text_hint"
                 android:textSize="@dimen/registration_label_text_size"
-                android:layout_marginBottom="@dimen/margin_medium" />
+                android:layout_marginBottom="@dimen/registration_label_margin_bottom" />
+
+            <!-- Valid ID Type Dropdown -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Valid ID Type"
+                android:textColor="@color/text_dark"
+                android:textSize="@dimen/registration_label_text_size"
+                android:layout_marginBottom="@dimen/registration_label_margin_bottom" />
+
+            <Spinner
+                android:id="@+id/spinnerValidIdType"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/registration_field_height"
+                android:background="@drawable/spinner_with_dropdown"
+                android:layout_marginBottom="@dimen/margin_medium"
+                android:paddingEnd="40dp" />
 
             <!-- Image Upload Area with Placeholder -->
             <FrameLayout
@@ -303,21 +320,6 @@
                 </LinearLayout>
 
             </androidx.cardview.widget.CardView>
-
-            <!-- See list of Valid IDs Link -->
-            <TextView
-                android:id="@+id/tv_valid_ids_list"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="See list of Valid IDs"
-                android:textColor="@color/orange_primary"
-                android:textSize="@dimen/text_size_medium"
-                android:layout_gravity="center"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?android:attr/selectableItemBackground"
-                android:padding="@dimen/margin_small"
-                android:layout_marginBottom="@dimen/spacing_xxxlarge" />
 
             <View
                 android:layout_width="match_parent"

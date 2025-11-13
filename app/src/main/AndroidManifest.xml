@@ -130,6 +130,7 @@
             android:name=".RegistrationActivity"
             android:exported="false"
             android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize"
             android:parentActivityName=".MainActivity" />
 
         <activity

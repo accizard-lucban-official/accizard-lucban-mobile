@@ -220,6 +220,9 @@ public class MapViewActivity extends AppCompatActivity {
     private Runnable firestorePinCameraRunnable;
     private boolean isFirestorePinTrackingActive = false;
     
+    // Guard flag to prevent infinite loops when applying filters and layers simultaneously
+    private boolean isApplyingFiltersOrLayers = false;
+    
     // Current location pin system (like MapPickerActivity)
     private ImageView currentLocationMarker;
     private Point currentLocationPoint;
@@ -2178,7 +2181,14 @@ public class MapViewActivity extends AppCompatActivity {
      * @param showToast Whether to show toast message with results
      */
     private void applyFiltersToFirestorePins(boolean showToast) {
+        // Prevent infinite loops when filters and layers are applied simultaneously
+        if (isApplyingFiltersOrLayers) {
+            Log.d(TAG, "Skipping filter application - already in progress");
+            return;
+        }
+        
         try {
+            isApplyingFiltersOrLayers = true;
             Log.d(TAG, "Applying filters to Firestore pins...");
             
             int visiblePins = 0;
@@ -2243,6 +2253,8 @@ public class MapViewActivity extends AppCompatActivity {
             
         } catch (Exception e) {
             Log.e(TAG, "Error applying filters to Firestore pins: " + e.getMessage(), e);
+        } finally {
+            isApplyingFiltersOrLayers = false;
         }
     }
     
@@ -2697,19 +2709,31 @@ public class MapViewActivity extends AppCompatActivity {
      * When no layers are active, pins visibility is controlled by filters
      */
     private void updatePinsVisibilityBasedOnLayers() {
-        if (heatmapEnabled && hasActiveHazardFilter()) {
-            setAllPinsVisibility(false);
+        // Prevent infinite loops when filters and layers are applied simultaneously
+        if (isApplyingFiltersOrLayers) {
+            Log.d(TAG, "Skipping pins visibility update - already in progress");
             return;
         }
-        boolean anyLayerActive = hasAnyLayerActive();
-        if (anyLayerActive) {
-            // Hide all pins when layers are active
-            setAllPinsVisibility(false);
-            Log.d(TAG, "Pins visibility updated - Layers active, hiding all pins");
-        } else {
-            // When no layers are active, apply filter-based visibility
-            applyFiltersToFirestorePins(false);
-            Log.d(TAG, "Pins visibility updated - No layers active, applying filters");
+        
+        try {
+            isApplyingFiltersOrLayers = true;
+            
+            if (heatmapEnabled && hasActiveHazardFilter()) {
+                setAllPinsVisibility(false);
+                return; // Flag will be reset in finally block
+            }
+            boolean anyLayerActive = hasAnyLayerActive();
+            if (anyLayerActive) {
+                // Hide all pins when layers are active
+                setAllPinsVisibility(false);
+                Log.d(TAG, "Pins visibility updated - Layers active, hiding all pins");
+            } else {
+                // When no layers are active, apply filter-based visibility
+                applyFiltersToFirestorePins(false);
+                Log.d(TAG, "Pins visibility updated - No layers active, applying filters");
+            }
+        } finally {
+            isApplyingFiltersOrLayers = false;
         }
     }
     
