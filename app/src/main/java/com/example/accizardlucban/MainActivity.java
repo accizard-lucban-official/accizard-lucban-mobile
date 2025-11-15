@@ -35,6 +35,7 @@ import android.content.SharedPreferences;
 
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.FirebaseAuth.AuthStateListener;
+import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import android.os.Handler;
@@ -62,6 +63,22 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_EMAIL = "email";
     private static final String KEY_PASSWORD = "password";
     private static final String KEY_USER_LOGGED_OUT = "user_logged_out";
+    
+    // Rate limiting constants for email verification
+    private static final String PREFS_EMAIL_VERIFICATION = "email_verification_rate_limit";
+    private static final String KEY_LAST_VERIFICATION_TIME = "last_verification_time";
+    private static final String KEY_VERIFICATION_ATTEMPTS = "verification_attempts";
+    private static final String KEY_BLOCKED_UNTIL = "blocked_until";
+    private static final long MIN_TIME_BETWEEN_EMAILS = 60000; // 1 minute between emails (in milliseconds)
+    private static final int MAX_ATTEMPTS_PER_HOUR = 3; // Maximum 3 attempts per hour
+    private static final long HOUR_IN_MILLIS = 3600000; // 1 hour in milliseconds
+    private static final long BLOCK_DURATION = 3600000; // Block for 1 hour if rate limit exceeded
+    
+    // Retry logic constants
+    private static final int MAX_RETRY_ATTEMPTS = 3; // Maximum retry attempts
+    private static final long INITIAL_RETRY_DELAY = 2000; // Initial delay: 2 seconds
+    private static final long MAX_RETRY_DELAY = 30000; // Maximum delay: 30 seconds
+    private static final double BACKOFF_MULTIPLIER = 2.0; // Exponential backoff multiplier
     
     private FirebaseAuth mAuth;
     private AuthStateListener authStateListener;
@@ -230,7 +247,15 @@ public class MainActivity extends AppCompatActivity {
      * Attempts to auto-login using saved credentials
      */
     private void autoLogin(String email, String password) {
-        mAuth.signInWithEmailAndPassword(email, password)
+        // Normalize email to lowercase for consistency
+        String normalizedEmail = email != null ? email.trim().toLowerCase() : "";
+        if (normalizedEmail.isEmpty() || password == null || password.isEmpty()) {
+            Log.w(TAG, "Auto-login skipped: invalid credentials");
+            return;
+        }
+        
+        Log.d(TAG, "Attempting auto-login for email: " + normalizedEmail);
+        mAuth.signInWithEmailAndPassword(normalizedEmail, password)
             .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                 @Override
                 public void onComplete(@NonNull Task<AuthResult> task) {
@@ -238,11 +263,11 @@ public class MainActivity extends AppCompatActivity {
                         FirebaseUser user = mAuth.getCurrentUser();
                         if (user != null && user.isEmailVerified()) {
                             Log.d(TAG, "✅ Auto-login successful - email verified");
-                            checkUserSuspensionStatus(email, () -> {
+                            checkUserSuspensionStatus(normalizedEmail, () -> {
                                 // User not suspended, proceed with login
                                 initializeNotificationChannels();
                                 initializeFCMToken();
-                                navigateAfterLoginFast(email);
+                                navigateAfterLoginFast(normalizedEmail);
                             });
                         } else {
                             Log.w(TAG, "Auto-login failed - email not verified");
@@ -324,7 +349,7 @@ public class MainActivity extends AppCompatActivity {
             signInButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    String email = emailEditText.getText() != null ? emailEditText.getText().toString().trim() : "";
+                    String email = emailEditText.getText() != null ? emailEditText.getText().toString().trim().toLowerCase() : "";
                     String password = passwordEditText.getText() != null ? passwordEditText.getText().toString().trim() : "";
 
                     if (email.isEmpty()) {
@@ -337,6 +362,9 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(MainActivity.this, "Password is required", Toast.LENGTH_SHORT).show();
                         return;
                     }
+
+                    // Log attempt for debugging (without sensitive data)
+                    Log.d(TAG, "Attempting login for email: " + email);
 
                     mAuth.signInWithEmailAndPassword(email, password)
                         .addOnCompleteListener(MainActivity.this, new OnCompleteListener<AuthResult>() {
@@ -368,7 +396,89 @@ public class MainActivity extends AppCompatActivity {
                                         }
                                     }
                                 } else {
-                                    Toast.makeText(MainActivity.this, "Firebase Auth failed: " + (task.getException() != null ? task.getException().getMessage() : "Username or Password did not match"), Toast.LENGTH_SHORT).show();
+                                    // Sign in failed - provide specific error messages
+                                    Log.w(TAG, "signInWithEmail:failure", task.getException());
+                                    String errorMessage = "Authentication failed. Please check your credentials.";
+                                    
+                                    if (task.getException() != null) {
+                                        Exception exception = task.getException();
+                                        
+                                        // Check if it's a FirebaseAuthException to get error code
+                                        if (exception instanceof FirebaseAuthException) {
+                                            FirebaseAuthException authException = (FirebaseAuthException) exception;
+                                            String errorCode = authException.getErrorCode();
+                                            Log.d(TAG, "Firebase Auth error code: " + errorCode);
+                                            
+                                            switch (errorCode) {
+                                                case "ERROR_USER_NOT_FOUND":
+                                                    errorMessage = "No account found with this email address. Please sign up first.";
+                                                    break;
+                                                case "ERROR_WRONG_PASSWORD":
+                                                    errorMessage = "Incorrect password. Please try again or use 'Forgot Password' to reset it.";
+                                                    break;
+                                                case "ERROR_INVALID_EMAIL":
+                                                    errorMessage = "Invalid email address. Please check your email format.";
+                                                    break;
+                                                case "ERROR_USER_DISABLED":
+                                                    errorMessage = "This account has been disabled. Please contact support.";
+                                                    break;
+                                                case "ERROR_TOO_MANY_REQUESTS":
+                                                    errorMessage = "Too many failed login attempts. Please try again later.";
+                                                    break;
+                                                case "ERROR_INVALID_CREDENTIAL":
+                                                    errorMessage = "Invalid email or password. Please check your credentials and try again.";
+                                                    break;
+                                                case "ERROR_OPERATION_NOT_ALLOWED":
+                                                    errorMessage = "Email/password sign-in is not enabled. Please contact support.";
+                                                    break;
+                                                case "ERROR_NETWORK_REQUEST_FAILED":
+                                                    errorMessage = "Network error. Please check your internet connection and try again.";
+                                                    break;
+                                                default:
+                                                    // Check error message for additional context
+                                                    String exceptionMessage = exception.getMessage();
+                                                    if (exceptionMessage != null) {
+                                                        if (exceptionMessage.contains("user-not-found")) {
+                                                            errorMessage = "No account found with this email address. Please sign up first.";
+                                                        } else if (exceptionMessage.contains("wrong-password")) {
+                                                            errorMessage = "Incorrect password. Please try again or use 'Forgot Password' to reset it.";
+                                                        } else if (exceptionMessage.contains("invalid-email")) {
+                                                            errorMessage = "Invalid email address. Please check your email format.";
+                                                        } else if (exceptionMessage.contains("user-disabled")) {
+                                                            errorMessage = "This account has been disabled. Please contact support.";
+                                                        } else if (exceptionMessage.contains("too-many-requests")) {
+                                                            errorMessage = "Too many failed login attempts. Please try again later.";
+                                                        } else if (exceptionMessage.contains("invalid-credential") || exceptionMessage.contains("malformed") || exceptionMessage.contains("expired")) {
+                                                            errorMessage = "Invalid email or password. Please check your credentials and try again.";
+                                                        } else if (exceptionMessage.contains("network")) {
+                                                            errorMessage = "Network error. Please check your internet connection and try again.";
+                                                        } else {
+                                                            errorMessage = "Login failed: " + exceptionMessage;
+                                                        }
+                                                    }
+                                                    break;
+                                            }
+                                        } else {
+                                            // Not a FirebaseAuthException, check message
+                                            String exceptionMessage = exception.getMessage();
+                                            if (exceptionMessage != null) {
+                                                Log.d(TAG, "Non-FirebaseAuthException error: " + exceptionMessage);
+                                                if (exceptionMessage.contains("user-not-found")) {
+                                                    errorMessage = "No account found with this email address. Please sign up first.";
+                                                } else if (exceptionMessage.contains("wrong-password")) {
+                                                    errorMessage = "Incorrect password. Please try again or use 'Forgot Password' to reset it.";
+                                                } else if (exceptionMessage.contains("invalid-email")) {
+                                                    errorMessage = "Invalid email address. Please check your email format.";
+                                                } else if (exceptionMessage.contains("network")) {
+                                                    errorMessage = "Network error. Please check your internet connection and try again.";
+                                                } else {
+                                                    errorMessage = "Login failed: " + exceptionMessage;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    Toast.makeText(MainActivity.this, errorMessage, Toast.LENGTH_LONG).show();
                                 }
                             }
                         });
@@ -549,27 +659,262 @@ public class MainActivity extends AppCompatActivity {
             .show();
     }
 
-    private void resendVerificationEmail(String email, String password) {
+    /**
+     * Checks if we can send a verification email based on rate limiting
+     * @return null if allowed, error message if blocked
+     */
+    private String canSendVerificationEmail() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_EMAIL_VERIFICATION, MODE_PRIVATE);
+        long currentTime = System.currentTimeMillis();
+        
+        // Check if currently blocked
+        long blockedUntil = prefs.getLong(KEY_BLOCKED_UNTIL, 0);
+        if (blockedUntil > currentTime) {
+            long minutesRemaining = (blockedUntil - currentTime) / 60000;
+            return "Too many verification email attempts. Please wait " + minutesRemaining + " minute(s) before trying again.";
+        }
+        
+        // Check time since last email
+        long lastVerificationTime = prefs.getLong(KEY_LAST_VERIFICATION_TIME, 0);
+        if (lastVerificationTime > 0) {
+            long timeSinceLastEmail = currentTime - lastVerificationTime;
+            if (timeSinceLastEmail < MIN_TIME_BETWEEN_EMAILS) {
+                long secondsRemaining = (MIN_TIME_BETWEEN_EMAILS - timeSinceLastEmail) / 1000;
+                return "Please wait " + secondsRemaining + " second(s) before requesting another verification email.";
+            }
+        }
+        
+        // Check attempts in the last hour
+        long firstAttemptTime = prefs.getLong("first_attempt_time", 0);
+        int attempts = prefs.getInt(KEY_VERIFICATION_ATTEMPTS, 0);
+        
+        if (firstAttemptTime > 0 && (currentTime - firstAttemptTime) < HOUR_IN_MILLIS) {
+            // Still within the hour window
+            if (attempts >= MAX_ATTEMPTS_PER_HOUR) {
+                long timeUntilReset = HOUR_IN_MILLIS - (currentTime - firstAttemptTime);
+                long minutesRemaining = timeUntilReset / 60000;
+                return "Maximum verification email attempts reached. Please wait " + minutesRemaining + " minute(s) before trying again.";
+            }
+        } else {
+            // Hour window expired, reset attempts
+            attempts = 0;
+            firstAttemptTime = currentTime;
+        }
+        
+        return null; // Allowed to send
+    }
+    
+    /**
+     * Records a verification email attempt
+     */
+    private void recordVerificationAttempt(boolean success) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_EMAIL_VERIFICATION, MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        long currentTime = System.currentTimeMillis();
+        
+        if (success) {
+            // Successful send - record time and increment attempts
+            editor.putLong(KEY_LAST_VERIFICATION_TIME, currentTime);
+            
+            long firstAttemptTime = prefs.getLong("first_attempt_time", 0);
+            int attempts = prefs.getInt(KEY_VERIFICATION_ATTEMPTS, 0);
+            
+            if (firstAttemptTime == 0 || (currentTime - firstAttemptTime) >= HOUR_IN_MILLIS) {
+                // New hour window
+                editor.putLong("first_attempt_time", currentTime);
+                editor.putInt(KEY_VERIFICATION_ATTEMPTS, 1);
+            } else {
+                // Same hour window
+                editor.putInt(KEY_VERIFICATION_ATTEMPTS, attempts + 1);
+            }
+        }
+        
+        editor.apply();
+    }
+    
+    /**
+     * Handles rate limit error from Firebase and blocks future attempts
+     */
+    private void handleRateLimitError() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_EMAIL_VERIFICATION, MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        long currentTime = System.currentTimeMillis();
+        
+        // Block for the specified duration
+        editor.putLong(KEY_BLOCKED_UNTIL, currentTime + BLOCK_DURATION);
+        editor.putLong("first_attempt_time", currentTime);
+        editor.putInt(KEY_VERIFICATION_ATTEMPTS, MAX_ATTEMPTS_PER_HOUR);
+        editor.apply();
+        
+        Log.w(TAG, "Rate limit detected. Blocked until: " + new java.util.Date(currentTime + BLOCK_DURATION));
+    }
+    
+    /**
+     * Gets user-friendly error message for Firebase errors
+     */
+    private String getUserFriendlyErrorMessage(Exception exception) {
+        if (exception == null || exception.getMessage() == null) {
+            return "Failed to send verification email. Please try again later.";
+        }
+        
+        String errorMessage = exception.getMessage();
+        
+        // Check for rate limiting errors
+        if (errorMessage.contains("blocked") || 
+            errorMessage.contains("unusual activity") || 
+            errorMessage.contains("too many requests") ||
+            errorMessage.contains("quota exceeded")) {
+            
+            handleRateLimitError();
+            long blockedUntil = getSharedPreferences(PREFS_EMAIL_VERIFICATION, MODE_PRIVATE)
+                .getLong(KEY_BLOCKED_UNTIL, 0);
+            
+            if (blockedUntil > System.currentTimeMillis()) {
+                long minutesRemaining = (blockedUntil - System.currentTimeMillis()) / 60000;
+                return "Too many verification email requests. Please wait " + minutesRemaining + 
+                       " minute(s) before trying again. This helps prevent spam.";
+            }
+            
+            return "Too many verification email requests. Please wait 1 hour before trying again. This helps prevent spam.";
+        }
+        
+        // Check for network errors
+        if (errorMessage.contains("network") || errorMessage.contains("timeout")) {
+            return "Network error. Please check your internet connection and try again.";
+        }
+        
+        // Check for invalid email
+        if (errorMessage.contains("invalid-email")) {
+            return "Invalid email address. Please check your email and try again.";
+        }
+        
+        // Generic error
+        return "Failed to send verification email. Please try again later.";
+    }
+    
+    /**
+     * Checks if an error is retryable (transient errors that might succeed on retry)
+     */
+    private boolean isRetryableError(Exception exception) {
+        if (exception == null || exception.getMessage() == null) {
+            return false;
+        }
+        
+        String errorMessage = exception.getMessage().toLowerCase();
+        
+        // Retry for transient errors
+        if (errorMessage.contains("network") || 
+            errorMessage.contains("timeout") ||
+            errorMessage.contains("connection") ||
+            errorMessage.contains("unavailable") ||
+            errorMessage.contains("internal error") ||
+            errorMessage.contains("service unavailable")) {
+            return true;
+        }
+        
+        // Don't retry for permanent errors
+        if (errorMessage.contains("invalid-email") ||
+            errorMessage.contains("user-disabled") ||
+            errorMessage.contains("user-not-found") ||
+            errorMessage.contains("email-already-in-use") ||
+            errorMessage.contains("operation-not-allowed")) {
+            return false;
+        }
+        
+        // Don't retry for rate limit errors (handled separately)
+        if (errorMessage.contains("blocked") || 
+            errorMessage.contains("unusual activity") || 
+            errorMessage.contains("too many requests")) {
+            return false;
+        }
+        
+        // Default: don't retry for unknown errors
+        return false;
+    }
+    
+    /**
+     * Resends verification email with retry logic for transient errors
+     */
+    private void resendVerificationEmailWithRetry(String email, String password, int retryCount) {
+        // Check rate limits before sending
+        String rateLimitError = canSendVerificationEmail();
+        if (rateLimitError != null) {
+            Toast.makeText(MainActivity.this, rateLimitError, Toast.LENGTH_LONG).show();
+            Log.w(TAG, "Rate limit check failed: " + rateLimitError);
+            FirebaseAuth.getInstance().signOut();
+            return;
+        }
+        
         FirebaseAuth mAuth = FirebaseAuth.getInstance();
         if (mAuth.getCurrentUser() != null) {
+            if (retryCount > 0) {
+                Log.d(TAG, "Retry attempt " + retryCount + " of " + MAX_RETRY_ATTEMPTS + " for resending verification email");
+            }
+            
             mAuth.getCurrentUser().sendEmailVerification()
                 .addOnCompleteListener(new OnCompleteListener<Void>() {
                     @Override
                     public void onComplete(@NonNull Task<Void> task) {
                         if (task.isSuccessful()) {
+                            recordVerificationAttempt(true);
                             Toast.makeText(MainActivity.this, 
                                 "Verification email sent to " + email, Toast.LENGTH_LONG).show();
+                            // Sign out the user since email is not verified
+                            FirebaseAuth.getInstance().signOut();
                         } else {
-                            Log.e(TAG, "Failed to send verification email", task.getException());
-                            Toast.makeText(MainActivity.this,
-                                "Failed to send verification email: " + task.getException().getMessage(),
-                                Toast.LENGTH_LONG).show();
+                            Exception exception = task.getException();
+                            Log.e(TAG, "Failed to send verification email (attempt " + (retryCount + 1) + ")", exception);
+                            
+                            // Check if it's a rate limit error
+                            if (exception != null && exception.getMessage() != null) {
+                                String errorMsg = exception.getMessage();
+                                if (errorMsg.contains("blocked") || 
+                                    errorMsg.contains("unusual activity") || 
+                                    errorMsg.contains("too many requests")) {
+                                    recordVerificationAttempt(false);
+                                    handleRateLimitError();
+                                    String userFriendlyMessage = getUserFriendlyErrorMessage(exception);
+                                    Toast.makeText(MainActivity.this, userFriendlyMessage, Toast.LENGTH_LONG).show();
+                                    FirebaseAuth.getInstance().signOut();
+                                    return;
+                                }
+                            }
+                            
+                            // Check if error is retryable and we haven't exceeded max retries
+                            if (isRetryableError(exception) && retryCount < MAX_RETRY_ATTEMPTS) {
+                                // Calculate exponential backoff delay
+                                long delay = (long) (INITIAL_RETRY_DELAY * Math.pow(BACKOFF_MULTIPLIER, retryCount));
+                                delay = Math.min(delay, MAX_RETRY_DELAY); // Cap at max delay
+                                
+                                Log.d(TAG, "Retryable error detected. Retrying in " + (delay / 1000) + " seconds...");
+                                
+                                // Schedule retry with exponential backoff
+                                authCheckHandler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        resendVerificationEmailWithRetry(email, password, retryCount + 1);
+                                    }
+                                }, delay);
+                            } else {
+                                // Not retryable or max retries exceeded
+                                String userFriendlyMessage = getUserFriendlyErrorMessage(exception);
+                                if (retryCount >= MAX_RETRY_ATTEMPTS) {
+                                    userFriendlyMessage = "Failed to send verification email after " + (MAX_RETRY_ATTEMPTS + 1) + " attempts. " + userFriendlyMessage;
+                                    Log.w(TAG, "Max retry attempts reached");
+                                }
+                                
+                                Toast.makeText(MainActivity.this, userFriendlyMessage, Toast.LENGTH_LONG).show();
+                                // Sign out the user since email is not verified
+                                FirebaseAuth.getInstance().signOut();
+                            }
                         }
-                        // Sign out the user since email is not verified
-                        FirebaseAuth.getInstance().signOut();
                     }
                 });
         }
+    }
+    
+    private void resendVerificationEmail(String email, String password) {
+        resendVerificationEmailWithRetry(email, password, 0);
     }
 
     /**
@@ -746,9 +1091,16 @@ public class MainActivity extends AppCompatActivity {
 
     private void saveCredentials(String email, String password) {
         try {
+            // Normalize email to lowercase for consistency
+            String normalizedEmail = email != null ? email.trim().toLowerCase() : "";
+            if (normalizedEmail.isEmpty()) {
+                Log.w(TAG, "Cannot save credentials: email is empty");
+                return;
+            }
+            
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
             SharedPreferences.Editor editor = prefs.edit();
-            editor.putString(KEY_EMAIL, email);
+            editor.putString(KEY_EMAIL, normalizedEmail);
             editor.putString(KEY_PASSWORD, password);
             editor.putBoolean(KEY_USER_LOGGED_OUT, false); // Ensure logout flag is false
             editor.apply();

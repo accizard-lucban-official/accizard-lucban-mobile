@@ -59,7 +59,7 @@
             <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:maxHeight="500dp"
+                android:maxHeight="600dp"
                 android:padding="16dp">
 
                 <LinearLayout
@@ -67,11 +67,11 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <!-- Effective Date Section -->
+                    <!-- Section 1: Effective Date -->
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Effective Date"
+                        android:text="1. Effective Date"
                         android:textStyle="bold"
                         android:textSize="16sp"
                         android:textColor="@color/orange_primary"
@@ -80,16 +80,16 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="These Terms and Conditions are effective as of January 1, 2024."
+                        android:text="September 30, 2025"
                         android:textSize="14sp"
                         android:textColor="@color/text_dark"
                         android:layout_marginBottom="16dp" />
 
-                    <!-- About the Application -->
+                    <!-- Section 2: Developed by -->
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="About the Application"
+                        android:text="2. Developed by"
                         android:textStyle="bold"
                         android:textSize="16sp"
                         android:textColor="@color/orange_primary"
@@ -98,16 +98,16 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="AcciZard Lucban is a mobile application designed to provide emergency assistance and accident reporting services in Lucban, Quezon. The app connects users with emergency services and provides location-based assistance."
+                        android:text="BSIT Students, Southern Luzon State University\n\nWelcome to AcciZard Lucban, this mobile application was developed to help the residents of Lucban, Quezon report accidents and hazards instantly. Please make sure to read these Terms and Conditions carefully before proceeding and using our mobile application AcciZard Lucban.\n\nBy using this mobile application, you read, understand and accept the Terms and Conditions of mobile application AcciZard Lucban. If you do not agree, we kindly ask you not to use this application."
                         android:textSize="14sp"
                         android:textColor="@color/text_dark"
                         android:layout_marginBottom="16dp" />
 
-                    <!-- User Responsibilities -->
+                    <!-- Section 3: About the Application -->
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="User Responsibilities"
+                        android:text="3. About the Application"
                         android:textStyle="bold"
                         android:textSize="16sp"
                         android:textColor="@color/orange_primary"
@@ -116,16 +116,16 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="• Provide accurate information when reporting incidents\n• Use the application responsibly and only for legitimate emergencies\n• Maintain the confidentiality of your account credentials\n• Report any misuse or technical issues to our support team"
+                        android:text="The mobile application AcciZard Lucban is an accident and hazard reporting tool developed in partnership with Municipal Disaster Risk Reduction Office (MDRRMO) of Lucban, Quezon. Residents of Lucban, Quezon and even individuals visiting and bypassing the town can report emergencies, view hazard maps, and receive alerts. Note that it is not a replacement for calling emergency services."
                         android:textSize="14sp"
                         android:textColor="@color/text_dark"
                         android:layout_marginBottom="16dp" />
 
-                    <!-- Privacy Policy -->
+                    <!-- Section 4: User Responsibilities -->
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Privacy Policy"
+                        android:text="4. User Responsibilities"
                         android:textStyle="bold"
                         android:textSize="16sp"
                         android:textColor="@color/orange_primary"
@@ -134,16 +134,16 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="We collect and process your personal information including location data, contact information, and incident reports to provide emergency services. Your data is protected and will not be shared with third parties except as required for emergency response."
+                        android:text="When using this app, you agree to provide accurate, truthful, and complete information in reports, and avoid submitting false, misleading, or prank reports. Respect other users and local authorities. Make sure to use the app only for its intended purpose (i.e., safety reporting and information). Most importantly protect your account and not share your login details with others. You are responsible for anything that happens through your account."
                         android:textSize="14sp"
                         android:textColor="@color/text_dark"
                         android:layout_marginBottom="16dp" />
 
-                    <!-- Location Services -->
+                    <!-- Section 5: Intellectual Property and Limited License -->
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Location Services"
+                        android:text="5. Intellectual Property and Limited License"
                         android:textStyle="bold"
                         android:textSize="16sp"
                         android:textColor="@color/orange_primary"
@@ -152,16 +152,16 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="This application requires access to your device's location services to provide accurate emergency assistance. Location data is used solely for emergency response purposes and is not stored permanently unless required for incident documentation."
+                        android:text="All content, software, data, and materials within AcciZard Lucban are the intellectual property of the developers and/or the Lucban LDRRMO unless otherwise noted. By installing or using the app, you are granted a personal, revocable, non-transferable, non-exclusive license to use one copy of the app per device for personal, non-commercial use only."
                         android:textSize="14sp"
                         android:textColor="@color/text_dark"
                         android:layout_marginBottom="16dp" />
 
-                    <!-- Disclaimers -->
+                    <!-- Section 6: Prohibited Uses -->
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Disclaimers"
+                        android:text="6. Prohibited Uses"
                         android:textStyle="bold"
                         android:textSize="16sp"
                         android:textColor="@color/orange_primary"
@@ -170,16 +170,16 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="While we strive to provide reliable emergency services, response times may vary based on circumstances. This application supplements but does not replace traditional emergency services. Always call local emergency numbers (911) for immediate life-threatening situations."
+                        android:text="Under this license, you may not modify, copy, or adapt any materials contained in the app. You are also not permitted to use the app or any of its content for commercial purposes or public display. Any attempt to reverse-engineer, decompile, or extract source code from the software is strictly prohibited. You must not remove any copyright or proprietary notices. Additionally, you may not transfer, resell, mirror, or otherwise distribute the application or its contents to another person, platform, or server."
                         android:textSize="14sp"
                         android:textColor="@color/text_dark"
                         android:layout_marginBottom="16dp" />
 
-                    <!-- Contact Information -->
+                    <!-- Section 7: Termination of License -->
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Contact Us"
+                        android:text="7. Termination of License"
                         android:textStyle="bold"
                         android:textSize="16sp"
                         android:textColor="@color/orange_primary"
@@ -188,7 +188,205 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="For questions about these Terms and Conditions, please contact us at:\n\nEmail: support@accizardlucban.com\nPhone: +63 123 456 7890\nAddress: Lucban, Quezon, Philippines"
+                        android:text="This license automatically terminates if you violate any of the restrictions stated above. The AcciZard Lucban team or the Lucban LDRRMO may also terminate your access at any time. Once terminated, you must immediately stop using the app and delete all downloaded materials, whether in electronic or printed form."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Section 8: Disclaimer of Warranties -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="8. Disclaimer of Warranties"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="AcciZard Lucban is provided &quot;as is&quot; and &quot;as available.&quot; The developers and LDRRMO make no warranties, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement. The use of the app is at your own risk."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Section 9: Cookies and Device Information -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="9. Cookies and Device Information"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="The app may store small amounts of session or device-related data—functionally similar to cookies—to remember preferences, manage secure sessions, and compile anonymous usage statistics. Any such communication between your device and our servers is secured and encrypted, and your data is not used for advertising purposes or sold to any third party."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Section 10: Data Collection and Privacy Policy -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="10. Data Collection and Privacy Policy"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="In terms of data protection and collection practices, we collect your personal information (like your name, contact info, and location) to support emergency response and improvement of the system. The data collected will be handled in accordance with our Privacy Policy. Rest assured that we do not sell your data with third-party advertisers. Please make sure to read below our Privacy Policy.\n\nPrivacy Policy\nInformation We Collect\nWe collect various types of data to support emergency response and improve system performance. This includes your personal information such as your name, email address or contact number, and the account type you register with (Resident, LDRRMO Admin, or Super Admin). When reporting an incident, the app may collect your real-time GPS location (if enabled), a description of the hazard or accident, any attached photos, and the date and time the report was submitted. Additionally, we collect technical information such as your device type, operating system, and app usage logs to help us troubleshoot problems and analyze usage trends.\n\nHow We Use Your Information\nWe use the information to process and display reports on the map, notify LDRRMO for appropriate response, send alerts or warnings to users, improve system performance and user experience, and to verify and respond to user-submitted incidents. We do not use your data for advertising or share it with any commercial third party.\n\nData Sharing and Disclosure\nWe may share information only with authorized personnel such as LDRRMO staff for incident response and decision-making and researchers (in summary form, with no personal identifiers) for system evaluation or academic reporting. Your information is not sold, traded, or given to advertisers or unauthorized parties.\n\nHow We Protect Your Data\nWe use Firebase Authentication and Firestore Security Rules to encrypt your data in transit and at rest, control who can access which parts of the system, and prevent unauthorized data access. We also perform regular security reviews and restrict admin access to verified staff only.\n\nYour Rights as a User\nUnder the Data Privacy Act of 2012, you have the right to access your data, correct inaccurate information, withdraw consent or request deletion, and file a complaint with the National Privacy Commission if you believe your rights have been violated. To make a request, please contact us through the details below.\n\nData Retention\nWe keep your data as long as your account is active, also for system improvement and research (in anonymized form), and until you request deletion or account termination.\n\nChildren's Privacy\nThis app is not intended for users under the age of 18. If we discover that a child has registered without proper consent, their account will be removed.\n\nChanges to This Policy\nWe may update this Privacy Policy to reflect system improvements or legal changes. Updates will be posted in the app and on our official page. Your continued use means you agree to the latest version."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Section 11: Business Transfers -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="11. Business Transfers"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="If the AcciZard Lucban project or its assets are transferred due to acquisition, merger, or organizational restructuring, user data may be included in the transferred assets. Any acquiring party will continue to be bound by these Terms and our privacy practices, unless otherwise stated and agreed upon through renewed consent."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Section 12: External Links Disclaimer -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="12. External Links Disclaimer"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="AcciZard Lucban may contain links to external websites for informational purposes. These third-party sites are not under our control, and we are not responsible for their content, availability, or privacy practices. Users access these external resources at their own discretion and risk."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Section 13: Use of Location Services -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="13. Use of Location Services"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="The app may request access to your device's GPS/location to pinpoint accident/hazard locations, show nearby hazards, and to notify local authorities\n\nYou may choose to disable location sharing, but it may limit app features."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Section 14: Account Suspension or Termination -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="14. Account Suspension or Termination"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="We may suspend or terminate your account if you intentionally submit false or harmful reports, violate any part of these Terms, and misuse the platform or harass other users\n\nThe LDRRMO and developers reserve the right to take action if the system is abused."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Section 15: Disclaimers and Limitations -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="15. Disclaimers and Limitations"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="AcciZard Lucban is a tool for accident and hazard reporting, not an emergency response system. For immediate help, always call your local emergency numbers. We are not liable for delays in responses, technical issues, or decisions made based on the data provided by users. Reports submitted may be subject to review and verification by LDRRMO."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Section 16: Change to the Terms -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="16. Change to the Terms"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="We may update these Terms at any time to reflect changes in the system or policies. Users will be notified of major changes through the app or website. Continuing to use the app means you agree to the updated Terms."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Section 17: Governing Law -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="17. Governing Law"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="These Terms are governed by the laws of the Republic of the Philippines. Any disputes related to the app will be handled according to local laws and jurisdiction in Lucban, Quezon."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_dark"
+                        android:layout_marginBottom="16dp" />
+
+                    <!-- Section 18: Contact Us -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="18. Contact Us"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
+                        android:textColor="@color/orange_primary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="For questions or concerns about these Terms, you may contact the development team at:\n\nEmail: mdrrmo@lucban.gov.ph\nLocation: MDRRMO Office, Lucban Municipal Hall\nPhone: (042) 540-5555"
                         android:textSize="14sp"
                         android:textColor="@color/text_dark"
                         android:layout_marginBottom="24dp" />

@@ -58,6 +58,8 @@ public class ChatActivity extends AppCompatActivity {
     private static final String TAG = "ChatActivity";
     private static final String PREFS_NAME = "AlertsActivityPrefs";
     private static final String KEY_LAST_VISIT_TIME = "last_visit_time";
+    private static final String KEY_ADMIN_DELETION_DETECTED = "admin_deletion_detected";
+    private static final String KEY_ADMIN_DELETION_TIMESTAMP = "admin_deletion_timestamp";
 
     private RecyclerView messagesRecyclerView;
     private EditText messageInput;
@@ -74,6 +76,8 @@ public class ChatActivity extends AppCompatActivity {
     private ChatAdapter chatAdapter;
     private List<ChatMessage> messagesList;
     private java.util.Set<String> loadedMessageIds; // Track loaded message IDs to prevent duplicates
+    private int previousMessageCount = 0; // Track previous message count to detect bulk deletion
+    private long lastDeletionCheckTime = 0; // Track when we last checked for bulk deletion
 
     private static final int CAMERA_REQUEST_CODE = 201;
     private static final int GALLERY_REQUEST_CODE = 202;
@@ -1071,6 +1075,9 @@ public class ChatActivity extends AppCompatActivity {
         ChatActivityTracker.setChatActivityVisible(true);
         Log.d(TAG, "🔵 Chat is now VISIBLE - notifications will be suppressed");
         
+        // ✅ NEW: Check if admin deletion was detected while chat was closed
+        checkAndShowAdminDeletionToast();
+        
         // ✅ CRITICAL FIX: Clear chat badge IMMEDIATELY when user opens chat
         clearChatBadge();
         
@@ -1305,6 +1312,8 @@ public class ChatActivity extends AppCompatActivity {
                     // Badge will be updated when user leaves ChatActivity
                     
                     Log.d(TAG, "Loaded " + messagesList.size() + " messages from Firestore");
+                    // Initialize previous message count for deletion detection
+                    previousMessageCount = messagesList.size();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error loading messages from Firestore: " + e.getMessage(), e);
@@ -1345,9 +1354,21 @@ public class ChatActivity extends AppCompatActivity {
                     
                     if (snapshots != null) {
                         Log.d(TAG, "📡 Realtime listener received " + snapshots.getDocumentChanges().size() + " changes");
+                        
+                        // Track removed messages count
+                        int removedCount = 0;
+                        int addedCount = 0;
+                        
                         for (com.google.firebase.firestore.DocumentChange dc : snapshots.getDocumentChanges()) {
                             Log.d(TAG, "📡 Document change type: " + dc.getType() + ", doc: " + dc.getDocument().getId());
                             Log.d(TAG, "📡 Document data: " + dc.getDocument().getData().toString());
+                            
+                            // Count changes
+                            if (dc.getType() == com.google.firebase.firestore.DocumentChange.Type.REMOVED) {
+                                removedCount++;
+                            } else if (dc.getType() == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
+                                addedCount++;
+                            }
                             
                             switch (dc.getType()) {
                                 case ADDED:
@@ -1438,17 +1459,174 @@ public class ChatActivity extends AppCompatActivity {
                                     Log.d(TAG, "Message modified: " + dc.getDocument().getId());
                                     break;
                                 case REMOVED:
-                                    // Handle message removal if needed
-                                    Log.d(TAG, "Message removed: " + dc.getDocument().getId());
+                                    // Handle message removal
+                                    String removedMessageId = dc.getDocument().getId();
+                                    Log.d(TAG, "Message removed: " + removedMessageId);
+                                    
+                                    // Remove from local list
+                                    for (int i = messagesList.size() - 1; i >= 0; i--) {
+                                        if (messagesList.get(i).getMessageId() != null && 
+                                            messagesList.get(i).getMessageId().equals(removedMessageId)) {
+                                            messagesList.remove(i);
+                                            chatAdapter.notifyItemRemoved(i);
+                                            loadedMessageIds.remove(removedMessageId);
+                                            break;
+                                        }
+                                    }
                                     break;
                             }
                         }
+                        
+                        // Check for conversation deletion (bulk removal or all messages gone)
+                        int currentMessageCount = snapshots.size();
+                        long currentTime = System.currentTimeMillis();
+                        
+                        // Detect bulk deletion: multiple removals at once or all messages suddenly gone
+                        if (removedCount > 0) {
+                            // If we had messages before and now we have significantly fewer or none, it's likely admin deletion
+                            if (previousMessageCount > 0 && currentMessageCount < previousMessageCount) {
+                                // Check if this looks like a conversation deletion (more than 1 message removed or all gone)
+                                if (removedCount > 1 || currentMessageCount == 0) {
+                                    // Check if deletion was done by admin (users can only delete their own messages one at a time)
+                                    checkAndNotifyAdminDeletion(removedCount, currentMessageCount);
+                                }
+                            }
+                        }
+                        
+                        previousMessageCount = currentMessageCount;
+                        lastDeletionCheckTime = currentTime;
                     }
                 });
             
             Log.d(TAG, "Realtime message listener setup completed");
         } catch (Exception e) {
             Log.e(TAG, "Error setting up realtime message listener", e);
+        }
+    }
+    
+    /**
+     * Checks if conversation deletion was done by admin and shows toast notification
+     * Users can only delete their own messages one at a time, so bulk deletion indicates admin action
+     */
+    private void checkAndNotifyAdminDeletion(int removedCount, int remainingMessageCount) {
+        try {
+            // Users can only delete their own messages one at a time
+            // If multiple messages are deleted at once or all messages are gone, it's likely admin deletion
+            if (removedCount > 1 || remainingMessageCount == 0) {
+                // Verify current user is not an admin (to avoid false positives)
+                FirebaseUser currentUser = mAuth.getCurrentUser();
+                if (currentUser != null) {
+                    // Check if current user is admin
+                    db.collection("admins").document(currentUser.getUid())
+                        .get()
+                        .addOnSuccessListener(adminDoc -> {
+                            // If document doesn't exist, user is not an admin
+                            if (!adminDoc.exists()) {
+                                // Also check superAdmin collection
+                                db.collection("superAdmin").document(currentUser.getUid())
+                                    .get()
+                                    .addOnSuccessListener(superAdminDoc -> {
+                                        if (!superAdminDoc.exists()) {
+                                            // User is not an admin, so deletion must be by admin
+                                            showAdminDeletionToast();
+                                        }
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Log.e(TAG, "Error checking superAdmin status", e);
+                                        // On error, assume it's admin deletion if bulk removal
+                                        if (removedCount > 1 || remainingMessageCount == 0) {
+                                            showAdminDeletionToast();
+                                        }
+                                    });
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e(TAG, "Error checking admin status", e);
+                            // On error, assume it's admin deletion if bulk removal
+                            if (removedCount > 1 || remainingMessageCount == 0) {
+                                showAdminDeletionToast();
+                            }
+                        });
+                } else {
+                    // No current user, but bulk deletion still suggests admin action
+                    if (removedCount > 1 || remainingMessageCount == 0) {
+                        showAdminDeletionToast();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking admin deletion", e);
+        }
+    }
+    
+    /**
+     * Shows toast notification that admin deleted the conversation
+     * Always saves deletion flag to SharedPreferences so user sees it when they open chat
+     */
+    private void showAdminDeletionToast() {
+        // Save admin deletion flag to SharedPreferences (regardless of chat visibility)
+        // This ensures user sees the toast when they open chat later
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean(KEY_ADMIN_DELETION_DETECTED, true);
+        editor.putLong(KEY_ADMIN_DELETION_TIMESTAMP, System.currentTimeMillis());
+        editor.apply();
+        Log.d(TAG, "Admin deletion flag saved to SharedPreferences");
+        
+        // If chat is currently visible, show toast immediately
+        if (ChatActivityTracker.isChatActivityVisible()) {
+            runOnUiThread(() -> {
+                Toast.makeText(ChatActivity.this, 
+                    "Your conversation has been deleted by an administrator.", 
+                    Toast.LENGTH_LONG).show();
+                Log.d(TAG, "Admin deletion detected - showing toast notification (chat is visible)");
+            });
+        } else {
+            Log.d(TAG, "Admin deletion detected but chat is not visible - flag saved, toast will show when chat opens");
+        }
+    }
+    
+    /**
+     * Checks if admin deletion was detected and shows toast when user opens chat
+     * Called in onResume() to show toast even if deletion happened while chat was closed
+     */
+    private void checkAndShowAdminDeletionToast() {
+        try {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            boolean deletionDetected = prefs.getBoolean(KEY_ADMIN_DELETION_DETECTED, false);
+            
+            if (deletionDetected) {
+                // Get deletion timestamp
+                long deletionTimestamp = prefs.getLong(KEY_ADMIN_DELETION_TIMESTAMP, 0);
+                long currentTime = System.currentTimeMillis();
+                
+                // Show toast regardless of when deletion happened (minutes/hours/days ago)
+                runOnUiThread(() -> {
+                    Toast.makeText(ChatActivity.this, 
+                        "Your conversation has been deleted by an administrator.", 
+                        Toast.LENGTH_LONG).show();
+                    
+                    // Calculate time since deletion for logging
+                    long timeSinceDeletion = currentTime - deletionTimestamp;
+                    long hoursSince = timeSinceDeletion / (1000 * 60 * 60);
+                    long minutesSince = (timeSinceDeletion / (1000 * 60)) % 60;
+                    
+                    if (hoursSince > 0) {
+                        Log.d(TAG, "Admin deletion toast shown - deletion happened " + hoursSince + " hour(s) and " + minutesSince + " minute(s) ago");
+                    } else {
+                        Log.d(TAG, "Admin deletion toast shown - deletion happened " + minutesSince + " minute(s) ago");
+                    }
+                });
+                
+                // Clear the flag after showing toast (so it doesn't show again)
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.remove(KEY_ADMIN_DELETION_DETECTED);
+                editor.remove(KEY_ADMIN_DELETION_TIMESTAMP);
+                editor.apply();
+                Log.d(TAG, "Admin deletion flag cleared after showing toast");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking admin deletion toast", e);
         }
     }
     

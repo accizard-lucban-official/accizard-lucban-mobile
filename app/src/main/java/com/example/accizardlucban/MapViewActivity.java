@@ -49,6 +49,9 @@ import java.util.Locale;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.Geocoder;
+import android.location.Address;
+import java.io.IOException;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -178,6 +181,12 @@ public class MapViewActivity extends AppCompatActivity {
     private List<MapMarker> firestorePinMarkers = new ArrayList<>(); // Add this for Firestore pins
     private FrameLayout mapContainer;
     private List<Point> pinnedLocations = new ArrayList<>();
+    
+    // Search marker (like Google Maps red pin)
+    private ImageView searchMarker;
+    private Point searchMarkerLocation;
+    private Handler searchMarkerHandler;
+    private Runnable searchMarkerRunnable;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
     private FirebaseFirestore db; // Add this for Firestore operations
     private static class IncidentCheckboxEntry {
@@ -288,6 +297,9 @@ public class MapViewActivity extends AppCompatActivity {
         
         // Initialize camera tracking handler for Firestore pins
         firestorePinCameraHandler = new Handler(Looper.getMainLooper());
+        
+        // Initialize search marker handler
+        searchMarkerHandler = new Handler(Looper.getMainLooper());
 
         // Initialize MapView and MapboxMap
         mapView = findViewById(R.id.mapView);
@@ -928,6 +940,10 @@ public class MapViewActivity extends AppCompatActivity {
             hideSearchResults();
             currentAutocompleteResults.clear();
             clearSearchButton.setVisibility(View.GONE);
+            
+            // Clear search marker when clearing search
+            clearSearchMarker();
+            
             searchLocationEditText.requestFocus();
             
             // Show keyboard
@@ -947,10 +963,16 @@ public class MapViewActivity extends AppCompatActivity {
                     imm.hideSoftInputFromWindow(searchLocationEditText.getWindowToken(), 0);
                 }
                 
-                // If there are search results, select the first one
+                // Hide search results
+                hideSearchResults();
+                
+                // If there are search results, select the first one (will use geocoding)
                 if (!currentAutocompleteResults.isEmpty()) {
                     SimpleSearchAdapter.SearchPlace firstResult = currentAutocompleteResults.get(0);
                     onSearchResultSelected(firstResult);
+                } else {
+                    // No autocomplete results, perform direct geocoding search
+                    performGeocodingSearch(query);
                 }
                 return true;
             }
@@ -1074,20 +1096,346 @@ public class MapViewActivity extends AppCompatActivity {
             // Clear focus from search field
             searchLocationEditText.clearFocus();
 
-            // Create point for the selected location
-            Point selectedPoint = Point.fromLngLat(place.getLongitude(), place.getLatitude());
-
-            // Navigate to the location with smooth animation
-            // Use different zoom levels based on place type
-            double zoomLevel = getZoomLevelForPlace(place);
-
-            // Animate to location
-            animateToLocation(selectedPoint, zoomLevel);
+            // Use geocoding to get accurate coordinates for the searched location
+            performGeocodingSearch(place.getName());
             
-            // Show toast with location info
-            // Navigate to location (toast removed)
         } catch (Exception e) {
             Log.e(TAG, "Error handling search result selection", e);
+            Toast.makeText(this, "Error searching location", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * Performs geocoding search to get accurate coordinates and adds a marker
+     */
+    private void performGeocodingSearch(String locationName) {
+        // Show loading message
+        Toast.makeText(this, "Searching for: " + locationName, Toast.LENGTH_SHORT).show();
+        
+        // Run geocoding in background thread
+        new Thread(() -> {
+            try {
+                Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+                
+                // Enhanced search query for better accuracy
+                String enhancedQuery = locationName;
+                if (!locationName.toLowerCase().contains("philippines") && 
+                    !locationName.toLowerCase().contains("quezon")) {
+                    enhancedQuery = locationName + ", Quezon Province, Philippines";
+                }
+                
+                List<Address> addresses = geocoder.getFromLocationName(enhancedQuery, 10);
+                
+                if (addresses != null && !addresses.isEmpty()) {
+                    // Find the most accurate address
+                    Address bestAddress = findMostAccurateAddress(addresses);
+                    
+                    // Get high precision coordinates
+                    double latitude = bestAddress.getLatitude();
+                    double longitude = bestAddress.getLongitude();
+                    
+                    // Validate coordinates are within Philippines bounds
+                    if (isValidPhilippinesCoordinates(longitude, latitude)) {
+                        Point point = Point.fromLngLat(longitude, latitude);
+                        
+                        // Run UI updates on main thread
+                        runOnUiThread(() -> {
+                            // Clear existing search marker
+                            clearSearchMarker();
+                            
+                            // Add marker at the searched location
+                            addSearchMarkerAtLocation(point, locationName);
+                            
+                            // Navigate to the location with appropriate zoom
+                            double zoomLevel = getZoomLevelForLocationName(locationName);
+                            animateToLocation(point, zoomLevel);
+                            
+                            Log.d(TAG, "Search result coordinates: " + latitude + ", " + longitude);
+                            Log.d(TAG, "Search result address: " + bestAddress.getAddressLine(0));
+                        });
+                    } else {
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "Location not found in Philippines", Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                } else {
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Location not found. Please try a different search term.", Toast.LENGTH_SHORT).show();
+                    });
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Geocoding error", e);
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Error searching location. Please check your internet connection.", Toast.LENGTH_SHORT).show();
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error in geocoding search", e);
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Error searching location", Toast.LENGTH_SHORT).show();
+                });
+            }
+        }).start();
+    }
+    
+    /**
+     * Finds the most accurate address from geocoding results
+     */
+    private Address findMostAccurateAddress(List<Address> addresses) {
+        if (addresses.isEmpty()) return null;
+        
+        Address bestAddress = addresses.get(0);
+        int bestScore = calculateAddressScore(bestAddress);
+        
+        for (Address address : addresses) {
+            int score = calculateAddressScore(address);
+            if (score > bestScore) {
+                bestScore = score;
+                bestAddress = address;
+            }
+        }
+        
+        return bestAddress;
+    }
+    
+    /**
+     * Calculates a score for address accuracy (higher is better)
+     */
+    private int calculateAddressScore(Address address) {
+        int score = 0;
+        
+        // Prefer addresses with more details
+        if (address.getFeatureName() != null && !address.getFeatureName().isEmpty()) {
+            score += 10;
+        }
+        if (address.getThoroughfare() != null && !address.getThoroughfare().isEmpty()) {
+            score += 5;
+        }
+        if (address.getSubLocality() != null && !address.getSubLocality().isEmpty()) {
+            score += 3;
+        }
+        if (address.getLocality() != null && !address.getLocality().isEmpty()) {
+            score += 2;
+        }
+        if (address.getAdminArea() != null && !address.getAdminArea().isEmpty()) {
+            score += 1;
+        }
+        
+        return score;
+    }
+    
+    /**
+     * Validates if coordinates are within Philippines bounds
+     */
+    private boolean isValidPhilippinesCoordinates(double longitude, double latitude) {
+        // Philippines approximate bounds
+        return longitude >= 116.0 && longitude <= 127.0 && 
+               latitude >= 4.0 && latitude <= 22.0;
+    }
+    
+    /**
+     * Gets appropriate zoom level based on location name
+     */
+    private double getZoomLevelForLocationName(String locationName) {
+        String name = locationName.toLowerCase();
+        
+        // Higher zoom for specific buildings and landmarks
+        if (name.contains("hospital") || name.contains("medical") ||
+            name.contains("police") || name.contains("fire") ||
+            name.contains("school") || name.contains("university") ||
+            name.contains("college") || name.contains("bank") ||
+            name.contains("church") || name.contains("hall") ||
+            name.contains("building")) {
+            return 18.0; // Very close view for buildings
+        }
+        
+        // Medium zoom for general areas
+        if (name.contains("plaza") || name.contains("park") ||
+            name.contains("market") || name.contains("terminal")) {
+            return 16.0; // Medium view for public spaces
+        }
+        
+        // Lower zoom for barangays and general areas
+        if (name.contains("barangay") || name.contains("district")) {
+            return 15.0; // Wider view for areas
+        }
+        
+        // Default zoom for other places
+        return 17.0;
+    }
+    
+    /**
+     * Adds a search marker at the specified location (like Google Maps red pin)
+     */
+    private void addSearchMarkerAtLocation(Point point, String title) {
+        if (mapContainer == null || mapboxMap == null) {
+            Log.e(TAG, "Map container or mapboxMap is null");
+            return;
+        }
+        
+        try {
+            // Clear any existing search marker first
+            clearSearchMarker();
+            
+            // Ensure pin dimensions are set
+            ensurePinDimensions();
+            
+            // Create marker using accizard_pin drawable (like Google Maps)
+            searchMarker = new ImageView(this);
+            searchMarker.setImageResource(R.drawable.accizard_pin);
+            
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                pinWidthPx,
+                pinHeightPx
+            );
+            searchMarker.setLayoutParams(params);
+            
+            // Store the location
+            searchMarkerLocation = point;
+            
+            // Add to container
+            mapContainer.addView(searchMarker);
+            
+            // Position marker at coordinates
+            positionSearchMarkerAtCoordinates(point);
+            
+            // Add drop animation
+            animateSearchMarkerDrop(searchMarker);
+            
+            // Start camera tracking to keep marker positioned correctly
+            startSearchMarkerCameraTracking();
+            
+            Log.d(TAG, "Search marker added at: " + point.longitude() + ", " + point.latitude());
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error adding search marker", e);
+        }
+    }
+    
+    /**
+     * Positions search marker at specific coordinates
+     */
+    private void positionSearchMarkerAtCoordinates(Point point) {
+        if (searchMarker == null || mapboxMap == null || mapContainer == null) {
+            return;
+        }
+        
+        try {
+            // Convert geographic coordinates to screen coordinates
+            ScreenCoordinate screenCoord = mapboxMap.pixelForCoordinate(point);
+            
+            // Get map container dimensions
+            int containerWidth = mapContainer.getWidth();
+            int containerHeight = mapContainer.getHeight();
+            
+            if (containerWidth <= 0 || containerHeight <= 0) {
+                // Container not ready yet, try again later
+                searchMarkerHandler.postDelayed(() -> {
+                    positionSearchMarkerAtCoordinates(point);
+                }, 100);
+                return;
+            }
+            
+            // Calculate marker position
+            double x = screenCoord.getX();
+            double y = screenCoord.getY();
+            
+            // Check if coordinates are within visible bounds
+            int margin = 80;
+            if (x >= -margin && x <= containerWidth + margin && 
+                y >= -margin && y <= containerHeight + margin) {
+                
+                ensurePinDimensions();
+                FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    pinWidthPx,
+                    pinHeightPx
+                );
+                
+                // Center the pin point exactly on the geographic coordinates
+                params.leftMargin = (int) Math.round(x - (pinWidthPx / 2.0));
+                params.topMargin = (int) Math.round(y - pinHeightPx + pinOffsetPx);
+                
+                searchMarker.setLayoutParams(params);
+                searchMarker.setVisibility(View.VISIBLE);
+                
+            } else {
+                // Marker is outside visible area, hide it
+                searchMarker.setVisibility(View.GONE);
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error positioning search marker", e);
+            if (searchMarker != null) {
+                searchMarker.setVisibility(View.GONE);
+            }
+        }
+    }
+    
+    /**
+     * Animates search marker drop like Google Maps
+     */
+    private void animateSearchMarkerDrop(ImageView markerView) {
+        markerView.setScaleX(0.1f);
+        markerView.setScaleY(0.1f);
+        markerView.setTranslationY(-50f);
+        markerView.setAlpha(0.8f);
+        
+        markerView.animate()
+            .scaleX(1.0f)
+            .scaleY(1.0f)
+            .translationY(0f)
+            .alpha(1.0f)
+            .setDuration(300)
+            .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f))
+            .start();
+    }
+    
+    /**
+     * Starts camera tracking for search marker
+     */
+    private void startSearchMarkerCameraTracking() {
+        // Stop any existing tracking first
+        stopSearchMarkerCameraTracking();
+        
+        if (searchMarkerRunnable == null) {
+            searchMarkerRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (searchMarker != null && searchMarkerLocation != null) {
+                        positionSearchMarkerAtCoordinates(searchMarkerLocation);
+                    }
+                    
+                    if (searchMarkerHandler != null && searchMarker != null) {
+                        searchMarkerHandler.postDelayed(this, 16); // Update every 16ms (~60fps)
+                    }
+                }
+            };
+        }
+        
+        if (searchMarkerHandler != null) {
+            searchMarkerHandler.post(searchMarkerRunnable);
+        }
+    }
+    
+    /**
+     * Stops camera tracking for search marker
+     */
+    private void stopSearchMarkerCameraTracking() {
+        if (searchMarkerHandler != null && searchMarkerRunnable != null) {
+            searchMarkerHandler.removeCallbacks(searchMarkerRunnable);
+        }
+    }
+    
+    /**
+     * Clears the search marker
+     */
+    private void clearSearchMarker() {
+        stopSearchMarkerCameraTracking();
+        
+        if (searchMarker != null && mapContainer != null) {
+            mapContainer.removeView(searchMarker);
+            searchMarker = null;
+            searchMarkerLocation = null;
+            Log.d(TAG, "Search marker cleared");
         }
     }
 

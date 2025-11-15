@@ -63,6 +63,22 @@ public class ValidIdActivity extends AppCompatActivity {
     private static final int CUSTOM_CAMERA_REQUEST_CODE = 200;
     private static final int CAMERA_PERMISSION_CODE = 102;
     private static final int STORAGE_PERMISSION_CODE = 103;
+    
+    // Rate limiting constants for email verification
+    private static final String PREFS_EMAIL_VERIFICATION = "email_verification_rate_limit";
+    private static final String KEY_LAST_VERIFICATION_TIME = "last_verification_time";
+    private static final String KEY_VERIFICATION_ATTEMPTS = "verification_attempts";
+    private static final String KEY_BLOCKED_UNTIL = "blocked_until";
+    private static final long MIN_TIME_BETWEEN_EMAILS = 60000; // 1 minute between emails (in milliseconds)
+    private static final int MAX_ATTEMPTS_PER_HOUR = 3; // Maximum 3 attempts per hour
+    private static final long HOUR_IN_MILLIS = 3600000; // 1 hour in milliseconds
+    private static final long BLOCK_DURATION = 3600000; // Block for 1 hour if rate limit exceeded
+    
+    // Retry logic constants
+    private static final int MAX_RETRY_ATTEMPTS = 3; // Maximum retry attempts
+    private static final long INITIAL_RETRY_DELAY = 2000; // Initial delay: 2 seconds
+    private static final long MAX_RETRY_DELAY = 30000; // Maximum delay: 30 seconds
+    private static final double BACKOFF_MULTIPLIER = 2.0; // Exponential backoff multiplier
 
     private CardView btnUpload;
     private Button btnNext;
@@ -603,10 +619,202 @@ public class ValidIdActivity extends AppCompatActivity {
     }
 
     /**
-     * Sends email verification to the user
+     * Checks if we can send a verification email based on rate limiting
+     * @return null if allowed, error message if blocked
      */
-    private void sendEmailVerification(final FirebaseUser user) {
-        btnNext.setText("Sending Verification Email...");
+    private String canSendVerificationEmail() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_EMAIL_VERIFICATION, MODE_PRIVATE);
+        long currentTime = System.currentTimeMillis();
+        
+        // Check if currently blocked
+        long blockedUntil = prefs.getLong(KEY_BLOCKED_UNTIL, 0);
+        if (blockedUntil > currentTime) {
+            long minutesRemaining = (blockedUntil - currentTime) / 60000;
+            return "Too many verification email attempts. Please wait " + minutesRemaining + " minute(s) before trying again.";
+        }
+        
+        // Check time since last email
+        long lastVerificationTime = prefs.getLong(KEY_LAST_VERIFICATION_TIME, 0);
+        if (lastVerificationTime > 0) {
+            long timeSinceLastEmail = currentTime - lastVerificationTime;
+            if (timeSinceLastEmail < MIN_TIME_BETWEEN_EMAILS) {
+                long secondsRemaining = (MIN_TIME_BETWEEN_EMAILS - timeSinceLastEmail) / 1000;
+                return "Please wait " + secondsRemaining + " second(s) before requesting another verification email.";
+            }
+        }
+        
+        // Check attempts in the last hour
+        long firstAttemptTime = prefs.getLong("first_attempt_time", 0);
+        int attempts = prefs.getInt(KEY_VERIFICATION_ATTEMPTS, 0);
+        
+        if (firstAttemptTime > 0 && (currentTime - firstAttemptTime) < HOUR_IN_MILLIS) {
+            // Still within the hour window
+            if (attempts >= MAX_ATTEMPTS_PER_HOUR) {
+                long timeUntilReset = HOUR_IN_MILLIS - (currentTime - firstAttemptTime);
+                long minutesRemaining = timeUntilReset / 60000;
+                return "Maximum verification email attempts reached. Please wait " + minutesRemaining + " minute(s) before trying again.";
+            }
+        } else {
+            // Hour window expired, reset attempts
+            attempts = 0;
+            firstAttemptTime = currentTime;
+        }
+        
+        return null; // Allowed to send
+    }
+    
+    /**
+     * Records a verification email attempt
+     */
+    private void recordVerificationAttempt(boolean success) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_EMAIL_VERIFICATION, MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        long currentTime = System.currentTimeMillis();
+        
+        if (success) {
+            // Successful send - record time and increment attempts
+            editor.putLong(KEY_LAST_VERIFICATION_TIME, currentTime);
+            
+            long firstAttemptTime = prefs.getLong("first_attempt_time", 0);
+            int attempts = prefs.getInt(KEY_VERIFICATION_ATTEMPTS, 0);
+            
+            if (firstAttemptTime == 0 || (currentTime - firstAttemptTime) >= HOUR_IN_MILLIS) {
+                // New hour window
+                editor.putLong("first_attempt_time", currentTime);
+                editor.putInt(KEY_VERIFICATION_ATTEMPTS, 1);
+            } else {
+                // Same hour window
+                editor.putInt(KEY_VERIFICATION_ATTEMPTS, attempts + 1);
+            }
+        } else {
+            // Failed send - check if it's a rate limit error
+            // This will be handled in the error handler
+        }
+        
+        editor.apply();
+    }
+    
+    /**
+     * Handles rate limit error from Firebase and blocks future attempts
+     */
+    private void handleRateLimitError() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_EMAIL_VERIFICATION, MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        long currentTime = System.currentTimeMillis();
+        
+        // Block for the specified duration
+        editor.putLong(KEY_BLOCKED_UNTIL, currentTime + BLOCK_DURATION);
+        editor.putLong("first_attempt_time", currentTime);
+        editor.putInt(KEY_VERIFICATION_ATTEMPTS, MAX_ATTEMPTS_PER_HOUR);
+        editor.apply();
+        
+        Log.w(TAG, "Rate limit detected. Blocked until: " + new java.util.Date(currentTime + BLOCK_DURATION));
+    }
+    
+    /**
+     * Gets user-friendly error message for Firebase errors
+     */
+    private String getUserFriendlyErrorMessage(Exception exception) {
+        if (exception == null || exception.getMessage() == null) {
+            return "Failed to send verification email. Please try again later.";
+        }
+        
+        String errorMessage = exception.getMessage();
+        
+        // Check for rate limiting errors
+        if (errorMessage.contains("blocked") || 
+            errorMessage.contains("unusual activity") || 
+            errorMessage.contains("too many requests") ||
+            errorMessage.contains("quota exceeded")) {
+            
+            handleRateLimitError();
+            long blockedUntil = getSharedPreferences(PREFS_EMAIL_VERIFICATION, MODE_PRIVATE)
+                .getLong(KEY_BLOCKED_UNTIL, 0);
+            
+            if (blockedUntil > System.currentTimeMillis()) {
+                long minutesRemaining = (blockedUntil - System.currentTimeMillis()) / 60000;
+                return "Too many verification email requests. Please wait " + minutesRemaining + 
+                       " minute(s) before trying again. This helps prevent spam.";
+            }
+            
+            return "Too many verification email requests. Please wait 1 hour before trying again. This helps prevent spam.";
+        }
+        
+        // Check for network errors
+        if (errorMessage.contains("network") || errorMessage.contains("timeout")) {
+            return "Network error. Please check your internet connection and try again.";
+        }
+        
+        // Check for invalid email
+        if (errorMessage.contains("invalid-email")) {
+            return "Invalid email address. Please check your email and try again.";
+        }
+        
+        // Generic error
+        return "Failed to send verification email. Please try again later.";
+    }
+    
+    /**
+     * Checks if an error is retryable (transient errors that might succeed on retry)
+     */
+    private boolean isRetryableError(Exception exception) {
+        if (exception == null || exception.getMessage() == null) {
+            return false;
+        }
+        
+        String errorMessage = exception.getMessage().toLowerCase();
+        
+        // Retry for transient errors
+        if (errorMessage.contains("network") || 
+            errorMessage.contains("timeout") ||
+            errorMessage.contains("connection") ||
+            errorMessage.contains("unavailable") ||
+            errorMessage.contains("internal error") ||
+            errorMessage.contains("service unavailable")) {
+            return true;
+        }
+        
+        // Don't retry for permanent errors
+        if (errorMessage.contains("invalid-email") ||
+            errorMessage.contains("user-disabled") ||
+            errorMessage.contains("user-not-found") ||
+            errorMessage.contains("email-already-in-use") ||
+            errorMessage.contains("operation-not-allowed")) {
+            return false;
+        }
+        
+        // Don't retry for rate limit errors (handled separately)
+        if (errorMessage.contains("blocked") || 
+            errorMessage.contains("unusual activity") || 
+            errorMessage.contains("too many requests")) {
+            return false;
+        }
+        
+        // Default: don't retry for unknown errors
+        return false;
+    }
+    
+    /**
+     * Sends email verification with retry logic for transient errors
+     */
+    private void sendEmailVerificationWithRetry(final FirebaseUser user, int retryCount) {
+        // Check rate limits before sending
+        String rateLimitError = canSendVerificationEmail();
+        if (rateLimitError != null) {
+            btnNext.setEnabled(true);
+            btnNext.setText("Next");
+            Toast.makeText(ValidIdActivity.this, rateLimitError, Toast.LENGTH_LONG).show();
+            Log.w(TAG, "Rate limit check failed: " + rateLimitError);
+            return;
+        }
+        
+        // Update button text to show retry attempt if applicable
+        if (retryCount > 0) {
+            btnNext.setText("Retrying... (" + retryCount + "/" + MAX_RETRY_ATTEMPTS + ")");
+            Log.d(TAG, "Retry attempt " + retryCount + " of " + MAX_RETRY_ATTEMPTS);
+        } else {
+            btnNext.setText("Sending Verification Email...");
+        }
         
         user.sendEmailVerification()
                 .addOnCompleteListener(new OnCompleteListener<Void>() {
@@ -614,18 +822,67 @@ public class ValidIdActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<Void> task) {
                         if (task.isSuccessful()) {
                             Log.d(TAG, "✅ Verification email sent to: " + user.getEmail());
+                            recordVerificationAttempt(true);
                             // Continue with registration after email is sent
                             generateCustomUserIdAndContinue(user);
                         } else {
-                            btnNext.setEnabled(true);
-                            btnNext.setText("Next");
-                            Log.e(TAG, "Failed to send verification email", task.getException());
-                            Toast.makeText(ValidIdActivity.this,
-                                    "Failed to send verification email: " + task.getException().getMessage(),
-                                    Toast.LENGTH_LONG).show();
+                            Exception exception = task.getException();
+                            Log.e(TAG, "Failed to send verification email (attempt " + (retryCount + 1) + ")", exception);
+                            
+                            // Check if it's a rate limit error
+                            if (exception != null && exception.getMessage() != null) {
+                                String errorMsg = exception.getMessage();
+                                if (errorMsg.contains("blocked") || 
+                                    errorMsg.contains("unusual activity") || 
+                                    errorMsg.contains("too many requests")) {
+                                    recordVerificationAttempt(false);
+                                    handleRateLimitError();
+                                    btnNext.setEnabled(true);
+                                    btnNext.setText("Next");
+                                    String userFriendlyMessage = getUserFriendlyErrorMessage(exception);
+                                    Toast.makeText(ValidIdActivity.this, userFriendlyMessage, Toast.LENGTH_LONG).show();
+                                    return;
+                                }
+                            }
+                            
+                            // Check if error is retryable and we haven't exceeded max retries
+                            if (isRetryableError(exception) && retryCount < MAX_RETRY_ATTEMPTS) {
+                                // Calculate exponential backoff delay
+                                long delay = (long) (INITIAL_RETRY_DELAY * Math.pow(BACKOFF_MULTIPLIER, retryCount));
+                                delay = Math.min(delay, MAX_RETRY_DELAY); // Cap at max delay
+                                
+                                Log.d(TAG, "Retryable error detected. Retrying in " + (delay / 1000) + " seconds...");
+                                
+                                // Schedule retry with exponential backoff
+                                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        sendEmailVerificationWithRetry(user, retryCount + 1);
+                                    }
+                                }, delay);
+                            } else {
+                                // Not retryable or max retries exceeded
+                                btnNext.setEnabled(true);
+                                btnNext.setText("Next");
+                                
+                                String userFriendlyMessage = getUserFriendlyErrorMessage(exception);
+                                if (retryCount >= MAX_RETRY_ATTEMPTS) {
+                                    userFriendlyMessage = "Failed to send verification email after " + (MAX_RETRY_ATTEMPTS + 1) + " attempts. " + userFriendlyMessage;
+                                    Log.w(TAG, "Max retry attempts reached");
+                                }
+                                
+                                Toast.makeText(ValidIdActivity.this, userFriendlyMessage, Toast.LENGTH_LONG).show();
+                            }
                         }
                     }
                 });
+    }
+    
+    /**
+     * Sends email verification to the user with rate limiting protection and retry logic
+     */
+    private void sendEmailVerification(final FirebaseUser user) {
+        sendEmailVerificationWithRetry(user, 0);
     }
 
     // Generate custom userId in the format RID-[auto-incremented value]
