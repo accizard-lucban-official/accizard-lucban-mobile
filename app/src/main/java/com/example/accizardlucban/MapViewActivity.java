@@ -140,13 +140,13 @@ public class MapViewActivity extends AppCompatActivity {
     
     // Map style selector
     private Dialog mapStyleDialog;
-    private String currentMapStyle = "street"; // Default map style
     
     // Map layers state
     private boolean lucbanBoundaryVisible = true; // Always visible by default
     private boolean barangayBoundariesVisible = false;
     private boolean roadNetworkVisible = false;
     private boolean waterwaysVisible = false;
+    private boolean satelliteMapVisible = false; // Satellite map layer toggle
     private boolean healthFacilitiesVisible = false;
     private boolean evacuationCentersVisible = false;
     
@@ -306,7 +306,7 @@ public class MapViewActivity extends AppCompatActivity {
         if (mapView != null) {
             mapboxMap = mapView.getMapboxMap();
             // Load default street style
-            loadMapStyle(currentMapStyle);
+            loadMapStyle();
         }
 
         initializeSearchPlaces();
@@ -2817,27 +2817,11 @@ public class MapViewActivity extends AppCompatActivity {
             ImageView closeButton = mapStyleDialog.findViewById(R.id.closeButton);
             closeButton.setOnClickListener(v -> mapStyleDialog.dismiss());
             
-            // Map style options (Street only)
-            LinearLayout streetStyle = mapStyleDialog.findViewById(R.id.streetMapStyle);
-            ImageView streetCheck = mapStyleDialog.findViewById(R.id.streetCheckIcon);
-            
-            // Set current selection (Street is always selected)
-            if (streetCheck != null) {
-                streetCheck.setVisibility(View.VISIBLE);
-            }
-            
-            // Set click listener (Street style is always used)
-            if (streetStyle != null) {
-                streetStyle.setOnClickListener(v -> {
-                    // Street style is already active, just close dialog
-                    mapStyleDialog.dismiss();
-                });
-            }
-            
             // Map layers checkboxes
             CheckBox barangayCheck = mapStyleDialog.findViewById(R.id.barangayBoundariesCheck);
             CheckBox roadNetworkCheck = mapStyleDialog.findViewById(R.id.roadNetworkCheck);
             CheckBox waterwaysCheck = mapStyleDialog.findViewById(R.id.waterwaysCheck);
+            CheckBox satelliteCheck = mapStyleDialog.findViewById(R.id.satelliteMapCheck);
             
             // Set initial states
             if (barangayCheck != null) {
@@ -2849,11 +2833,15 @@ public class MapViewActivity extends AppCompatActivity {
             if (waterwaysCheck != null) {
                 waterwaysCheck.setChecked(waterwaysVisible);
             }
+            if (satelliteCheck != null) {
+                satelliteCheck.setChecked(satelliteMapVisible);
+            }
             
             // Layer click listeners (clicking the row toggles the checkbox)
             LinearLayout barangayLayer = mapStyleDialog.findViewById(R.id.barangayBoundariesLayer);
             LinearLayout roadNetworkLayer = mapStyleDialog.findViewById(R.id.roadNetworkLayer);
             LinearLayout waterwaysLayer = mapStyleDialog.findViewById(R.id.waterwaysLayer);
+            LinearLayout satelliteLayer = mapStyleDialog.findViewById(R.id.satelliteMapLayer);
             
             if (barangayLayer != null && barangayCheck != null) {
                 barangayLayer.setOnClickListener(v -> {
@@ -2879,6 +2867,14 @@ public class MapViewActivity extends AppCompatActivity {
                 });
             }
             
+            if (satelliteLayer != null && satelliteCheck != null) {
+                satelliteLayer.setOnClickListener(v -> {
+                    boolean newState = !satelliteCheck.isChecked();
+                    satelliteCheck.setChecked(newState);
+                    toggleSatelliteMap(newState);
+                });
+            }
+            
             // Direct checkbox listeners
             if (barangayCheck != null) {
                 barangayCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -2898,57 +2894,37 @@ public class MapViewActivity extends AppCompatActivity {
                 });
             }
             
+            if (satelliteCheck != null) {
+                satelliteCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    toggleSatelliteMap(isChecked);
+                });
+            }
+            
         } catch (Exception e) {
             Log.e(TAG, "Error setting up map style dialog: " + e.getMessage(), e);
         }
     }
     
     /**
-     * Update the visual selection indicators (Street only)
+     * Load the map style based on satellite layer toggle
      */
-    private void updateMapStyleSelection(ImageView streetCheck) {
-        try {
-            // Street is always selected
-            if (streetCheck != null) {
-                streetCheck.setVisibility(View.VISIBLE);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error updating map style selection: " + e.getMessage(), e);
-        }
-    }
-    
-    /**
-     * Select a map style and apply it (Street only)
-     */
-    private void selectMapStyle(String style) {
-        try {
-            // Only Street style is supported
-            currentMapStyle = "street";
-            loadMapStyle("street");
-            
-            // Close dialog if open
-            if (mapStyleDialog != null && mapStyleDialog.isShowing()) {
-                mapStyleDialog.dismiss();
-            }
-            
-        } catch (Exception e) {
-            Log.e(TAG, "Error selecting map style: " + e.getMessage(), e);
-        }
-    }
-    
-    /**
-     * Load the map style (Street only)
-     */
-    private void loadMapStyle(String style) {
+    private void loadMapStyle() {
         try {
             if (mapboxMap == null) return;
             
-            // Only Street style is supported
-            String styleUri = "mapbox://styles/accizard-lucban-official/cmhox8ita005o01sr1psmbgp6";
+            // Determine style URI based on satellite layer toggle
+            String styleUri;
+            if (satelliteMapVisible) {
+                // Use Mapbox satellite style
+                styleUri = "mapbox://styles/mapbox/satellite-v9";
+            } else {
+                // Default to street style
+                styleUri = "mapbox://styles/accizard-lucban-official/cmhox8ita005o01sr1psmbgp6";
+            }
             
             mapboxMap.loadStyleUri(styleUri, loadedStyle -> {
                 // Style loaded successfully
-                Log.d(TAG, "Map style loaded: " + style);
+                Log.d(TAG, "Map style loaded: " + (satelliteMapVisible ? "satellite" : "street"));
                 
                 // Initialize camera animations plugin
                 if (cameraAnimationsPlugin == null) {
@@ -3100,11 +3076,11 @@ public class MapViewActivity extends AppCompatActivity {
             // Get the current style from mapboxMap (not from parameter)
             Style style = mapboxMap.getStyle();
             if (style == null) {
-                Log.w(TAG, "Style not ready yet for style: " + currentMapStyle + ", will retry");
+                Log.w(TAG, "Style not ready yet for style: " + (satelliteMapVisible ? "satellite" : "street") + ", will retry");
                 return;
             }
             
-            Log.d(TAG, "Re-applying layer states to current style: " + currentMapStyle);
+            Log.d(TAG, "Re-applying layer states to current style: " + (satelliteMapVisible ? "satellite" : "street"));
             
             // Re-apply all layer visibility states based on current flags
             // Use dedicated apply methods for better reliability
@@ -3120,9 +3096,9 @@ public class MapViewActivity extends AppCompatActivity {
             // Update pins visibility
             updatePinsVisibilityBasedOnLayers();
             
-            Log.d(TAG, "Layer states re-applied successfully for style: " + currentMapStyle);
+            Log.d(TAG, "Layer states re-applied successfully for style: " + (satelliteMapVisible ? "satellite" : "street"));
         } catch (Exception e) {
-            Log.e(TAG, "Error re-applying layer states for style " + currentMapStyle + ": " + e.getMessage(), e);
+            Log.e(TAG, "Error re-applying layer states for style " + (satelliteMapVisible ? "satellite" : "street") + ": " + e.getMessage(), e);
         }
     }
     
@@ -3137,10 +3113,10 @@ public class MapViewActivity extends AppCompatActivity {
             String visibilityValue = visible ? "visible" : "none";
             com.mapbox.bindgen.Value value = com.mapbox.bindgen.Value.valueOf(visibilityValue);
             style.setStyleLayerProperty(layerId, "visibility", value);
-            Log.d(TAG, "Layer '" + layerId + "' visibility set to: " + visibilityValue + " (Style: " + currentMapStyle + ")");
+            Log.d(TAG, "Layer '" + layerId + "' visibility set to: " + visibilityValue + " (Style: " + (satelliteMapVisible ? "satellite" : "street") + ")");
         } catch (Exception e) {
             // Layer might not exist in the style, log for debugging
-            Log.w(TAG, "Layer '" + layerId + "' visibility not set in style '" + currentMapStyle + "' (may not exist): " + e.getMessage());
+            Log.w(TAG, "Layer '" + layerId + "' visibility not set in style '" + (satelliteMapVisible ? "satellite" : "street") + "' (may not exist): " + e.getMessage());
         }
     }
     
@@ -3218,7 +3194,7 @@ public class MapViewActivity extends AppCompatActivity {
             setLayerVisibility(style, "lucban-brgys", barangayBoundariesVisible);
             setLayerVisibility(style, "lucban-fill", barangayBoundariesVisible);
             setLayerVisibility(style, "lucban-brgy-names", barangayBoundariesVisible);
-            Log.d(TAG, "Barangay boundaries layers applied: " + barangayBoundariesVisible + " (Style: " + currentMapStyle + ")");
+            Log.d(TAG, "Barangay boundaries layers applied: " + barangayBoundariesVisible + " (Style: " + (satelliteMapVisible ? "satellite" : "street") + ")");
         } else {
             // Style not ready yet, retry after a short delay
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
@@ -3249,7 +3225,7 @@ public class MapViewActivity extends AppCompatActivity {
         Style style = mapboxMap != null ? mapboxMap.getStyle() : null;
         if (style != null) {
             setLayerVisibility(style, "road", roadNetworkVisible);
-            Log.d(TAG, "Road network layer applied: " + roadNetworkVisible + " (Style: " + currentMapStyle + ")");
+            Log.d(TAG, "Road network layer applied: " + roadNetworkVisible + " (Style: " + (satelliteMapVisible ? "satellite" : "street") + ")");
         } else {
             // Style not ready yet, retry after a short delay
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
@@ -3280,12 +3256,27 @@ public class MapViewActivity extends AppCompatActivity {
         Style style = mapboxMap != null ? mapboxMap.getStyle() : null;
         if (style != null) {
             setLayerVisibility(style, "waterway", waterwaysVisible);
-            Log.d(TAG, "Waterways layer applied: " + waterwaysVisible + " (Style: " + currentMapStyle + ")");
+            Log.d(TAG, "Waterways layer applied: " + waterwaysVisible + " (Style: " + (satelliteMapVisible ? "satellite" : "street") + ")");
         } else {
             // Style not ready yet, retry after a short delay
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 applyWaterwaysVisibility();
             }, 300);
+        }
+    }
+    
+    /**
+     * Toggle Satellite Map layer visibility
+     */
+    private void toggleSatelliteMap(boolean visible) {
+        try {
+            satelliteMapVisible = visible;
+            // Reload the map style based on satellite toggle
+            loadMapStyle();
+            // Update pins visibility based on all layers
+            updatePinsVisibilityBasedOnLayers();
+        } catch (Exception e) {
+            Log.e(TAG, "Error toggling satellite map: " + e.getMessage(), e);
         }
     }
     
