@@ -18,7 +18,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Map Settings"
+            android:text="Map Layers"
             android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="#333333" />
@@ -35,16 +35,6 @@
             android:contentDescription="Close" />
 
     </LinearLayout>
-
-    <!-- Map Layers Section -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Map Layers"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="#333333"
-        android:layout_marginBottom="16dp" />
 
     <!-- Barangay Boundaries -->
     <LinearLayout

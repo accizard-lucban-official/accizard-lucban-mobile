@@ -80,6 +80,9 @@ public class MapViewActivity extends AppCompatActivity {
     private static final String TAG = "MapViewActivity";
     private static final String HEATMAP_SOURCE_ID = "hazard-heatmap-source";
     private static final String HEATMAP_LAYER_ID = "hazard-heatmap-layer";
+    // Satellite base as raster overlay (keeps custom layers available)
+    private static final String SATELLITE_SOURCE_ID = "satellite-source";
+    private static final String SATELLITE_LAYER_ID = "satellite-layer";
     private static final List<String> HAZARD_FILTER_KEYS = Arrays.asList(
             "Road Accident",
             "Fire",
@@ -2906,25 +2909,17 @@ public class MapViewActivity extends AppCompatActivity {
     }
     
     /**
-     * Load the map style based on satellite layer toggle
+     * Load the base custom style and prepare optional satellite raster base layer
      */
     private void loadMapStyle() {
         try {
             if (mapboxMap == null) return;
             
-            // Determine style URI based on satellite layer toggle
-            String styleUri;
-            if (satelliteMapVisible) {
-                // Use Mapbox satellite style
-                styleUri = "mapbox://styles/mapbox/satellite-v9";
-            } else {
-                // Default to street style
-                styleUri = "mapbox://styles/accizard-lucban-official/cmhox8ita005o01sr1psmbgp6";
-            }
+            // Always load the custom style; overlay satellite imagery as a raster layer when enabled
+            String styleUri = "mapbox://styles/accizard-lucban-official/cmhox8ita005o01sr1psmbgp6";
             
             mapboxMap.loadStyleUri(styleUri, loadedStyle -> {
-                // Style loaded successfully
-                Log.d(TAG, "Map style loaded: " + (satelliteMapVisible ? "satellite" : "street"));
+                Log.d(TAG, "Map style loaded (custom street base). Satellite enabled: " + satelliteMapVisible);
                 
                 // Initialize camera animations plugin
                 if (cameraAnimationsPlugin == null) {
@@ -2945,6 +2940,10 @@ public class MapViewActivity extends AppCompatActivity {
                 // Initialize map layers
                 // This ensures: lucban-boundary is visible, all other layers are hidden
                 initializeMapLayers(loadedStyle);
+
+                // Ensure satellite raster base exists and apply current visibility
+                ensureSatelliteLayer(loadedStyle);
+                setSatelliteVisibility(loadedStyle, satelliteMapVisible);
                 
                 // Ensure lucban-boundary is always visible (safety check)
                 ensureLucbanBoundaryVisible();
@@ -3119,6 +3118,58 @@ public class MapViewActivity extends AppCompatActivity {
             Log.w(TAG, "Layer '" + layerId + "' visibility not set in style '" + (satelliteMapVisible ? "satellite" : "street") + "' (may not exist): " + e.getMessage());
         }
     }
+
+    /**
+     * Ensure a raster satellite base layer and source exist in the current style.
+     * Keeps custom vector layers (barangays, roads, waterways) available over satellite imagery.
+     */
+    private void ensureSatelliteLayer(Style style) {
+        if (style == null) return;
+        try {
+            // Add raster source if missing
+            try {
+                style.getStyleSourceProperty(SATELLITE_SOURCE_ID, "type");
+            } catch (Exception missingSource) {
+                java.util.HashMap<String, com.mapbox.bindgen.Value> source = new java.util.HashMap<>();
+                source.put("type", com.mapbox.bindgen.Value.valueOf("raster"));
+                source.put("url", com.mapbox.bindgen.Value.valueOf("mapbox://mapbox.satellite"));
+                // Use long for integers in Value
+                source.put("tileSize", com.mapbox.bindgen.Value.valueOf(256L));
+                style.addStyleSource(SATELLITE_SOURCE_ID, com.mapbox.bindgen.Value.valueOf(source));
+                Log.d(TAG, "Satellite raster source added");
+            }
+
+            // Add raster layer if missing (place it below our boundary/overlays)
+            if (!layerExists(style, SATELLITE_LAYER_ID)) {
+                java.util.HashMap<String, com.mapbox.bindgen.Value> layer = new java.util.HashMap<>();
+                layer.put("id", com.mapbox.bindgen.Value.valueOf(SATELLITE_LAYER_ID));
+                layer.put("type", com.mapbox.bindgen.Value.valueOf("raster"));
+                layer.put("source", com.mapbox.bindgen.Value.valueOf(SATELLITE_SOURCE_ID));
+                // Insert below a known overlay layer so overlays remain on top
+                com.mapbox.maps.LayerPosition position = new com.mapbox.maps.LayerPosition(
+                        null, /* above */
+                        "lucban-boundary", /* below */
+                        null /* index */
+                );
+                style.addStyleLayer(com.mapbox.bindgen.Value.valueOf(layer), position);
+                Log.d(TAG, "Satellite raster layer added");
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to ensure satellite layer: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Set satellite raster base visibility.
+     */
+    private void setSatelliteVisibility(Style style, boolean visible) {
+        if (style == null) return;
+        try {
+            setLayerVisibility(style, SATELLITE_LAYER_ID, visible);
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to set satellite visibility: " + e.getMessage());
+        }
+    }
     
     /**
      * Check if a layer exists in the current style
@@ -3271,8 +3322,12 @@ public class MapViewActivity extends AppCompatActivity {
     private void toggleSatelliteMap(boolean visible) {
         try {
             satelliteMapVisible = visible;
-            // Reload the map style based on satellite toggle
-            loadMapStyle();
+            // Toggle satellite raster base visibility without reloading the whole style
+            Style style = mapboxMap != null ? mapboxMap.getStyle() : null;
+            if (style != null) {
+                ensureSatelliteLayer(style);
+                setSatelliteVisibility(style, visible);
+            }
             // Update pins visibility based on all layers
             updatePinsVisibilityBasedOnLayers();
         } catch (Exception e) {
