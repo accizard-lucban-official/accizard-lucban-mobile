@@ -34,6 +34,10 @@
     <string name="civil_disturbance">⚠️ Civil Disturbance</string>
     <string name="armed_conflict">🔴 Armed Conflict</string>
     <string name="infectious_disease">🦠 Infectious Disease</string>
+    <string name="poor_infrastructure">🏗️ Poor Infrastructure</string>
+    <string name="obstructions">🚧 Obstructions</string>
+    <string name="electrical_hazard">⚡ Electrical Hazard</string>
+    <string name="environmental_hazard">🌿 Environmental Hazard</string>
     <string name="evacuation_centers">🏠 Evacuation Centers</string>
     <string name="health_facilities">🏥 Health Facilities</string>
     <string name="police_stations">👮 Police Stations</string>

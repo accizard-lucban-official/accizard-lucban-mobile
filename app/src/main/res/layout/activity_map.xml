@@ -280,6 +280,31 @@
                                 android:layout_marginStart="12dp" />
                         </LinearLayout>
 
+                        <!-- My Reports -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/reportCheck"
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:checked="false"
+                                android:button="@null"
+                                android:background="@drawable/checkbox_selector" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="📋 My Reports"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
                         <!-- Road Accident -->
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -530,7 +555,7 @@
                                 android:layout_marginStart="8dp" />
                         </LinearLayout>
 
-                        <!-- Report -->
+                        <!-- Poor Infrastructure -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -539,7 +564,7 @@
                             android:padding="8dp">
 
                             <CheckBox
-                                android:id="@+id/reportCheck"
+                                android:id="@+id/poorInfrastructureCheck"
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
                                 android:checked="false"
@@ -549,7 +574,107 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="📋 Report"
+                                android:text="🏗️ Poor Infrastructure"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Obstructions -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/obstructionsCheck"
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:checked="false"
+                                android:button="@null"
+                                android:background="@drawable/checkbox_selector" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🚧 Obstructions"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Electrical Hazard -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/electricalHazardCheck"
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:checked="false"
+                                android:button="@null"
+                                android:background="@drawable/checkbox_selector" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="⚡ Electrical Hazard"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Environmental Hazard -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/environmentalHazardCheck"
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:checked="false"
+                                android:button="@null"
+                                android:background="@drawable/checkbox_selector" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🌿 Environmental Hazard"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <!-- Animal Concerns -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <CheckBox
+                                android:id="@+id/animalConcernsCheck"
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:checked="false"
+                                android:button="@null"
+                                android:background="@drawable/checkbox_selector" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🐾 Animal Concerns"
                                 android:textSize="14sp"
                                 android:textColor="#333333"
                                 android:layout_marginStart="8dp" />

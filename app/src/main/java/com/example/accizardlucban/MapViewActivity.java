@@ -94,6 +94,11 @@ public class MapViewActivity extends AppCompatActivity {
             "Civil Disturbance",
             "Armed Conflict",
             "Infectious Disease",
+            "Poor Infrastructure",
+            "Obstructions",
+            "Electrical Hazard",
+            "Environmental Hazard",
+            "Animal Concerns",
             "Others"
     );
     private static final String PREFS_NAME = "AlertsActivityPrefs";
@@ -164,6 +169,7 @@ public class MapViewActivity extends AppCompatActivity {
     private CheckBox roadAccidentCheck, fireCheck, medicalEmergencyCheck, floodingCheck;
     private CheckBox volcanicActivityCheck, landslideCheck, earthquakeCheck, civilDisturbanceCheck;
     private CheckBox armedConflictCheck, infectiousDiseaseCheck;
+    private CheckBox poorInfrastructureCheck, obstructionsCheck, electricalHazardCheck, environmentalHazardCheck, animalConcernsCheck;
     private CheckBox evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck;
     private CheckBox fireStationsCheck, governmentOfficesCheck;
     private CheckBox othersIncidentCheck;
@@ -182,6 +188,7 @@ public class MapViewActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private List<MapMarker> pinnedMarkers = new ArrayList<>();
     private List<MapMarker> firestorePinMarkers = new ArrayList<>(); // Add this for Firestore pins
+    private List<MapMarker> userReportPinMarkers = new ArrayList<>(); // Pins from user's reports
     private FrameLayout mapContainer;
     private List<Point> pinnedLocations = new ArrayList<>();
     
@@ -326,6 +333,7 @@ public class MapViewActivity extends AppCompatActivity {
         
         // Load pins from Firestore
         loadPinsFromFirestore();
+        loadUserReportsAsPins();
     }
 
     private void initializeSearchPlaces() {
@@ -499,6 +507,11 @@ public class MapViewActivity extends AppCompatActivity {
         incidentFilters.put("Civil Disturbance", false);
         incidentFilters.put("Armed Conflict", false);
         incidentFilters.put("Infectious Disease", false);
+        incidentFilters.put("Poor Infrastructure", false);
+        incidentFilters.put("Obstructions", false);
+        incidentFilters.put("Electrical Hazard", false);
+        incidentFilters.put("Environmental Hazard", false);
+        incidentFilters.put("Animal Concerns", false);
         incidentFilters.put("Report", false);
         incidentFilters.put("Others", false);
 
@@ -545,6 +558,15 @@ public class MapViewActivity extends AppCompatActivity {
         // Initialize filter panel
         filterPanelOverlay = findViewById(R.id.filterPanelOverlay);
         filterPanel = findViewById(R.id.filterPanel);
+        
+        // Ensure filter panel is hidden by default
+        if (filterPanelOverlay != null) {
+            filterPanelOverlay.setVisibility(View.GONE);
+        }
+        if (filterPanel != null) {
+            filterPanel.setTranslationX(-320f); // Start off-screen
+        }
+        isFilterPanelVisible = false;
         mainMapContainer = findViewById(R.id.mainMapContainer);
         
         // Initialize filter panel UI elements
@@ -567,6 +589,11 @@ public class MapViewActivity extends AppCompatActivity {
         civilDisturbanceCheck = findViewById(R.id.civilDisturbanceCheck);
         armedConflictCheck = findViewById(R.id.armedConflictCheck);
         infectiousDiseaseCheck = findViewById(R.id.infectiousDiseaseCheck);
+        poorInfrastructureCheck = findViewById(R.id.poorInfrastructureCheck);
+        obstructionsCheck = findViewById(R.id.obstructionsCheck);
+        electricalHazardCheck = findViewById(R.id.electricalHazardCheck);
+        environmentalHazardCheck = findViewById(R.id.environmentalHazardCheck);
+        animalConcernsCheck = findViewById(R.id.animalConcernsCheck);
         othersIncidentCheck = findViewById(R.id.othersIncidentCheck);
         reportCheck = findViewById(R.id.reportCheck);
         evacuationCentersCheck = findViewById(R.id.evacuationCentersCheck);
@@ -585,6 +612,11 @@ public class MapViewActivity extends AppCompatActivity {
         registerIncidentCheckbox(civilDisturbanceCheck, "Civil Disturbance");
         registerIncidentCheckbox(armedConflictCheck, "Armed Conflict");
         registerIncidentCheckbox(infectiousDiseaseCheck, "Infectious Disease");
+        registerIncidentCheckbox(poorInfrastructureCheck, "Poor Infrastructure");
+        registerIncidentCheckbox(obstructionsCheck, "Obstructions");
+        registerIncidentCheckbox(electricalHazardCheck, "Electrical Hazard");
+        registerIncidentCheckbox(environmentalHazardCheck, "Environmental Hazard");
+        registerIncidentCheckbox(animalConcernsCheck, "Animal Concerns");
         registerIncidentCheckbox(othersIncidentCheck, "Others");
         registerIncidentCheckbox(reportCheck, "Report"); // Report is now part of single-selection group
 
@@ -775,6 +807,11 @@ public class MapViewActivity extends AppCompatActivity {
             setupIncidentCheckboxListener(civilDisturbanceCheck, "Civil Disturbance");
             setupIncidentCheckboxListener(armedConflictCheck, "Armed Conflict");
             setupIncidentCheckboxListener(infectiousDiseaseCheck, "Infectious Disease");
+            setupIncidentCheckboxListener(poorInfrastructureCheck, "Poor Infrastructure");
+            setupIncidentCheckboxListener(obstructionsCheck, "Obstructions");
+            setupIncidentCheckboxListener(electricalHazardCheck, "Electrical Hazard");
+            setupIncidentCheckboxListener(environmentalHazardCheck, "Environmental Hazard");
+            setupIncidentCheckboxListener(animalConcernsCheck, "Animal Concerns");
             setupIncidentCheckboxListener(othersIncidentCheck, "Others");
             // Report checkbox is now part of the single-selection group
             setupIncidentCheckboxListener(reportCheck, "Report");
@@ -2544,9 +2581,11 @@ public class MapViewActivity extends AppCompatActivity {
             
             int visiblePins = 0;
             int hiddenPins = 0;
-            int totalPins = firestorePinMarkers.size();
+            int totalPins = firestorePinMarkers.size() + userReportPinMarkers.size();
             boolean layersActive = hasAnyLayerActive();
+            boolean isMyReportsFilterActive = incidentFilters.getOrDefault("Report", false);
             
+            // Process regular Firestore pins
             for (MapMarker mapMarker : firestorePinMarkers) {
                 if (mapMarker.pinData != null) {
                     boolean previouslyVisible = mapMarker.markerView.getVisibility() == View.VISIBLE;
@@ -2573,29 +2612,95 @@ public class MapViewActivity extends AppCompatActivity {
                         continue;
                     }
 
+                    // Only update visibility if it changed to prevent glitching
                     if (shouldShow) {
                         if (!previouslyVisible) {
                             mapMarker.markerView.clearAnimation();
                             mapMarker.markerView.setAlpha(1f);
                             mapMarker.markerView.setVisibility(View.VISIBLE);
                             mapMarker.markerView.bringToFront();
+                            visiblePins++;
+                        } else {
+                            // Already visible, no need to update
+                            visiblePins++;
                         }
-                        visiblePins++;
                     } else {
                         if (previouslyVisible) {
                             mapMarker.markerView.clearAnimation();
                             mapMarker.markerView.setAlpha(1f);
+                            mapMarker.markerView.setVisibility(View.GONE);
+                            hiddenPins++;
+                        } else {
+                            // Already hidden, no need to update
+                            hiddenPins++;
                         }
-                        mapMarker.markerView.setVisibility(View.GONE);
-                        hiddenPins++;
+                    }
+                }
+            }
+            
+            // Process user report pins
+            for (MapMarker mapMarker : userReportPinMarkers) {
+                if (mapMarker.pinData != null) {
+                    boolean previouslyVisible = mapMarker.markerView.getVisibility() == View.VISIBLE;
+                    
+                    // When "My Reports" filter is active, show user report pins
+                    // Otherwise, hide them
+                    boolean shouldShow = isMyReportsFilterActive;
+                    
+                    if (shouldShow) {
+                        if (!previouslyVisible) {
+                            mapMarker.markerView.clearAnimation();
+                            mapMarker.markerView.setAlpha(1f);
+                            mapMarker.markerView.setVisibility(View.VISIBLE);
+                            mapMarker.markerView.bringToFront();
+                            visiblePins++;
+                        } else {
+                            visiblePins++;
+                        }
+                    } else {
+                        if (previouslyVisible) {
+                            mapMarker.markerView.clearAnimation();
+                            mapMarker.markerView.setAlpha(1f);
+                            mapMarker.markerView.setVisibility(View.GONE);
+                            hiddenPins++;
+                        } else {
+                            hiddenPins++;
+                        }
                     }
                 }
             }
             
             Log.d(TAG, "Filtered Firestore pins - Total: " + totalPins + ", Visible: " + visiblePins + ", Hidden: " + hiddenPins);
             
-            // Show toast with filter results only if requested
-            // Toast messages removed
+            // Show toast if no pins match the active filter
+            if (showToast && visiblePins == 0 && totalPins > 0 && !layersActive && !(heatmapEnabled && hasActiveHazardFilter())) {
+                // Get the active filter name(s)
+                String activeFilterName = getActiveFilterName();
+                if (activeFilterName != null && !activeFilterName.isEmpty()) {
+                    Toast.makeText(this, "No pins found for " + activeFilterName, Toast.LENGTH_SHORT).show();
+                } else {
+                    // Check if any filters are actually active
+                    boolean hasActiveFilters = false;
+                    for (Boolean enabled : incidentFilters.values()) {
+                        if (enabled) {
+                            hasActiveFilters = true;
+                            break;
+                        }
+                    }
+                    if (!hasActiveFilters) {
+                        for (Boolean enabled : facilityFilters.values()) {
+                            if (enabled) {
+                                hasActiveFilters = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (hasActiveFilters) {
+                        Toast.makeText(this, "No pins found for the selected filter", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+            
             if (!layersActive && heatmapEnabled && hasActiveHazardFilter()) {
                 updateHeatmapLayerData();
             } else if (layersActive) {
@@ -2607,6 +2712,27 @@ public class MapViewActivity extends AppCompatActivity {
         } finally {
             isApplyingFiltersOrLayers = false;
         }
+    }
+    
+    /**
+     * Get the name of the currently active filter
+     */
+    private String getActiveFilterName() {
+        // Check incident filters
+        for (String filterName : incidentFilters.keySet()) {
+            if (incidentFilters.getOrDefault(filterName, false)) {
+                return filterName;
+            }
+        }
+        
+        // Check facility filters
+        for (String filterName : facilityFilters.keySet()) {
+            if (facilityFilters.getOrDefault(filterName, false)) {
+                return filterName;
+            }
+        }
+        
+        return null;
     }
     
     /**
@@ -3504,6 +3630,33 @@ public class MapViewActivity extends AppCompatActivity {
 
             // Facility filter states are already loaded above with single-selection enforcement
             
+            // Collapse all sections by default - user must expand them manually
+            LinearLayout incidentTypesContent = findViewById(R.id.incidentTypesContent);
+            ImageView incidentTypesArrow = findViewById(R.id.incidentTypesArrow);
+            if (incidentTypesContent != null && incidentTypesArrow != null) {
+                incidentTypesContent.setVisibility(View.GONE);
+                isIncidentTypesExpanded = false;
+                incidentTypesArrow.setRotation(0f);
+            }
+            
+            // Collapse Timeline section
+            LinearLayout timelineContent = findViewById(R.id.timelineContent);
+            ImageView timelineArrow = findViewById(R.id.timelineArrow);
+            if (timelineContent != null && timelineArrow != null) {
+                timelineContent.setVisibility(View.GONE);
+                isTimelineExpanded = false;
+                timelineArrow.setRotation(0f);
+            }
+            
+            // Collapse Emergency Support section
+            LinearLayout emergencySupportContent = findViewById(R.id.emergencySupportContent);
+            ImageView emergencySupportArrow = findViewById(R.id.emergencySupportArrow);
+            if (emergencySupportContent != null && emergencySupportArrow != null) {
+                emergencySupportContent.setVisibility(View.GONE);
+                isEmergencySupportExpanded = false;
+                emergencySupportArrow.setRotation(0f);
+            }
+            
             // Setup filter panel click listeners
             setupFilterPanelClickListeners();
             
@@ -3793,6 +3946,11 @@ public class MapViewActivity extends AppCompatActivity {
             incidentFilters.put("Civil Disturbance", false);
             incidentFilters.put("Armed Conflict", false);
             incidentFilters.put("Infectious Disease", false);
+            incidentFilters.put("Poor Infrastructure", false);
+            incidentFilters.put("Obstructions", false);
+            incidentFilters.put("Electrical Hazard", false);
+            incidentFilters.put("Environmental Hazard", false);
+            incidentFilters.put("Animal Concerns", false);
             incidentFilters.put("Others", false);
 
             // Reset all facility filters to false (unchecked)
@@ -3902,6 +4060,165 @@ public class MapViewActivity extends AppCompatActivity {
     }
     
     /**
+     * Load user's reports from Firestore "reports" collection and display them as pins
+     */
+    private void loadUserReportsAsPins() {
+        try {
+            FirebaseUser currentUser = mAuth != null ? mAuth.getCurrentUser() : null;
+            if (currentUser == null) {
+                Log.d(TAG, "No user logged in, skipping user reports load");
+                return;
+            }
+
+            if (db == null) {
+                Log.e(TAG, "Firestore not initialized");
+                return;
+            }
+
+            Log.d(TAG, "Loading user reports from Firestore for user: " + currentUser.getUid());
+
+            // Clear existing user report pins
+            clearUserReportPins();
+
+            // Query user's reports from "reports" collection
+            db.collection("reports")
+                .whereEqualTo("userId", currentUser.getUid())
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    try {
+                        int reportCount = 0;
+                        for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                            try {
+                                // Get report data
+                                String reportId = document.getId();
+                                String reportType = document.getString("reportType");
+                                if (reportType == null || reportType.isEmpty()) {
+                                    // Fallback to category if reportType is not available
+                                    reportType = document.getString("category");
+                                }
+                                
+                                Double latitude = document.getDouble("latitude");
+                                Double longitude = document.getDouble("longitude");
+                                String locationName = document.getString("locationName");
+                                if (locationName == null || locationName.isEmpty()) {
+                                    locationName = document.getString("location");
+                                }
+
+                                // Only create pin if coordinates are available
+                                if (latitude != null && longitude != null && 
+                                    latitude != 0.0 && longitude != 0.0) {
+                                    
+                                    // Create Pin object from report
+                                    Pin pin = new Pin();
+                                    pin.setId("report_" + reportId); // Prefix to distinguish from regular pins
+                                    pin.setType(reportType); // Use reportType for icon selection
+                                    pin.setCategory(reportType); // Also set category as fallback
+                                    pin.setLocationName(locationName != null ? locationName : "Location not specified");
+                                    pin.setLatitude(latitude);
+                                    pin.setLongitude(longitude);
+                                    pin.setCreatedBy(currentUser.getUid());
+                                    pin.setReportId(reportId);
+                                    
+                                    // Get timestamp
+                                    com.google.firebase.Timestamp timestamp = document.getTimestamp("timestamp");
+                                    if (timestamp != null) {
+                                        pin.setCreatedAt(timestamp.toDate());
+                                    }
+                                    
+                                    // Create point from coordinates
+                                    Point pinPoint = Point.fromLngLat(longitude, latitude);
+                                    
+                                    // Add pin to map (but keep it hidden initially - will be shown when filter is active)
+                                    addUserReportPinToMap(pin, pinPoint);
+                                    reportCount++;
+                                    
+                                    Log.d(TAG, "Added user report pin: " + reportType + " at " + latitude + ", " + longitude);
+                                } else {
+                                    Log.w(TAG, "Report " + reportId + " has invalid coordinates, skipping");
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error processing report document: " + document.getId(), e);
+                            }
+                        }
+                        
+                        Log.d(TAG, "Successfully loaded " + reportCount + " user reports as pins");
+                        
+                        // Apply filters to update visibility
+                        runOnUiThread(() -> {
+                            applyFiltersToFirestorePins(false); // Don't show toast during initial load
+                        });
+                        
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error processing user reports", e);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading user reports from Firestore", e);
+                });
+                
+        } catch (Exception e) {
+            Log.e(TAG, "Error in loadUserReportsAsPins: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Add user report pin to map
+     */
+    private void addUserReportPinToMap(Pin pin, Point point) {
+        if (mapContainer == null || pin == null) {
+            return;
+        }
+        
+        try {
+            ensurePinDimensions();
+            
+            ImageView markerView = new ImageView(this);
+            int drawableResource = getDrawableForPin(pin); // Use reportType for icon
+            markerView.setImageResource(drawableResource);
+            
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(pinWidthPx, pinHeightPx);
+            markerView.setLayoutParams(params);
+            
+            // Initially hide the pin - it will be shown when "My Reports" filter is active
+            markerView.setVisibility(View.GONE);
+            
+            mapContainer.addView(markerView);
+            
+            MapMarker mapMarker = new MapMarker(markerView, point, pin.getDisplayTitle(), pin, "report_" + pin.getReportId());
+            userReportPinMarkers.add(mapMarker);
+            
+            // Position the pin using the correct method
+            positionFirestorePinAtCoordinates(mapMarker, point);
+            
+            // Start camera tracking if not already active (tracking is global for all pins)
+            if (!isFirestorePinTrackingActive) {
+                startFirestorePinCameraTracking();
+                Log.d(TAG, "Started camera tracking for user report pins");
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error adding user report pin to map", e);
+        }
+    }
+    
+    /**
+     * Clear all user report pins from map
+     */
+    private void clearUserReportPins() {
+        try {
+            for (MapMarker marker : userReportPinMarkers) {
+                if (marker.markerView != null && marker.markerView.getParent() != null) {
+                    ((android.view.ViewGroup) marker.markerView.getParent()).removeView(marker.markerView);
+                }
+            }
+            userReportPinMarkers.clear();
+            Log.d(TAG, "Cleared all user report pins");
+        } catch (Exception e) {
+            Log.e(TAG, "Error clearing user report pins", e);
+        }
+    }
+    
+    /**
      * Parse Pin object from Firestore document - Updated for your structure
      */
     private Pin parsePinFromDocument(QueryDocumentSnapshot document) {
@@ -3911,6 +4228,7 @@ public class MapViewActivity extends AppCompatActivity {
             
             // Get fields from your actual Firestore structure
             pin.setCategory(document.getString("category"));
+            pin.setType(document.getString("type")); // Read type field from Firestore
             pin.setCreatedBy(document.getString("createdBy"));
             pin.setCreatedByName(document.getString("createdByName"));
             pin.setLocationName(document.getString("locationName"));
@@ -3972,7 +4290,7 @@ public class MapViewActivity extends AppCompatActivity {
             
             ensurePinDimensions();
             ImageView markerView = new ImageView(this);
-            int drawableResource = getDrawableForPinCategory(pin.getCategory());
+            int drawableResource = getDrawableForPin(pin); // Use new method that checks both type and category
             markerView.setImageResource(drawableResource);
             FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(pinWidthPx, pinHeightPx);
             markerView.setLayoutParams(layoutParams);
@@ -4083,6 +4401,120 @@ public class MapViewActivity extends AppCompatActivity {
     }
     
     /**
+     * Get custom drawable resource for pin based on type (priority) or category (fallback)
+     * Uses the "type" field from Firestore if available, otherwise falls back to "category"
+     */
+    private int getDrawableForPin(Pin pin) {
+        if (pin == null) {
+            return R.drawable.ic_location;
+        }
+        
+        // PRIORITY: Check type field from Firestore
+        String pinType = pin.getType();
+        if (pinType != null && !pinType.trim().isEmpty()) {
+            int typeDrawable = getDrawableForPinType(pinType);
+            if (typeDrawable != R.drawable.ic_location) {
+                return typeDrawable; // Found match in type field
+            }
+        }
+        
+        // FALLBACK: Use category field
+        String category = pin.getCategory();
+        if (category != null && !category.trim().isEmpty()) {
+            return getDrawableForPinCategory(category);
+        }
+        
+        return R.drawable.ic_location; // Default pin
+    }
+    
+    /**
+     * Get drawable resource for pin type from Firestore
+     */
+    private int getDrawableForPinType(String type) {
+        if (type == null || type.trim().isEmpty()) {
+            return R.drawable.ic_location;
+        }
+        
+        String typeLower = type.toLowerCase().trim();
+        
+        // Map type values to drawable resources
+        // "Road Crash" from Firestore uses road_crash drawable
+        if (typeLower.contains("road crash") || typeLower.contains("road accident") || 
+            typeLower.contains("accident") || typeLower.contains("traffic")) {
+            return R.drawable.road_crash;
+        }
+        if (typeLower.contains("fire") && !typeLower.contains("station")) {
+            return R.drawable.fire;
+        }
+        if (typeLower.contains("medical emergency") || (typeLower.contains("medical") && typeLower.contains("emergency"))) {
+            return R.drawable.medical_emergency__1_;
+        }
+        if (typeLower.contains("flooding") || typeLower.contains("flood")) {
+            return R.drawable.flooding;
+        }
+        if (typeLower.contains("volcanic activity") || typeLower.contains("volcanic") || typeLower.contains("volcano")) {
+            return R.drawable.volcano;
+        }
+        if (typeLower.contains("landslide")) {
+            return R.drawable.landslide;
+        }
+        if (typeLower.contains("earthquake")) {
+            return R.drawable.earthquake;
+        }
+        if (typeLower.contains("civil disturbance") || typeLower.contains("civil")) {
+            return R.drawable.civil_disturbance__1_;
+        }
+        if (typeLower.contains("armed conflict") || typeLower.contains("armed")) {
+            return R.drawable.armed_conflict__1_;
+        }
+        if (typeLower.contains("infectious disease") || typeLower.contains("infectious")) {
+            return R.drawable.infectious_disease;
+        }
+        if (typeLower.contains("poor infrastructure") || typeLower.contains("infrastructure")) {
+            return R.drawable.poor_infrastructure;
+        }
+        if (typeLower.contains("obstruction") || typeLower.contains("obstacle")) {
+            return R.drawable.obstruction;
+        }
+        if (typeLower.contains("electrical hazard") || (typeLower.contains("electrical") && typeLower.contains("hazard"))) {
+            return R.drawable.electrical_hazard;
+        }
+        if (typeLower.contains("environmental hazard") || (typeLower.contains("environmental") && typeLower.contains("hazard"))) {
+            return R.drawable.environmental_hazard;
+        }
+        if (typeLower.contains("animal concerns") || typeLower.contains("animal concern") || 
+            (typeLower.contains("animal") && typeLower.contains("concern"))) {
+            return R.drawable.animal_concern;
+        }
+        if (typeLower.contains("others") || typeLower.contains("other")) {
+            return R.drawable.accizard_pin; // Use same pin as current location marker
+        }
+        
+        // Facility types
+        if (typeLower.contains("government office") || typeLower.contains("government offices") || 
+            typeLower.contains("gobyerno") || (typeLower.contains("government") && typeLower.contains("office"))) {
+            return R.drawable.government_office;
+        }
+        if (typeLower.contains("evacuation center") || typeLower.contains("evacuation")) {
+            return R.drawable.evacuation_center;
+        }
+        if (typeLower.contains("health facility") || typeLower.contains("health") || 
+            typeLower.contains("hospital") || typeLower.contains("clinic")) {
+            return R.drawable.health_facility__1_;
+        }
+        if (typeLower.contains("police station") || typeLower.contains("police") || 
+            typeLower.contains("pulisya")) {
+            return R.drawable.police_station__1_;
+        }
+        if (typeLower.contains("fire station") || typeLower.contains("bumbero") || 
+            (typeLower.contains("fire") && typeLower.contains("station"))) {
+            return R.drawable.fire_station;
+        }
+        
+        return R.drawable.ic_location; // Default if no match
+    }
+    
+    /**
      * Get custom drawable resource for pin category based on your SVG files
      */
     private int getDrawableForPinCategory(String category) {
@@ -4106,7 +4538,7 @@ public class MapViewActivity extends AppCompatActivity {
             case "medical emergency":
             case "medical":
             case "hospital":
-                return R.drawable.medical_emergency;
+                return R.drawable.medical_emergency__1_;
             case "earthquake":
             case "lindol":
                 return R.drawable.earthquake;
@@ -4118,16 +4550,32 @@ public class MapViewActivity extends AppCompatActivity {
                 return R.drawable.volcano;
             case "civil disturbance":
             case "kaguluhan":
-                return R.drawable.civil_disturbance;
+                return R.drawable.civil_disturbance__1_;
             case "armed conflict":
             case "barilan":
-                return R.drawable.armed_conflict;
+                return R.drawable.armed_conflict__1_;
             case "infectious disease":
             case "sakit":
                 return R.drawable.infectious_disease;
+            case "poor infrastructure":
+            case "infrastructure":
+                return R.drawable.poor_infrastructure;
+            case "obstruction":
+            case "obstructions":
+            case "obstacle":
+                return R.drawable.obstruction;
+            case "electrical hazard":
+            case "electrical":
+                return R.drawable.electrical_hazard;
+            case "environmental hazard":
+            case "environmental":
+                return R.drawable.environmental_hazard;
+            case "animal concerns":
+            case "animal concern":
+                return R.drawable.animal_concern;
             case "police station":
             case "pulisya":
-                return R.drawable.police_station;
+                return R.drawable.police_station__1_;
             case "fire station":
             case "bumbero":
                 return R.drawable.fire_station;
@@ -4135,17 +4583,21 @@ public class MapViewActivity extends AppCompatActivity {
             case "evacuation":
                 return R.drawable.evacuation_center;
             case "government office":
+            case "government offices":
             case "gobyerno":
                 return R.drawable.government_office;
             case "health facility":
             case "health":
-                return R.drawable.health_facility;
+                return R.drawable.health_facility__1_;
             case "emergency":
             case "emergency response":
-                return R.drawable.medical_emergency;
+                return R.drawable.medical_emergency__1_;
             case "report":
             case "reports":
                 return R.drawable.accizard_pin; // Report pins use accizard_pin drawable
+            case "others":
+            case "other":
+                return R.drawable.accizard_pin; // Others use same pin as current location marker
             default:
                 return R.drawable.ic_location; // Default pin (using existing icon)
         }
@@ -4155,6 +4607,8 @@ public class MapViewActivity extends AppCompatActivity {
      * Check if a pin should be visible based on current filter settings
      * 
      * Behavior:
+     * - "My Reports" filter: When active, shows only pins created by the current user
+     *   (pins display with their appropriate icons based on their type: Fire, Medical Emergency, etc.)
      * - Pins are visible when their corresponding filter is ENABLED (checked)
      * - If NO filters are checked, ALL pins are hidden
      * - When BOTH an Incident Type AND an Emergency Support Facility are checked, 
@@ -4163,11 +4617,200 @@ public class MapViewActivity extends AppCompatActivity {
      * - Incident pins are checked against incident filters only
      */
     private boolean shouldShowPinBasedOnFilters(Pin pin) {
-        if (pin == null || pin.getCategory() == null) {
-            return false; // Hide pins with no category
+        if (pin == null) {
+            return false; // Hide pins with no data
         }
         
+        // Check if "My Reports" filter is active
+        boolean isMyReportsFilterActive = incidentFilters.getOrDefault("Report", false);
+        if (isMyReportsFilterActive) {
+            // When "My Reports" is active, only show pins from user reports
+            // User report pins have IDs starting with "report_"
+            if (pin.getId() != null && pin.getId().startsWith("report_")) {
+                // This is a user report pin - show it
+                return true;
+            } else {
+                // This is a regular pin - hide it when "My Reports" is active
+                return false;
+            }
+        } else {
+            // When "My Reports" is NOT active, hide user report pins
+            if (pin.getId() != null && pin.getId().startsWith("report_")) {
+                return false;
+            }
+        }
+        
+        // Check if ANY filters are active
+        boolean hasActiveIncidentFilters = false;
+        for (Boolean enabled : incidentFilters.values()) {
+            if (enabled) {
+                hasActiveIncidentFilters = true;
+                break;
+            }
+        }
+        
+        boolean hasActiveFacilityFilters = false;
+        for (Boolean enabled : facilityFilters.values()) {
+            if (enabled) {
+                hasActiveFacilityFilters = true;
+                break;
+            }
+        }
+        
+        // If NO filters are checked, hide ALL pins (show only Lucban boundary)
+        if (!hasActiveIncidentFilters && !hasActiveFacilityFilters) {
+            return false; // Hide all pins when no filters are active - show only boundary
+        }
+        
+        // PRIORITY: Use "type" field from Firestore for filtering
+        // The "type" field from web app should match filter names exactly
+        String pinType = pin.getType();
+        if (pinType != null && !pinType.trim().isEmpty()) {
+            String typeTrimmed = pinType.trim();
+            String typeLower = typeTrimmed.toLowerCase();
+            
+            // First, check if this is clearly a facility type (before checking incidents)
+            // This prevents facility types from being misidentified as incidents
+            // Must be specific to avoid false matches
+            boolean isFacilityType = false;
+            if (typeLower.contains("government office") || typeLower.contains("government offices") || 
+                typeLower.contains("gobyerno") || (typeLower.contains("government") && typeLower.contains("office")) ||
+                typeLower.contains("evacuation center") || typeLower.contains("evacuation centers") ||
+                (typeLower.contains("health facility") || typeLower.contains("health facilities")) ||
+                typeLower.contains("police station") || typeLower.contains("police stations") ||
+                typeLower.contains("fire station") || typeLower.contains("fire stations") ||
+                typeLower.contains("bumbero") || typeLower.contains("pulisya") ||
+                typeLower.contains("hospital") || typeLower.contains("clinic")) {
+                // Make sure it's not an incident type that mentions these words
+                if (!typeLower.contains("medical emergency") && !typeLower.contains("health emergency") &&
+                    !typeLower.contains("evacuation order") && !typeLower.contains("evacuation warning")) {
+                    isFacilityType = true;
+                }
+            }
+            
+            // Check if this type matches any Incident Type filter
+            // Only check if it's NOT a facility type
+            if (hasActiveIncidentFilters && !isFacilityType) {
+                // Map type to Incident Type filter names
+                // "Road Crash" from Firestore matches "Road Accident" filter
+                if (typeLower.contains("road crash") || typeLower.contains("road accident") || 
+                    typeLower.contains("accident") || typeLower.contains("traffic")) {
+                    return incidentFilters.getOrDefault("Road Accident", false);
+                }
+                if (typeLower.contains("fire") && !typeLower.contains("station")) {
+                    return incidentFilters.getOrDefault("Fire", false);
+                }
+                if (typeLower.contains("medical emergency") || (typeLower.contains("medical") && typeLower.contains("emergency"))) {
+                    return incidentFilters.getOrDefault("Medical Emergency", false);
+                }
+                if (typeLower.contains("flooding") || typeLower.contains("flood")) {
+                    return incidentFilters.getOrDefault("Flooding", false);
+                }
+                if (typeLower.contains("volcanic activity") || typeLower.contains("volcanic") || typeLower.contains("volcano")) {
+                    return incidentFilters.getOrDefault("Volcanic Activity", false);
+                }
+                if (typeLower.contains("landslide")) {
+                    return incidentFilters.getOrDefault("Landslide", false);
+                }
+                if (typeLower.contains("earthquake")) {
+                    return incidentFilters.getOrDefault("Earthquake", false);
+                }
+                if (typeLower.contains("civil disturbance") || typeLower.contains("civil")) {
+                    return incidentFilters.getOrDefault("Civil Disturbance", false);
+                }
+                if (typeLower.contains("armed conflict") || typeLower.contains("armed")) {
+                    return incidentFilters.getOrDefault("Armed Conflict", false);
+                }
+                if (typeLower.contains("infectious disease") || typeLower.contains("infectious")) {
+                    return incidentFilters.getOrDefault("Infectious Disease", false);
+                }
+                if (typeLower.contains("poor infrastructure") || typeLower.contains("infrastructure")) {
+                    return incidentFilters.getOrDefault("Poor Infrastructure", false);
+                }
+                if (typeLower.contains("obstruction") || typeLower.contains("obstacle")) {
+                    return incidentFilters.getOrDefault("Obstructions", false);
+                }
+                if (typeLower.contains("electrical hazard") || (typeLower.contains("electrical") && typeLower.contains("hazard"))) {
+                    return incidentFilters.getOrDefault("Electrical Hazard", false);
+                }
+                if (typeLower.contains("environmental hazard") || (typeLower.contains("environmental") && typeLower.contains("hazard"))) {
+                    return incidentFilters.getOrDefault("Environmental Hazard", false);
+                }
+                if (typeLower.contains("animal concerns") || typeLower.contains("animal concern") || 
+                    (typeLower.contains("animal") && typeLower.contains("concern"))) {
+                    return incidentFilters.getOrDefault("Animal Concerns", false);
+                }
+                
+                // Try exact match with filter names (case-insensitive)
+                for (String filterName : incidentFilters.keySet()) {
+                    if (typeTrimmed.equalsIgnoreCase(filterName)) {
+                        return incidentFilters.getOrDefault(filterName, false);
+                    }
+                }
+                
+                // If type doesn't match any incident filter and incident filters are active, hide it
+                return false;
+            }
+            
+            // Check if type matches any Facility Type filter
+            // Only check if it's identified as a facility type
+            if (hasActiveFacilityFilters && isFacilityType) {
+                // Check Government Offices
+                if (typeLower.contains("government office") || typeLower.contains("government offices") || 
+                    typeLower.contains("gobyerno") || (typeLower.contains("government") && typeLower.contains("office"))) {
+                    return facilityFilters.getOrDefault("Government Offices", false);
+                }
+                
+                // Check Evacuation Centers (must be specific)
+                if (typeLower.contains("evacuation center") || typeLower.contains("evacuation centers")) {
+                    return facilityFilters.getOrDefault("Evacuation Centers", false);
+                }
+                
+                // Check Health Facilities (must be specific - "health facility" not just "health")
+                if (typeLower.contains("health facility") || typeLower.contains("health facilities") ||
+                    typeLower.contains("hospital") || typeLower.contains("clinic")) {
+                    return facilityFilters.getOrDefault("Health Facilities", false);
+                }
+                
+                // Check Police Stations (must be specific)
+                if (typeLower.contains("police station") || typeLower.contains("police stations") || 
+                    typeLower.contains("pulisya")) {
+                    return facilityFilters.getOrDefault("Police Stations", false);
+                }
+                
+                // Check Fire Stations (must be specific)
+                if (typeLower.contains("fire station") || typeLower.contains("fire stations") || 
+                    typeLower.contains("bumbero") || (typeLower.contains("fire") && typeLower.contains("station"))) {
+                    return facilityFilters.getOrDefault("Fire Stations", false);
+                }
+                
+                // Try exact match with facility filter names (case-insensitive)
+                for (String filterName : facilityFilters.keySet()) {
+                    if (typeTrimmed.equalsIgnoreCase(filterName)) {
+                        return facilityFilters.getOrDefault(filterName, false);
+                    }
+                }
+            }
+            
+            // If type is a facility type but didn't match any facility filter, hide it
+            if (isFacilityType && hasActiveFacilityFilters) {
+                // Facility type but no matching filter - hide it
+                return false;
+            }
+            
+            // If type is not a facility type and didn't match any incident filter, hide it
+            if (!isFacilityType && hasActiveIncidentFilters) {
+                // Not a facility type and no matching incident filter - hide it
+                return false;
+            }
+        }
+        
+        // FALLBACK: Use category field if type is not available
         String category = pin.getCategory();
+        if (category == null || category.trim().isEmpty()) {
+            return false; // Hide pins with no category or type
+        }
+        
         String categoryLower = category.toLowerCase().trim();
         
         // First, determine if this is a facility pin or an incident pin
@@ -4175,19 +4818,29 @@ public class MapViewActivity extends AppCompatActivity {
         
         if (isFacility) {
             // This is a facility pin - check facility filters
-            // Check Evacuation Centers
-            if (categoryLower.contains("evacuation") || categoryLower.equals("evacuation center") || 
-                categoryLower.equals("evacuation centers")) {
+            // Only filter if facility filters are active
+            if (!hasActiveFacilityFilters) {
+                return false; // Hide all facility pins when no facility filters are active
+            }
+            
+            // Check Evacuation Centers (must be exact match or specific phrase)
+            if (categoryLower.equals("evacuation center") || categoryLower.equals("evacuation centers") ||
+                categoryLower.equals("evacuation")) {
                 boolean filterEnabled = facilityFilters.getOrDefault("Evacuation Centers", false);
                 Log.d(TAG, "Evacuation Centers pin - Category: " + category + ", Filter enabled: " + filterEnabled);
                 return filterEnabled;
             }
             
-            // Check Health Facilities
-            if (categoryLower.contains("health") && (categoryLower.contains("facility") || categoryLower.contains("facilities"))) {
-                boolean filterEnabled = facilityFilters.getOrDefault("Health Facilities", false);
-                Log.d(TAG, "Health Facilities pin - Category: " + category + ", Filter enabled: " + filterEnabled);
-                return filterEnabled;
+            // Check Health Facilities (must be exact match or specific phrase)
+            if (categoryLower.equals("health facility") || categoryLower.equals("health facilities") ||
+                categoryLower.equals("health") || categoryLower.contains("hospital") || categoryLower.contains("clinic")) {
+                // Make sure it's not an incident type
+                if (!categoryLower.contains("emergency") && !categoryLower.contains("medical emergency") &&
+                    !categoryLower.contains("disease") && !categoryLower.contains("infectious")) {
+                    boolean filterEnabled = facilityFilters.getOrDefault("Health Facilities", false);
+                    Log.d(TAG, "Health Facilities pin - Category: " + category + ", Filter enabled: " + filterEnabled);
+                    return filterEnabled;
+                }
             }
             
             // Check Police Stations
@@ -4210,6 +4863,11 @@ public class MapViewActivity extends AppCompatActivity {
             return false;
         } else {
             // This is an incident pin - check incident filters
+            // Only filter if incident filters are active
+            if (!hasActiveIncidentFilters) {
+                return false; // Hide all incident pins when no incident filters are active
+            }
+            
             if (categoryLower.contains("accident") || categoryLower.contains("traffic")) {
                 return incidentFilters.getOrDefault("Road Accident", false);
             }
@@ -4243,6 +4901,22 @@ public class MapViewActivity extends AppCompatActivity {
             }
             if (categoryLower.contains("infectious") || categoryLower.contains("sakit")) {
                 return incidentFilters.getOrDefault("Infectious Disease", false);
+            }
+            if (categoryLower.contains("poor infrastructure") || categoryLower.contains("infrastructure")) {
+                return incidentFilters.getOrDefault("Poor Infrastructure", false);
+            }
+            if (categoryLower.contains("obstruction") || categoryLower.contains("obstacle")) {
+                return incidentFilters.getOrDefault("Obstructions", false);
+            }
+            if (categoryLower.contains("electrical") && categoryLower.contains("hazard")) {
+                return incidentFilters.getOrDefault("Electrical Hazard", false);
+            }
+            if (categoryLower.contains("environmental") && categoryLower.contains("hazard")) {
+                return incidentFilters.getOrDefault("Environmental Hazard", false);
+            }
+            if (categoryLower.contains("animal concerns") || categoryLower.contains("animal concern") || 
+                (categoryLower.contains("animal") && categoryLower.contains("concern"))) {
+                return incidentFilters.getOrDefault("Animal Concerns", false);
             }
             if (categoryLower.contains("report")) {
                 return incidentFilters.getOrDefault("Report", false);
@@ -4283,9 +4957,9 @@ public class MapViewActivity extends AppCompatActivity {
             TextView pinTitle = dialog.findViewById(R.id.pinTitle);
             TextView pinDescription = dialog.findViewById(R.id.pinDescription);
             
-            // Set pin icon based on category
+            // Set pin icon based on type or category
             if (pinIcon != null) {
-                int iconResource = getDrawableForPinCategory(pin.getCategory());
+                int iconResource = getDrawableForPin(pin); // Use new method that checks both type and category
                 pinIcon.setImageResource(iconResource);
                 // Remove color filter since we're using custom SVG icons
                 pinIcon.setColorFilter(null);
@@ -4316,7 +4990,15 @@ public class MapViewActivity extends AppCompatActivity {
                 description.append("- Location: ").append(fullAddress);
             } else {
                 description.append("Report Details:\n");
-                String type = formatCategoryLabel(pin.getCategory());
+                // PRIORITY: Use "type" field from Firestore, fallback to "category"
+                String type = null;
+                if (pin.getType() != null && !pin.getType().trim().isEmpty()) {
+                    type = pin.getType().trim();
+                } else if (pin.getCategory() != null && !pin.getCategory().trim().isEmpty()) {
+                    type = formatCategoryLabel(pin.getCategory());
+                } else {
+                    type = "Not available";
+                }
                 description.append("- Type: ").append(type).append("\n");
                 description.append("- Location: ").append(fullAddress).append("\n");
 
@@ -4383,8 +5065,20 @@ public class MapViewActivity extends AppCompatActivity {
                                 }
                             }
                         }
-                        updateCount++;
                     }
+                    
+                    // Update all user report pin positions if they exist
+                    if (!userReportPinMarkers.isEmpty()) {
+                        for (MapMarker marker : userReportPinMarkers) {
+                            if (marker.markerView != null && marker.location != null) {
+                                // CRITICAL: marker.location Point object is IMMUTABLE and NEVER changes!
+                                // We're converting the SAME fixed coordinates to current screen position
+                                positionFirestorePinAtCoordinates(marker, marker.location);
+                            }
+                        }
+                    }
+                    
+                    updateCount++;
                     
                     // Schedule next update
                     if (firestorePinCameraHandler != null) {
@@ -4535,12 +5229,22 @@ public class MapViewActivity extends AppCompatActivity {
                  return true;
         }
         
-        // Check if category contains facility keywords (more flexible matching)
-        if (normalized.contains("evacuation")) {
+        // Check if category contains facility keywords (must be specific to avoid false matches)
+        // Only match "evacuation center" or "evacuation centers", not just "evacuation"
+        if (normalized.contains("evacuation center") || normalized.contains("evacuation centers")) {
             return true;
         }
-        if (normalized.contains("health") && (normalized.contains("facility") || normalized.contains("facilities"))) {
+        // Only match "health facility" or "health facilities", not just "health"
+        if ((normalized.contains("health facility") || normalized.contains("health facilities")) &&
+            !normalized.contains("emergency") && !normalized.contains("medical emergency") &&
+            !normalized.contains("disease") && !normalized.contains("infectious")) {
             return true;
+        }
+        // Also match hospital or clinic
+        if (normalized.contains("hospital") || normalized.contains("clinic")) {
+            if (!normalized.contains("emergency") && !normalized.contains("medical emergency")) {
+                return true;
+            }
         }
         if (normalized.contains("police") && normalized.contains("station")) {
             return true;

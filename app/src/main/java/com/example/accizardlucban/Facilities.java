@@ -40,6 +40,7 @@ public class Facilities extends AppCompatActivity {
     private CheckBox roadAccidentCheck, fireCheck, medicalEmergencyCheck, floodingCheck;
     private CheckBox volcanicActivityCheck, landslideCheck, earthquakeCheck, civilDisturbanceCheck;
     private CheckBox armedConflictCheck, infectiousDiseaseCheck;
+    private CheckBox poorInfrastructureCheck, obstructionsCheck, electricalHazardCheck, environmentalHazardCheck;
     private final List<CheckBox> incidentCheckboxes = new ArrayList<>();
     private boolean isUpdatingIncidentChecks = false;
     private CheckBox evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck;
@@ -107,6 +108,24 @@ public class Facilities extends AppCompatActivity {
         civilDisturbanceCheck = findViewById(R.id.civilDisturbanceCheck);
         armedConflictCheck = findViewById(R.id.armedConflictCheck);
         infectiousDiseaseCheck = findViewById(R.id.infectiousDiseaseCheck);
+        poorInfrastructureCheck = findViewById(R.id.poorInfrastructureCheck);
+        obstructionsCheck = findViewById(R.id.obstructionsCheck);
+        electricalHazardCheck = findViewById(R.id.electricalHazardCheck);
+        environmentalHazardCheck = findViewById(R.id.environmentalHazardCheck);
+
+        // Verify new checkboxes are found
+        if (poorInfrastructureCheck == null) {
+            android.util.Log.e("Facilities", "poorInfrastructureCheck is NULL!");
+        }
+        if (obstructionsCheck == null) {
+            android.util.Log.e("Facilities", "obstructionsCheck is NULL!");
+        }
+        if (electricalHazardCheck == null) {
+            android.util.Log.e("Facilities", "electricalHazardCheck is NULL!");
+        }
+        if (environmentalHazardCheck == null) {
+            android.util.Log.e("Facilities", "environmentalHazardCheck is NULL!");
+        }
 
         incidentCheckboxes.clear();
         registerIncidentCheckbox(roadAccidentCheck);
@@ -119,6 +138,10 @@ public class Facilities extends AppCompatActivity {
         registerIncidentCheckbox(civilDisturbanceCheck);
         registerIncidentCheckbox(armedConflictCheck);
         registerIncidentCheckbox(infectiousDiseaseCheck);
+        registerIncidentCheckbox(poorInfrastructureCheck);
+        registerIncidentCheckbox(obstructionsCheck);
+        registerIncidentCheckbox(electricalHazardCheck);
+        registerIncidentCheckbox(environmentalHazardCheck);
         evacuationCentersCheck = findViewById(R.id.evacuationCentersCheck);
         healthFacilitiesCheck = findViewById(R.id.healthFacilitiesCheck);
         policeStationsCheck = findViewById(R.id.policeStationsCheck);
@@ -138,8 +161,14 @@ public class Facilities extends AppCompatActivity {
         if (timelineContent != null) {
             timelineContent.setVisibility(View.GONE);
         }
+        // Expand Incident Types section by default so users can see all options including new ones
         if (incidentTypesContent != null) {
-            incidentTypesContent.setVisibility(View.GONE);
+            incidentTypesContent.setVisibility(View.VISIBLE);
+            isIncidentTypesExpanded = true;
+            // Rotate arrow to indicate expanded state
+            if (incidentTypesArrow != null) {
+                incidentTypesArrow.setRotation(180f);
+            }
         }
         if (emergencySupportContent != null) {
             emergencySupportContent.setVisibility(View.GONE);
@@ -209,6 +238,18 @@ public class Facilities extends AppCompatActivity {
         if (infectiousDiseaseCheck != null) {
             infectiousDiseaseCheck.setChecked(intent.getBooleanExtra("infectiousDisease", true));
         }
+        if (poorInfrastructureCheck != null) {
+            poorInfrastructureCheck.setChecked(intent.getBooleanExtra("poorInfrastructure", true));
+        }
+        if (obstructionsCheck != null) {
+            obstructionsCheck.setChecked(intent.getBooleanExtra("obstructions", true));
+        }
+        if (electricalHazardCheck != null) {
+            electricalHazardCheck.setChecked(intent.getBooleanExtra("electricalHazard", true));
+        }
+        if (environmentalHazardCheck != null) {
+            environmentalHazardCheck.setChecked(intent.getBooleanExtra("environmentalHazard", true));
+        }
 
         enforceSingleIncidentSelection();
 
@@ -265,6 +306,10 @@ public class Facilities extends AppCompatActivity {
         setupExclusiveIncidentCheckbox(civilDisturbanceCheck);
         setupExclusiveIncidentCheckbox(armedConflictCheck);
         setupExclusiveIncidentCheckbox(infectiousDiseaseCheck);
+        setupExclusiveIncidentCheckbox(poorInfrastructureCheck);
+        setupExclusiveIncidentCheckbox(obstructionsCheck);
+        setupExclusiveIncidentCheckbox(electricalHazardCheck);
+        setupExclusiveIncidentCheckbox(environmentalHazardCheck);
         
         // Facility checkboxes
         if (evacuationCentersCheck != null) {
@@ -589,6 +634,10 @@ public class Facilities extends AppCompatActivity {
         resultIntent.putExtra("civilDisturbance", civilDisturbanceCheck != null ? civilDisturbanceCheck.isChecked() : true);
         resultIntent.putExtra("armedConflict", armedConflictCheck != null ? armedConflictCheck.isChecked() : true);
         resultIntent.putExtra("infectiousDisease", infectiousDiseaseCheck != null ? infectiousDiseaseCheck.isChecked() : true);
+        resultIntent.putExtra("poorInfrastructure", poorInfrastructureCheck != null ? poorInfrastructureCheck.isChecked() : true);
+        resultIntent.putExtra("obstructions", obstructionsCheck != null ? obstructionsCheck.isChecked() : true);
+        resultIntent.putExtra("electricalHazard", electricalHazardCheck != null ? electricalHazardCheck.isChecked() : true);
+        resultIntent.putExtra("environmentalHazard", environmentalHazardCheck != null ? environmentalHazardCheck.isChecked() : true);
 
         // Add facility filter states
         resultIntent.putExtra("evacuationCenters", evacuationCentersCheck != null ? evacuationCentersCheck.isChecked() : true);

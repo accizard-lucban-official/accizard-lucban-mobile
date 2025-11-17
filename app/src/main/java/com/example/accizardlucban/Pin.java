@@ -6,6 +6,7 @@ import java.util.List;
 public class Pin {
     private String id;
     private String category; // "accident", "fire", etc.
+    private String type; // Pin type from web app (e.g., "Road Accident", "Fire", "Armed Conflict")
     private Date createdAt;
     private String createdBy; // User ID
     private String createdByName; // User display name
@@ -43,6 +44,14 @@ public class Pin {
     
     public void setCategory(String category) {
         this.category = category;
+    }
+    
+    public String getType() {
+        return type;
+    }
+    
+    public void setType(String type) {
+        this.type = type;
     }
     
     public Date getCreatedAt() {
@@ -123,6 +132,7 @@ public class Pin {
         return locationName != null ? locationName : "No address available";
     }
 }
+
 
 
 

@@ -41,9 +41,17 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            isMinifyEnabled = false
+        }
     }
     
-    packagingOptions {
+    // Fix for "string too large" error - enable resource shrinking
+    buildFeatures {
+        buildConfig = true
+    }
+    
+    packaging {
         resources {
             pickFirsts += "**/META-INF/NOTICE.md"
             pickFirsts += "**/META-INF/LICENSE.md"

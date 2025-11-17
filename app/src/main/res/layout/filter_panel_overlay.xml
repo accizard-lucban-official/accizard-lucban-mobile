@@ -61,7 +61,9 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:fillViewport="true">
+            android:fillViewport="true"
+            android:scrollbars="vertical"
+            android:fadeScrollbars="false">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -222,7 +224,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:layout_marginTop="16dp"
-                        android:visibility="gone">
+                        android:visibility="visible">
 
                         <!-- Heatmap View Toggle -->
                         <LinearLayout
@@ -247,6 +249,33 @@
                                 android:textSize="14sp"
                                 android:textColor="#333333"
                                 android:layout_marginStart="12dp" />
+                        </LinearLayout>
+
+                        <!-- My Reports -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp"
+                            android:visibility="visible">
+
+                            <CheckBox
+                                android:id="@+id/reportCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722"
+                                android:visibility="visible" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="📋 My Reports"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp"
+                                android:visibility="visible" />
                         </LinearLayout>
 
                         <!-- Road Accident -->
@@ -488,35 +517,171 @@
                                 android:textColor="#333333"
                                 android:layout_marginStart="8dp" />
                         </LinearLayout>
+
+                        <!-- Poor Infrastructure -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp"
+                            android:visibility="visible">
+
+                            <CheckBox
+                                android:id="@+id/poorInfrastructureCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722"
+                                android:visibility="visible" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🏗️ Poor Infrastructure"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp"
+                                android:visibility="visible" />
+                        </LinearLayout>
+
+                        <!-- Obstructions -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp"
+                            android:visibility="visible">
+
+                            <CheckBox
+                                android:id="@+id/obstructionsCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722"
+                                android:visibility="visible" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🚧 Obstructions"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp"
+                                android:visibility="visible" />
+                        </LinearLayout>
+
+                        <!-- Electrical Hazard -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp"
+                            android:visibility="visible">
+
+                            <CheckBox
+                                android:id="@+id/electricalHazardCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722"
+                                android:visibility="visible" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="⚡ Electrical Hazard"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp"
+                                android:visibility="visible" />
+                        </LinearLayout>
+
+                        <!-- Environmental Hazard -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp"
+                            android:visibility="visible">
+
+                            <CheckBox
+                                android:id="@+id/environmentalHazardCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722"
+                                android:visibility="visible" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🌿 Environmental Hazard"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp"
+                                android:visibility="visible" />
+                        </LinearLayout>
+
+                        <!-- Animal Concerns -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp"
+                            android:visibility="visible">
+
+                            <CheckBox
+                                android:id="@+id/animalConcernsCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722"
+                                android:visibility="visible" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🐾 Animal Concerns"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp"
+                                android:visibility="visible" />
+                        </LinearLayout>
+
+                        <!-- Others -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="8dp"
+                            android:visibility="visible">
+
+                            <CheckBox
+                                android:id="@+id/othersIncidentCheck"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:buttonTint="#FF5722"
+                                android:visibility="visible" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="➕ Others"
+                                android:textSize="14sp"
+                                android:textColor="#333333"
+                                android:layout_marginStart="8dp"
+                                android:visibility="visible" />
+                        </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Report Section (Always Visible) -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:background="@drawable/section_background"
-                    android:padding="16dp"
-                    android:layout_marginBottom="8dp">
-
-                    <CheckBox
-                        android:id="@+id/reportCheck"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:buttonTint="#FF5722" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="📋 Report"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="#333333"
-                        android:layout_marginStart="12dp" />
-                </LinearLayout>
 
                 <!-- Emergency Support Facilities Section -->
                 <LinearLayout

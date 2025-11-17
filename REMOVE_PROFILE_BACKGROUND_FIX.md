@@ -296,3 +296,4 @@ The gray square background has been completely removed! The profile picture now 
 
 
 
+
