@@ -19,6 +19,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -284,16 +285,43 @@ public class AlertsActivity extends AppCompatActivity {
                     // Add all documents in order (already sorted by Firestore query)
                     for (com.google.firebase.firestore.DocumentSnapshot docSnapshot : snapshots.getDocuments()) {
                         try {
+                            String docId = docSnapshot.getId();
+                            Log.d(TAG, "=== Processing Firestore Document: " + docId + " ===");
+                            
+                            // Debug: Print all available fields in the document
+                            if (docSnapshot.getData() != null) {
+                                Log.d(TAG, "Document fields: " + docSnapshot.getData().keySet().toString());
+                                for (String key : docSnapshot.getData().keySet()) {
+                                    Object value = docSnapshot.getData().get(key);
+                                    Log.d(TAG, "  Field '" + key + "' = '" + value + "' (type: " + (value != null ? value.getClass().getSimpleName() : "null") + ")");
+                                }
+                            } else {
+                                Log.w(TAG, "Document data is null!");
+                            }
+                            
+                            // Extract image URL using helper method
+                            String imageUrl = extractImageUrlFromDocument(docSnapshot);
+                            Log.d(TAG, "✅ Final imageUrl value: '" + imageUrl + "'");
+                            
+                            // Extract updatedAt field
+                            String updatedAt = extractUpdatedAtFromDocument(docSnapshot);
+                            Log.d(TAG, "✅ Final updatedAt value: '" + updatedAt + "'");
+                            
                             Announcement announcement = new Announcement(
                                     docSnapshot.getString("type"),
                                     docSnapshot.getString("priority"),
                                     docSnapshot.getString("description"),
-                                    docSnapshot.getString("date")
+                                    docSnapshot.getString("date"),
+                                    imageUrl,
+                                    updatedAt
                             );
                             fullAnnouncementList.add(announcement);
-                            Log.d(TAG, "Added announcement during initial load: " + announcement.type);
+                            Log.d(TAG, "✅ Added announcement: " + announcement.type + 
+                                    " (imageUrl: '" + announcement.imageUrl + "')");
+                            Log.d(TAG, "=== End Document: " + docId + " ===\n");
                         } catch (Exception e) {
-                            Log.e(TAG, "Error parsing announcement during initial load", e);
+                            Log.e(TAG, "❌ Error parsing announcement during initial load", e);
+                            e.printStackTrace();
                         }
                     }
                     
@@ -363,12 +391,22 @@ public class AlertsActivity extends AppCompatActivity {
             String docId = doc.getId();
             Log.d(TAG, "New announcement added: " + docId + " (Initial load: " + isInitialLoad + ")");
             
+            // Extract image URL using helper method
+            String urlValue = extractImageUrlFromDocument(doc);
+            
+            // Extract updatedAt field
+            String updatedAt = extractUpdatedAtFromDocument(doc);
+            
             Announcement newAnnouncement = new Announcement(
                     doc.getString("type"),
                     doc.getString("priority"),
                     doc.getString("description"),
-                    doc.getString("date")
+                    doc.getString("date"),
+                    urlValue,
+                    updatedAt
             );
+            
+            Log.d(TAG, "New announcement imageUrl from Firestore: '" + urlValue + "'");
             
             // Add to the beginning of the list (newest first)
             fullAnnouncementList.add(0, newAnnouncement);
@@ -401,11 +439,19 @@ public class AlertsActivity extends AppCompatActivity {
             String docId = doc.getId();
             Log.d(TAG, "Announcement modified: " + docId);
             
+            // Extract image URL using helper method
+            String urlValue = extractImageUrlFromDocument(doc);
+            
+            // Extract updatedAt field
+            String updatedAt = extractUpdatedAtFromDocument(doc);
+            
             Announcement modifiedAnnouncement = new Announcement(
                     doc.getString("type"),
                     doc.getString("priority"),
                     doc.getString("description"),
-                    doc.getString("date")
+                    doc.getString("date"),
+                    urlValue,
+                    updatedAt
             );
             
             // Find and update the announcement in the list
@@ -485,6 +531,7 @@ public class AlertsActivity extends AppCompatActivity {
             TextView tvPreviewPriority = dialogView.findViewById(R.id.tvPreviewPriority);
             TextView tvPreviewDate = dialogView.findViewById(R.id.tvPreviewDate);
             TextView tvPreviewMessage = dialogView.findViewById(R.id.tvPreviewMessage);
+            ImageView ivAnnouncementImage = dialogView.findViewById(R.id.ivAnnouncementImage);
             LinearLayout priorityIndicatorBox = dialogView.findViewById(R.id.priorityIndicatorBox);
             Button btnClosePreview = dialogView.findViewById(R.id.btnClosePreview);
             
@@ -519,14 +566,24 @@ public class AlertsActivity extends AppCompatActivity {
             }
             
             if (tvPreviewDate != null) {
-                tvPreviewDate.setText(announcement.date != null ? announcement.date : "No date available");
+                // Use updatedAt if available, otherwise fall back to date field
+                String dateTimeText = null;
+                if (announcement.updatedAt != null && !announcement.updatedAt.isEmpty()) {
+                    dateTimeText = announcement.updatedAt;
+                    Log.d(TAG, "Using updatedAt for date/time display: '" + dateTimeText + "'");
+                } else if (announcement.date != null && !announcement.date.isEmpty()) {
+                    dateTimeText = announcement.date;
+                    Log.d(TAG, "Using date field for date/time display: '" + dateTimeText + "'");
+                }
+                
+                tvPreviewDate.setText(dateTimeText != null ? dateTimeText : "No date available");
             }
             
             if (tvPreviewMessage != null) {
                 tvPreviewMessage.setText(announcement.message != null ? announcement.message : "No details available");
             }
             
-            // Create dialog
+            // Create dialog first
             android.app.AlertDialog dialog = builder.setView(dialogView)
                     .setCancelable(true)
                     .create();
@@ -541,13 +598,589 @@ public class AlertsActivity extends AppCompatActivity {
                 });
             }
             
+            // Show dialog first
             dialog.show();
             
-            Log.d(TAG, "Announcement preview shown for: " + announcement.type);
+            // Load and display announcement image if available (after dialog is shown)
+            LinearLayout imageContainer = dialogView.findViewById(R.id.imageContainer);
+            final String imagePathOrUrl = announcement.imageUrl; // Store in final variable for use in listener
+            
+            Log.d(TAG, "=== IMAGE LOADING DEBUG ===");
+            Log.d(TAG, "1. Announcement type: " + announcement.type);
+            Log.d(TAG, "2. Image path/URL from announcement: '" + imagePathOrUrl + "'");
+            Log.d(TAG, "3. ImageView (ivAnnouncementImage) is null: " + (ivAnnouncementImage == null));
+            Log.d(TAG, "4. ImageContainer is null: " + (imageContainer == null));
+            
+            if (ivAnnouncementImage == null) {
+                Log.e(TAG, "❌ ERROR: ImageView (ivAnnouncementImage) is NULL! Cannot display image.");
+            }
+            if (imageContainer == null) {
+                Log.e(TAG, "❌ ERROR: ImageContainer is NULL! Cannot display image.");
+            }
+            
+            if (ivAnnouncementImage != null && imageContainer != null) {
+                Log.d(TAG, "5. Both ImageView and Container are NOT null - proceeding...");
+                
+                if (imagePathOrUrl != null && !imagePathOrUrl.isEmpty() && !imagePathOrUrl.trim().isEmpty()) {
+                    // Show the image container and image view
+                    Log.d(TAG, "6. ✅ Image path/URL is VALID: '" + imagePathOrUrl + "'");
+                    Log.d(TAG, "7. Setting image container VISIBLE");
+                    imageContainer.setVisibility(View.VISIBLE);
+                    ivAnnouncementImage.setVisibility(View.VISIBLE);
+                    Log.d(TAG, "8. Image container visibility set. Container visible: " + (imageContainer.getVisibility() == View.VISIBLE));
+                    
+                    // Set a placeholder while loading
+                    Log.d(TAG, "9. Setting placeholder image");
+                    ivAnnouncementImage.setImageResource(R.drawable.ic_camera_placeholder);
+                    
+                    // Use postDelayed to ensure dialog is fully rendered before loading image
+                    Log.d(TAG, "10. Scheduling image load with 100ms delay");
+                    ivAnnouncementImage.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            Log.d(TAG, "11. Starting image load process...");
+                            // Check if it's a Firebase Storage path or a full URL
+                            if (isFirebaseStoragePath(imagePathOrUrl)) {
+                                // It's a Storage path - convert to download URL
+                                Log.d(TAG, "12. ✅ Detected Firebase Storage path. Converting to download URL: " + imagePathOrUrl);
+                                loadImageFromStoragePath(ivAnnouncementImage, imagePathOrUrl, dialog);
+                            } else {
+                                // It's already a full URL - load directly
+                                Log.d(TAG, "12. ✅ Detected full URL. Loading announcement image from URL: " + imagePathOrUrl);
+                                loadImageFromUrl(ivAnnouncementImage, imagePathOrUrl);
+                            }
+                        }
+                    }, 100); // Small delay to ensure dialog is rendered
+                    
+                    // Make image clickable to open fullscreen preview
+                    ivAnnouncementImage.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            // For fullscreen, we need the actual URL, so handle both cases
+                            if (isFirebaseStoragePath(imagePathOrUrl)) {
+                                // Get download URL first, then show fullscreen
+                                getDownloadUrlFromStoragePath(imagePathOrUrl, new OnImageUrlReadyListener() {
+                                    @Override
+                                    public void onUrlReady(String downloadUrl) {
+                                        showFullScreenAnnouncementImage(downloadUrl);
+                                    }
+                                    
+                                    @Override
+                                    public void onError(String error) {
+                                        android.widget.Toast.makeText(AlertsActivity.this, "Unable to load image", android.widget.Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            } else {
+                                showFullScreenAnnouncementImage(imagePathOrUrl);
+                            }
+                        }
+                    });
+                } else {
+                    // Hide image container if no image URL
+                    Log.d(TAG, "6. ❌ Image path/URL is NULL or EMPTY. Hiding image container.");
+                    Log.d(TAG, "   Value was: '" + imagePathOrUrl + "'");
+                    imageContainer.setVisibility(View.GONE);
+                    ivAnnouncementImage.setVisibility(View.GONE);
+                }
+            } else {
+                Log.e(TAG, "❌ ERROR: ImageView or imageContainer is null - cannot display image.");
+                Log.e(TAG, "   ImageView is null: " + (ivAnnouncementImage == null));
+                Log.e(TAG, "   ImageContainer is null: " + (imageContainer == null));
+            }
+            
+            Log.d(TAG, "=== END IMAGE LOADING DEBUG ===");
+            
+            Log.d(TAG, "Announcement preview shown for: " + announcement.type + " with imagePath/URL: '" + imagePathOrUrl + "'");
             
         } catch (Exception e) {
             Log.e(TAG, "Error showing announcement preview", e);
             android.widget.Toast.makeText(this, "Error showing announcement details", android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * Interface for image URL ready callback
+     */
+    private interface OnImageUrlReadyListener {
+        void onUrlReady(String downloadUrl);
+        void onError(String error);
+    }
+    
+    /**
+     * Extract image URL from Firestore document
+     * Handles both top-level fields and nested media structure (media.0.url)
+     */
+    private String extractImageUrlFromDocument(com.google.firebase.firestore.DocumentSnapshot doc) {
+        String imageUrl = null;
+        
+        try {
+            // First, try top-level fields
+            imageUrl = doc.getString("url");
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                Log.d(TAG, "Found imageUrl in top-level 'url' field: '" + imageUrl + "'");
+                return imageUrl;
+            }
+            
+            imageUrl = doc.getString("imageUrl");
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                Log.d(TAG, "Found imageUrl in top-level 'imageUrl' field: '" + imageUrl + "'");
+                return imageUrl;
+            }
+            
+            imageUrl = doc.getString("image");
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                Log.d(TAG, "Found imageUrl in top-level 'image' field: '" + imageUrl + "'");
+                return imageUrl;
+            }
+            
+            // If not found at top level, try nested media structure (media.0.url)
+            Object mediaObj = doc.get("media");
+            if (mediaObj != null) {
+                Log.d(TAG, "Found 'media' field, extracting URL from nested structure");
+                
+                if (mediaObj instanceof Map) {
+                    Map<String, Object> mediaMap = (Map<String, Object>) mediaObj;
+                    Log.d(TAG, "Media is a Map with keys: " + mediaMap.keySet());
+                    
+                    // Try to get the first item (could be "0" or first key)
+                    Object firstMediaItem = null;
+                    if (mediaMap.containsKey("0")) {
+                        firstMediaItem = mediaMap.get("0");
+                        Log.d(TAG, "Found media item at key '0'");
+                    } else if (!mediaMap.isEmpty()) {
+                        // Get first entry
+                        firstMediaItem = mediaMap.values().iterator().next();
+                        Log.d(TAG, "Getting first media item from map");
+                    }
+                    
+                    if (firstMediaItem != null && firstMediaItem instanceof Map) {
+                        Map<String, Object> mediaItemMap = (Map<String, Object>) firstMediaItem;
+                        Object urlObj = mediaItemMap.get("url");
+                        if (urlObj != null) {
+                            imageUrl = urlObj.toString();
+                            Log.d(TAG, "✅ Found URL in media.0.url: '" + imageUrl + "'");
+                            return imageUrl;
+                        } else {
+                            // Try path field and convert to download URL
+                            Object pathObj = mediaItemMap.get("path");
+                            if (pathObj != null) {
+                                String path = pathObj.toString();
+                                Log.d(TAG, "Found path in media.0.path: '" + path + "', will convert to URL");
+                                return path; // Store path, will convert later
+                            }
+                        }
+                    }
+                } else if (mediaObj instanceof List) {
+                    List<Object> mediaList = (List<Object>) mediaObj;
+                    Log.d(TAG, "Media is a List with size: " + mediaList.size());
+                    
+                    if (!mediaList.isEmpty()) {
+                        Object firstItem = mediaList.get(0);
+                        if (firstItem instanceof Map) {
+                            Map<String, Object> mediaItemMap = (Map<String, Object>) firstItem;
+                            Object urlObj = mediaItemMap.get("url");
+                            if (urlObj != null) {
+                                imageUrl = urlObj.toString();
+                                Log.d(TAG, "✅ Found URL in media[0].url: '" + imageUrl + "'");
+                                return imageUrl;
+                            } else {
+                                Object pathObj = mediaItemMap.get("path");
+                                if (pathObj != null) {
+                                    String path = pathObj.toString();
+                                    Log.d(TAG, "Found path in media[0].path: '" + path + "', will convert to URL");
+                                    return path;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Try other field names as fallback
+            imageUrl = doc.getString("imagePath");
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                Log.d(TAG, "Found imageUrl in 'imagePath' field: '" + imageUrl + "'");
+                return imageUrl;
+            }
+            
+            imageUrl = doc.getString("image_url");
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                Log.d(TAG, "Found imageUrl in 'image_url' field: '" + imageUrl + "'");
+                return imageUrl;
+            }
+            
+            imageUrl = doc.getString("photo");
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                Log.d(TAG, "Found imageUrl in 'photo' field: '" + imageUrl + "'");
+                return imageUrl;
+            }
+            
+            imageUrl = doc.getString("photoUrl");
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                Log.d(TAG, "Found imageUrl in 'photoUrl' field: '" + imageUrl + "'");
+                return imageUrl;
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error extracting image URL from document: " + e.getMessage(), e);
+        }
+        
+        Log.d(TAG, "No imageUrl found in document");
+        return null;
+    }
+    
+    /**
+     * Extract updatedAt timestamp from Firestore document
+     * Handles Firestore Timestamp, Long, String, and Date formats
+     */
+    private String extractUpdatedAtFromDocument(com.google.firebase.firestore.DocumentSnapshot doc) {
+        try {
+            Object updatedAtObj = doc.get("updatedAt");
+            
+            if (updatedAtObj == null) {
+                // Try alternative field names
+                updatedAtObj = doc.get("updated_at");
+                if (updatedAtObj == null) {
+                    updatedAtObj = doc.get("createdAt");
+                }
+                if (updatedAtObj == null) {
+                    updatedAtObj = doc.get("created_at");
+                }
+                if (updatedAtObj == null) {
+                    updatedAtObj = doc.get("timestamp");
+                }
+            }
+            
+            if (updatedAtObj == null) {
+                Log.d(TAG, "No updatedAt field found in document");
+                return null;
+            }
+            
+            String formattedDate = null;
+            
+            // Handle Firestore Timestamp
+            if (updatedAtObj instanceof Timestamp) {
+                Timestamp timestamp = (Timestamp) updatedAtObj;
+                Date date = timestamp.toDate();
+                formattedDate = formatDateForDisplay(date);
+                Log.d(TAG, "Found Firestore Timestamp, formatted: '" + formattedDate + "'");
+                return formattedDate;
+            }
+            
+            // Handle Long timestamp
+            if (updatedAtObj instanceof Long) {
+                Long timestamp = (Long) updatedAtObj;
+                Date date = new Date(timestamp);
+                formattedDate = formatDateForDisplay(date);
+                Log.d(TAG, "Found Long timestamp, formatted: '" + formattedDate + "'");
+                return formattedDate;
+            }
+            
+            // Handle String date (like "November 19, 2025 at 3:18:23 AM UTC+8")
+            if (updatedAtObj instanceof String) {
+                String dateStr = (String) updatedAtObj;
+                // Try to parse the string format from Firestore
+                try {
+                    // Try multiple date formats
+                    SimpleDateFormat[] formats = {
+                        new SimpleDateFormat("MMMM dd, yyyy 'at' h:mm:ssa z", Locale.ENGLISH),
+                        new SimpleDateFormat("MMMM dd, yyyy 'at' hh:mm:ssa z", Locale.ENGLISH),
+                        new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
+                        new SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault()),
+                        new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+                    };
+                    
+                    Date parsedDate = null;
+                    for (SimpleDateFormat format : formats) {
+                        try {
+                            parsedDate = format.parse(dateStr);
+                            if (parsedDate != null) {
+                                break;
+                            }
+                        } catch (Exception e) {
+                            // Try next format
+                        }
+                    }
+                    
+                    if (parsedDate != null) {
+                        formattedDate = formatDateForDisplay(parsedDate);
+                        Log.d(TAG, "Parsed string date, formatted: '" + formattedDate + "'");
+                        return formattedDate;
+                    } else {
+                        // If parsing fails, return the string as-is
+                        Log.d(TAG, "Could not parse date string, using as-is: '" + dateStr + "'");
+                        return dateStr;
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Error parsing date string: " + dateStr, e);
+                    return dateStr; // Return as-is if parsing fails
+                }
+            }
+            
+            // Handle Date object
+            if (updatedAtObj instanceof Date) {
+                Date date = (Date) updatedAtObj;
+                formattedDate = formatDateForDisplay(date);
+                Log.d(TAG, "Found Date object, formatted: '" + formattedDate + "'");
+                return formattedDate;
+            }
+            
+            // If we can't handle the type, convert to string
+            Log.w(TAG, "Unknown updatedAt type: " + (updatedAtObj != null ? updatedAtObj.getClass().getSimpleName() : "null"));
+            return updatedAtObj != null ? updatedAtObj.toString() : null;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error extracting updatedAt from document: " + e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    /**
+     * Format Date object for display in announcement dialog
+     */
+    private String formatDateForDisplay(Date date) {
+        try {
+            SimpleDateFormat displayFormat = new SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault());
+            return displayFormat.format(date);
+        } catch (Exception e) {
+            Log.e(TAG, "Error formatting date: " + e.getMessage(), e);
+            return date != null ? date.toString() : "Unknown date";
+        }
+    }
+    
+    /**
+     * Check if the given string is a Firebase Storage path (not a full URL)
+     */
+    private boolean isFirebaseStoragePath(String pathOrUrl) {
+        if (pathOrUrl == null || pathOrUrl.isEmpty()) {
+            return false;
+        }
+        
+        // If it starts with http:// or https://, it's a full URL
+        if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
+            return false;
+        }
+        
+        // If it starts with gs://, it's a Storage path
+        if (pathOrUrl.startsWith("gs://")) {
+            return true;
+        }
+        
+        // If it doesn't contain :// and looks like a path (contains /), it's likely a Storage path
+        if (!pathOrUrl.contains("://") && pathOrUrl.contains("/")) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Load image from Firebase Storage path
+     */
+    private void loadImageFromStoragePath(ImageView imageView, String storagePath, android.app.AlertDialog dialog) {
+        try {
+            Log.d(TAG, "Loading image from Firebase Storage path: " + storagePath);
+            
+            // Show placeholder while loading
+            imageView.setImageResource(R.drawable.ic_camera_placeholder);
+            
+            FirebaseStorage storage = FirebaseStorage.getInstance();
+            StorageReference storageRef;
+            
+            // Handle different path formats
+            if (storagePath.startsWith("gs://")) {
+                // Full gs:// path
+                storageRef = storage.getReferenceFromUrl(storagePath);
+            } else {
+                // Relative path (e.g., "announcements/image1.jpg")
+                storageRef = storage.getReference().child(storagePath);
+            }
+            
+            // Get download URL
+            storageRef.getDownloadUrl()
+                .addOnSuccessListener(uri -> {
+                    String downloadUrl = uri.toString();
+                    Log.d(TAG, "✅ SUCCESS: Got download URL from Storage: " + downloadUrl);
+                    
+                    // Load image using ProfilePictureCache on UI thread
+                    runOnUiThread(() -> {
+                        try {
+                            Log.d(TAG, "Loading image into ImageView using ProfilePictureCache");
+                            ProfilePictureCache.getInstance().loadChatImage(imageView, downloadUrl);
+                            Log.d(TAG, "✅ Image loading initiated from Storage URL: " + downloadUrl);
+                        } catch (Exception e) {
+                            Log.e(TAG, "❌ Error loading image with ProfilePictureCache: " + e.getMessage(), e);
+                            // Fallback: Try direct loading
+                            loadImageDirectlyFromUrl(imageView, downloadUrl);
+                        }
+                    });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ ERROR: Failed to get download URL from Storage path: " + storagePath, e);
+                    Log.e(TAG, "Error details: " + e.getMessage());
+                    runOnUiThread(() -> {
+                        imageView.setImageResource(R.drawable.ic_camera_placeholder);
+                        android.widget.Toast.makeText(this, "Unable to load image: " + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
+                    });
+                });
+                
+        } catch (Exception e) {
+            Log.e(TAG, "Error in loadImageFromStoragePath: " + e.getMessage(), e);
+            imageView.setImageResource(R.drawable.ic_camera_placeholder);
+        }
+    }
+    
+    /**
+     * Get download URL from Firebase Storage path (for fullscreen preview)
+     */
+    private void getDownloadUrlFromStoragePath(String storagePath, OnImageUrlReadyListener listener) {
+        try {
+            Log.d(TAG, "Getting download URL from Firebase Storage path: " + storagePath);
+            
+            FirebaseStorage storage = FirebaseStorage.getInstance();
+            StorageReference storageRef;
+            
+            // Handle different path formats
+            if (storagePath.startsWith("gs://")) {
+                // Full gs:// path
+                storageRef = storage.getReferenceFromUrl(storagePath);
+            } else {
+                // Relative path (e.g., "announcements/image1.jpg")
+                storageRef = storage.getReference().child(storagePath);
+            }
+            
+            // Get download URL
+            storageRef.getDownloadUrl()
+                .addOnSuccessListener(uri -> {
+                    String downloadUrl = uri.toString();
+                    Log.d(TAG, "Got download URL for fullscreen: " + downloadUrl);
+                    listener.onUrlReady(downloadUrl);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error getting download URL from Storage path: " + storagePath, e);
+                    listener.onError("Unable to load image: " + e.getMessage());
+                });
+                
+        } catch (Exception e) {
+            Log.e(TAG, "Error in getDownloadUrlFromStoragePath: " + e.getMessage(), e);
+            listener.onError("Error: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Load image from full URL
+     */
+    private void loadImageFromUrl(ImageView imageView, String imageUrl) {
+        try {
+            Log.d(TAG, "Loading image from URL: " + imageUrl);
+            
+            // Use post to ensure view is attached before loading
+            imageView.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Log.d(TAG, "Loading image into ImageView using ProfilePictureCache for URL: " + imageUrl);
+                        ProfilePictureCache.getInstance().loadChatImage(imageView, imageUrl);
+                        Log.d(TAG, "✅ Image loading initiated for URL: " + imageUrl);
+                    } catch (Exception e) {
+                        Log.e(TAG, "❌ Error loading image with ProfilePictureCache: " + e.getMessage(), e);
+                        // Fallback: Try direct loading
+                        loadImageDirectlyFromUrl(imageView, imageUrl);
+                    }
+                }
+            });
+            
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Error in loadImageFromUrl: " + e.getMessage(), e);
+            imageView.setImageResource(R.drawable.ic_camera_placeholder);
+        }
+    }
+    
+    /**
+     * Fallback method to load image directly from URL (without cache)
+     */
+    private void loadImageDirectlyFromUrl(ImageView imageView, String imageUrl) {
+        try {
+            Log.d(TAG, "Loading announcement image directly from URL: " + imageUrl);
+            
+            new Thread(() -> {
+                try {
+                    java.net.URL url = new java.net.URL(imageUrl);
+                    final android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeStream(url.openConnection().getInputStream());
+                    
+                    runOnUiThread(() -> {
+                        if (bitmap != null && imageView != null) {
+                            imageView.setImageBitmap(bitmap);
+                            Log.d(TAG, "Announcement image loaded successfully");
+                        } else {
+                            Log.e(TAG, "Failed to load announcement image - bitmap is null");
+                            if (imageView != null) {
+                                imageView.setImageResource(R.drawable.ic_camera_placeholder);
+                            }
+                        }
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Error loading announcement image directly: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        if (imageView != null) {
+                            imageView.setImageResource(R.drawable.ic_camera_placeholder);
+                        }
+                    });
+                }
+            }).start();
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error in loadAnnouncementImageDirectly: " + e.getMessage(), e);
+            if (imageView != null) {
+                imageView.setImageResource(R.drawable.ic_camera_placeholder);
+            }
+        }
+    }
+    
+    /**
+     * Show fullscreen image preview for announcement image
+     */
+    private void showFullScreenAnnouncementImage(String imageUrl) {
+        try {
+            Log.d(TAG, "Showing fullscreen announcement image: " + imageUrl);
+            
+            android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+            android.view.LayoutInflater inflater = getLayoutInflater();
+            View dialogView = inflater.inflate(R.layout.dialog_fullscreen_image, null);
+            
+            ImageView fullScreenImageView = dialogView.findViewById(R.id.fullScreenImageView);
+            if (fullScreenImageView != null && imageUrl != null && !imageUrl.isEmpty()) {
+                // Load image from URL using ProfilePictureCache
+                ProfilePictureCache.getInstance().loadChatImage(fullScreenImageView, imageUrl);
+                Log.d(TAG, "Loading fullscreen image from URL: " + imageUrl);
+            } else {
+                Log.w(TAG, "Cannot show fullscreen image - imageUrl is null or empty");
+                android.widget.Toast.makeText(this, "Image not available", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // Create dialog
+            android.app.AlertDialog dialog = builder.setView(dialogView)
+                    .setCancelable(true)
+                    .create();
+            
+            // Make image clickable to close dialog
+            if (fullScreenImageView != null) {
+                fullScreenImageView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        dialog.dismiss();
+                    }
+                });
+            }
+            
+            dialog.show();
+            
+            Log.d(TAG, "Fullscreen announcement image dialog shown");
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing fullscreen announcement image", e);
+            android.widget.Toast.makeText(this, "Error showing image", android.widget.Toast.LENGTH_SHORT).show();
         }
     }
     
@@ -584,12 +1217,32 @@ public class AlertsActivity extends AppCompatActivity {
 
     // Announcement model
     public static class Announcement {
-        public String type, priority, message, date;
+        public String type, priority, message, date, imageUrl, updatedAt;
         public Announcement(String type, String priority, String message, String date) {
             this.type = type != null ? type : "Announcement";
             this.priority = priority != null ? priority : "Medium";
             this.message = message != null ? message : "";
             this.date = date != null ? date : "";
+            this.imageUrl = null;
+            this.updatedAt = null;
+        }
+        
+        public Announcement(String type, String priority, String message, String date, String imageUrl) {
+            this.type = type != null ? type : "Announcement";
+            this.priority = priority != null ? priority : "Medium";
+            this.message = message != null ? message : "";
+            this.date = date != null ? date : "";
+            this.imageUrl = imageUrl;
+            this.updatedAt = null;
+        }
+        
+        public Announcement(String type, String priority, String message, String date, String imageUrl, String updatedAt) {
+            this.type = type != null ? type : "Announcement";
+            this.priority = priority != null ? priority : "Medium";
+            this.message = message != null ? message : "";
+            this.date = date != null ? date : "";
+            this.imageUrl = imageUrl;
+            this.updatedAt = updatedAt;
         }
     }
 

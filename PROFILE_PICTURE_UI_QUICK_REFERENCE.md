@@ -177,3 +177,4 @@ Your ProfilePictureActivity now perfectly matches the design in your provided im
 
 
 
+
