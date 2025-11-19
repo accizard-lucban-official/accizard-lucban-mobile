@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -231,11 +232,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/roadAccidentCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -255,11 +256,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/fireCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -279,11 +280,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/medicalEmergencyCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -303,11 +304,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/floodingCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -327,11 +328,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/volcanicActivityCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -351,11 +352,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/landslideCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -375,11 +376,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/earthquakeCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -399,11 +400,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/civilDisturbanceCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -423,11 +424,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/armedConflictCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -447,11 +448,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/infectiousDiseaseCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -471,11 +472,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/poorInfrastructureCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -495,11 +496,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/obstructionsCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -519,11 +520,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/electricalHazardCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -543,11 +544,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/environmentalHazardCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -567,11 +568,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/animalConcernsCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -640,11 +641,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/evacuationCentersCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -664,11 +665,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/healthFacilitiesCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -688,11 +689,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/policeStationsCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -712,11 +713,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/fireStationsCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView
@@ -736,11 +737,11 @@
                         android:orientation="horizontal"
                         android:padding="8dp">
 
-                        <CheckBox
+                        <androidx.appcompat.widget.AppCompatRadioButton
                             android:id="@+id/governmentOfficesCheck"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:buttonTint="#FF5722"
+                            android:button="@drawable/radio_button_selector"
                             android:checked="true" />
 
                         <TextView

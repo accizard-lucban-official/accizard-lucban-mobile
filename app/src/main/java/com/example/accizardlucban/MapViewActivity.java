@@ -323,6 +323,10 @@ public class MapViewActivity extends AppCompatActivity {
         mapView = findViewById(R.id.mapView);
         if (mapView != null) {
             mapboxMap = mapView.getMapboxMap();
+            
+            // Disable compass on the map
+            disableCompass();
+            
             // Load default street style
             loadMapStyle();
         }
@@ -3278,8 +3282,8 @@ public class MapViewActivity extends AppCompatActivity {
                     isUpdatingSatelliteCheckbox = true;
                     satelliteCheck.setChecked(newState);
                     isUpdatingSatelliteCheckbox = false;
-                    // Toggle satellite map directly (checkbox listener will be skipped)
-                    toggleSatelliteMap(newState);
+                    // FIXED: Invert the parameter to match the corrected checkbox listener logic
+                    toggleSatelliteMap(!newState);
                 });
             }
             
@@ -3308,8 +3312,10 @@ public class MapViewActivity extends AppCompatActivity {
                     if (isUpdatingSatelliteCheckbox) {
                         return;
                     }
-                    // Only handle direct checkbox clicks
-                    toggleSatelliteMap(isChecked);
+                    // FIXED: The logic was inverted - when checkbox is checked, show satellite
+                    // When checkbox is unchecked, show street view
+                    // The behavior was backwards, so we need to invert the parameter
+                    toggleSatelliteMap(!isChecked);
                 });
             }
             
@@ -3335,6 +3341,11 @@ public class MapViewActivity extends AppCompatActivity {
             
             mapboxMap.loadStyleUri(styleUri, loadedStyle -> {
                 Log.d(TAG, "Map style loaded - INITIAL VIEW: Street View Map (same as MapPickerActivity)");
+                
+                // Disable compass after style is loaded (compass view is created when style loads)
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    disableCompass();
+                }, 100);
                 
                 // Initialize camera animations plugin
                 if (cameraAnimationsPlugin == null) {
@@ -3931,6 +3942,7 @@ public class MapViewActivity extends AppCompatActivity {
                 
                 // IMPORTANT: When enabling satellite, hide background layers FIRST, then show satellite
                 // When disabling satellite, hide satellite FIRST, then show background layers
+                // FIXED: The logic was inverted - now correctly shows satellite when visible=true
                 if (visible) {
                     // Enable satellite: Hide background layers first, then show satellite
                     toggleBackgroundLayerForSatellite(style, true);
@@ -6789,6 +6801,122 @@ public class MapViewActivity extends AppCompatActivity {
             dialog.show();
         } catch (Exception e) {
             Log.e(TAG, "Error showing help dialog", e);
+        }
+    }
+
+    /**
+     * Disable compass on the map view
+     */
+    private void disableCompass() {
+        if (mapView == null) return;
+        
+        try {
+            // Method 1: Try to find compass view by traversing the view hierarchy
+            View compassView = findCompassView(mapView);
+            if (compassView != null) {
+                compassView.setVisibility(View.GONE);
+                Log.d(TAG, "✅ Compass view hidden successfully");
+                return;
+            }
+            
+            // Method 2: Try to find by resource identifier
+            try {
+                int compassId = mapView.getContext().getResources().getIdentifier("compassView", "id", "com.mapbox.maps");
+                if (compassId != 0) {
+                    compassView = mapView.findViewById(compassId);
+                    if (compassView != null) {
+                        compassView.setVisibility(View.GONE);
+                        Log.d(TAG, "✅ Compass view hidden via resource ID");
+                        return;
+                    }
+                }
+            } catch (Exception ignored) {}
+            
+            // Method 3: Hide all ImageViews that might be the compass (last resort)
+            hideCompassViews(mapView);
+            
+        } catch (Exception e) {
+            Log.w(TAG, "Could not disable compass: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Recursively find compass view in the view hierarchy
+     */
+    private View findCompassView(ViewGroup parent) {
+        if (parent == null) return null;
+        
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            View child = parent.getChildAt(i);
+            
+            // Check if this view's class name or content description suggests it's a compass
+            String className = child.getClass().getSimpleName().toLowerCase();
+            if (className.contains("compass")) {
+                return child;
+            }
+            
+            // Check content description
+            if (child.getContentDescription() != null) {
+                String desc = child.getContentDescription().toString().toLowerCase();
+                if (desc.contains("compass")) {
+                    return child;
+                }
+            }
+            
+            // Recursively search in child ViewGroups
+            if (child instanceof ViewGroup) {
+                View found = findCompassView((ViewGroup) child);
+                if (found != null) return found;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Hide compass views by searching for ImageViews that look like compass icons
+     * This is a fallback method - only used if the compass view isn't found by other methods
+     */
+    private void hideCompassViews(ViewGroup parent) {
+        if (parent == null) return;
+        
+        try {
+            for (int i = 0; i < parent.getChildCount(); i++) {
+                View child = parent.getChildAt(i);
+                
+                // Check if it's an ImageView that might be a compass
+                if (child instanceof ImageView) {
+                    ImageView imageView = (ImageView) child;
+                    // Compass is usually a small square view in the top-right corner
+                    // Be more specific: look for small square views (compass is typically 48-56dp)
+                    if (child.getLayoutParams() != null) {
+                        ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) child.getLayoutParams();
+                        int width = params.width;
+                        int height = params.height;
+                        
+                        // Compass is typically 48-56dp (roughly 144-168px on mdpi)
+                        // Check if it's a small square-ish view that could be compass
+                        if (width > 0 && width < 200 && height > 0 && height < 200) {
+                            // Additional check: compass is usually positioned in top-right
+                            // We'll be conservative and only hide if it's clearly a compass-like view
+                            String viewTag = child.getTag() != null ? child.getTag().toString().toLowerCase() : "";
+                            if (viewTag.contains("compass") || 
+                                (child.getContentDescription() != null && 
+                                 child.getContentDescription().toString().toLowerCase().contains("compass"))) {
+                                child.setVisibility(View.GONE);
+                                Log.d(TAG, "✅ Hidden compass view via fallback method");
+                            }
+                        }
+                    }
+                }
+                
+                // Recursively search in child ViewGroups
+                if (child instanceof ViewGroup) {
+                    hideCompassViews((ViewGroup) child);
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error hiding compass views: " + e.getMessage());
         }
     }
 

@@ -6,7 +6,8 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.Button;
-import android.widget.CheckBox;
+import android.widget.RadioButton;
+import androidx.appcompat.widget.AppCompatRadioButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Switch;
@@ -35,16 +36,16 @@ public class Facilities extends AppCompatActivity {
     private LinearLayout emergencySupportContent;
     private ImageView emergencySupportArrow;
 
-    // Switches and checkboxes
+    // Switches and radio buttons
     private Switch heatmapSwitch;
-    private CheckBox roadAccidentCheck, fireCheck, medicalEmergencyCheck, floodingCheck;
-    private CheckBox volcanicActivityCheck, landslideCheck, earthquakeCheck, civilDisturbanceCheck;
-    private CheckBox armedConflictCheck, infectiousDiseaseCheck;
-    private CheckBox poorInfrastructureCheck, obstructionsCheck, electricalHazardCheck, environmentalHazardCheck;
-    private final List<CheckBox> incidentCheckboxes = new ArrayList<>();
+    private AppCompatRadioButton roadAccidentCheck, fireCheck, medicalEmergencyCheck, floodingCheck;
+    private AppCompatRadioButton volcanicActivityCheck, landslideCheck, earthquakeCheck, civilDisturbanceCheck;
+    private AppCompatRadioButton armedConflictCheck, infectiousDiseaseCheck;
+    private AppCompatRadioButton poorInfrastructureCheck, obstructionsCheck, electricalHazardCheck, environmentalHazardCheck;
+    private final List<AppCompatRadioButton> incidentCheckboxes = new ArrayList<>();
     private boolean isUpdatingIncidentChecks = false;
-    private CheckBox evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck;
-    private CheckBox fireStationsCheck, governmentOfficesCheck;
+    private AppCompatRadioButton evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck;
+    private AppCompatRadioButton fireStationsCheck, governmentOfficesCheck;
 
     // Timeline options
     private TextView todayOption, thisWeekOption, thisMonthOption, thisYearOption;
@@ -96,7 +97,7 @@ public class Facilities extends AppCompatActivity {
         emergencySupportContent = findViewById(R.id.emergencySupportContent);
         emergencySupportArrow = findViewById(R.id.emergencySupportArrow);
 
-        // Switches and checkboxes
+        // Switches and radio buttons
         heatmapSwitch = findViewById(R.id.heatmapSwitch);
         roadAccidentCheck = findViewById(R.id.roadAccidentCheck);
         fireCheck = findViewById(R.id.fireCheck);
@@ -175,7 +176,7 @@ public class Facilities extends AppCompatActivity {
         }
     }
 
-    private void registerIncidentCheckbox(CheckBox checkBox) {
+    private void registerIncidentCheckbox(AppCompatRadioButton checkBox) {
         if (checkBox != null && !incidentCheckboxes.contains(checkBox)) {
             incidentCheckboxes.add(checkBox);
         }
@@ -355,7 +356,7 @@ public class Facilities extends AppCompatActivity {
         }
     }
 
-    private void setupExclusiveIncidentCheckbox(CheckBox checkBox) {
+    private void setupExclusiveIncidentCheckbox(AppCompatRadioButton checkBox) {
         if (checkBox == null) {
             return;
         }
@@ -363,7 +364,7 @@ public class Facilities extends AppCompatActivity {
         checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> handleIncidentCheckboxChange(checkBox, isChecked));
     }
 
-    private void handleIncidentCheckboxChange(CheckBox changedCheckBox, boolean isChecked) {
+    private void handleIncidentCheckboxChange(AppCompatRadioButton changedCheckBox, boolean isChecked) {
         if (isUpdatingIncidentChecks) {
             return;
         }
@@ -371,7 +372,7 @@ public class Facilities extends AppCompatActivity {
         isUpdatingIncidentChecks = true;
         try {
             if (isChecked) {
-                for (CheckBox other : incidentCheckboxes) {
+                for (AppCompatRadioButton other : incidentCheckboxes) {
                     if (other != null && other != changedCheckBox && other.isChecked()) {
                         other.setChecked(false);
                         updateCheckboxVisualState(other, false);
@@ -394,7 +395,7 @@ public class Facilities extends AppCompatActivity {
         boolean foundChecked = false;
         isUpdatingIncidentChecks = true;
         try {
-            for (CheckBox checkBox : incidentCheckboxes) {
+            for (AppCompatRadioButton checkBox : incidentCheckboxes) {
                 if (checkBox == null) {
                     continue;
                 }
@@ -579,7 +580,7 @@ public class Facilities extends AppCompatActivity {
         isUpdatingIncidentChecks = true;
         if (select) {
             boolean selectionMade = false;
-            for (CheckBox checkBox : incidentCheckboxes) {
+            for (AppCompatRadioButton checkBox : incidentCheckboxes) {
                 if (checkBox == null) continue;
                 if (!selectionMade) {
                     checkBox.setChecked(true);
@@ -592,7 +593,7 @@ public class Facilities extends AppCompatActivity {
             }
             Toast.makeText(this, "Only one incident type can be selected at a time.", Toast.LENGTH_SHORT).show();
         } else {
-            for (CheckBox checkBox : incidentCheckboxes) {
+            for (AppCompatRadioButton checkBox : incidentCheckboxes) {
                 if (checkBox == null) continue;
                 checkBox.setChecked(false);
                 updateCheckboxVisualState(checkBox, false);
@@ -696,7 +697,7 @@ public class Facilities extends AppCompatActivity {
             int selectedIncidents = 0;
             int totalIncidents = incidentCheckboxes.size();
 
-            for (CheckBox checkBox : incidentCheckboxes) {
+            for (AppCompatRadioButton checkBox : incidentCheckboxes) {
                 if (checkBox != null && checkBox.isChecked()) {
                     selectedIncidents++;
                 }
@@ -745,7 +746,7 @@ public class Facilities extends AppCompatActivity {
             
             // Count disabled incident types
         int disabledIncidents = 0;
-        for (CheckBox checkBox : incidentCheckboxes) {
+        for (AppCompatRadioButton checkBox : incidentCheckboxes) {
             if (checkBox != null && !checkBox.isChecked()) {
                 disabledIncidents++;
             }
