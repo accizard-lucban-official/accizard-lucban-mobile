@@ -363,7 +363,7 @@ public class SafetyTipsActivity extends AppCompatActivity {
                 TextView contentText = new TextView(this);
                 contentText.setText(page.content);
                 contentText.setTextColor(getResources().getColor(R.color.black));
-                contentText.setTextSize(16);
+                contentText.setTextSize(14);
                 contentText.setPadding(0, 0, 0, 24);
                 contentContainer.addView(contentText);
             }
@@ -431,27 +431,36 @@ public class SafetyTipsActivity extends AppCompatActivity {
         layout.setOrientation(LinearLayout.HORIZONTAL);
         layout.setPadding(0, 0, 0, 16);
         
-        // Create bullet icon
-        ImageView bulletIcon = new ImageView(this);
-        bulletIcon.setLayoutParams(new LinearLayout.LayoutParams(32, 32));
-        bulletIcon.setImageResource(R.drawable.accizard_logo_svg);
-        bulletIcon.setPadding(4, 4, 4, 4);
+        // Create orange dot bullet
+        View bulletDot = new View(this);
+        LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(
+            dpToPx(8), dpToPx(8)
+        );
+        dotParams.setMargins(0, dpToPx(6), 0, 0);
+        bulletDot.setLayoutParams(dotParams);
+        bulletDot.setBackgroundResource(R.drawable.orange_dot);
         
         // Create text view
         TextView textView = new TextView(this);
         textView.setText(text);
         textView.setTextColor(getResources().getColor(R.color.black));
         textView.setTextSize(14);
-        textView.setLayoutParams(new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
-        ));
-        textView.setPadding(16, 0, 0, 0);
+        );
+        textParams.setMargins(dpToPx(12), 0, 0, 0);
+        textView.setLayoutParams(textParams);
         
-        layout.addView(bulletIcon);
+        layout.addView(bulletDot);
         layout.addView(textView);
         
         return layout;
+    }
+    
+    private int dpToPx(float dp) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(dp * density);
     }
     
     private void updatePaginationDots() {

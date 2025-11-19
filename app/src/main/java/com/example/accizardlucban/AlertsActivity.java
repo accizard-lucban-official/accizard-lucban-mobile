@@ -35,6 +35,19 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.StyleSpan;
+import android.text.style.UnderlineSpan;
+import android.text.style.ClickableSpan;
+import android.text.method.LinkMovementMethod;
+import android.text.Html;
+import android.text.util.Linkify;
+import android.view.View;
+import android.content.Intent;
+import android.net.Uri;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 public class AlertsActivity extends AppCompatActivity {
 
@@ -542,27 +555,33 @@ public class AlertsActivity extends AppCompatActivity {
             
             if (tvPreviewPriority != null) {
                 tvPreviewPriority.setText(announcement.priority != null ? announcement.priority : "Medium");
-                // Set background color based on priority
+                // Set background color and text color based on priority (matching report status badges)
                 int bgRes = R.drawable.medium_priority_bg;
+                int textColor = getResources().getColor(android.R.color.holo_orange_dark);
                 if (announcement.priority != null) {
                     if ("High".equalsIgnoreCase(announcement.priority)) {
                         bgRes = R.drawable.high_priority_bg;
+                        textColor = getResources().getColor(android.R.color.holo_red_dark);
                         // Update priority indicator box color for high priority
                         if (priorityIndicatorBox != null) {
                             priorityIndicatorBox.setBackgroundColor(0xFFFFEBEE); // Light red
                         }
                     } else if ("Low".equalsIgnoreCase(announcement.priority)) {
                         bgRes = R.drawable.low_priority_bg;
+                        textColor = getResources().getColor(android.R.color.holo_green_dark);
                         if (priorityIndicatorBox != null) {
                             priorityIndicatorBox.setBackgroundColor(0xFFF1F8E9); // Light green
                         }
                     } else {
+                        // Medium priority
+                        textColor = getResources().getColor(android.R.color.holo_orange_dark);
                         if (priorityIndicatorBox != null) {
                             priorityIndicatorBox.setBackgroundColor(0xFFFFF3E0); // Light orange
                         }
                     }
                 }
                 tvPreviewPriority.setBackgroundResource(bgRes);
+                tvPreviewPriority.setTextColor(textColor);
             }
             
             if (tvPreviewDate != null) {
@@ -580,7 +599,10 @@ public class AlertsActivity extends AppCompatActivity {
             }
             
             if (tvPreviewMessage != null) {
-                tvPreviewMessage.setText(announcement.message != null ? announcement.message : "No details available");
+                // Apply rich text formatting to message
+                CharSequence formattedMessage = formatRichText(announcement.message != null ? announcement.message : "No details available");
+                tvPreviewMessage.setText(formattedMessage);
+                tvPreviewMessage.setMovementMethod(LinkMovementMethod.getInstance());
             }
             
             // Create dialog first
@@ -1277,19 +1299,29 @@ public class AlertsActivity extends AppCompatActivity {
                     // Set text safely with null checks
                     holder.tvType.setText(ann.type != null ? ann.type : "Unknown Type");
                     holder.tvPriority.setText(ann.priority != null ? ann.priority : "Medium");
-                    holder.tvMessage.setText(ann.message != null ? ann.message : "No message");
+                    // Apply rich text formatting to message
+                    CharSequence formattedMessage = formatRichText(ann.message != null ? ann.message : "No message");
+                    holder.tvMessage.setText(formattedMessage);
+                    holder.tvMessage.setMovementMethod(LinkMovementMethod.getInstance());
                     holder.tvDate.setText(ann.date != null ? ann.date : "No date");
                     
-                    // Set background color based on priority
+                    // Set background color and text color based on priority (matching report status badges)
                     int bgRes = R.drawable.medium_priority_bg;
+                    int textColor = getResources().getColor(android.R.color.holo_orange_dark);
                     if (ann.priority != null) {
                         if ("High".equalsIgnoreCase(ann.priority)) {
                             bgRes = R.drawable.high_priority_bg;
+                            textColor = getResources().getColor(android.R.color.holo_red_dark);
                         } else if ("Low".equalsIgnoreCase(ann.priority)) {
                             bgRes = R.drawable.low_priority_bg;
+                            textColor = getResources().getColor(android.R.color.holo_green_dark);
+                        } else {
+                            // Medium priority
+                            textColor = getResources().getColor(android.R.color.holo_orange_dark);
                         }
                     }
                     holder.tvPriority.setBackgroundResource(bgRes);
+                    holder.tvPriority.setTextColor(textColor);
                     
                     // Set click listener on item view
                     holder.itemView.setOnClickListener(new View.OnClickListener() {
@@ -1761,6 +1793,120 @@ public class AlertsActivity extends AppCompatActivity {
             Log.d(TAG, "Badge update requested from other activity: " + newAnnouncementCount);
         } catch (Exception e) {
             Log.e(TAG, "Error updating badge from other activity: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Format rich text with support for bold, italic, underline, lists, and links
+     * Supports:
+     * - **bold** or <b>bold</b>
+     * - *italic* or <i>italic</i>
+     * - __underline__ or <u>underline</u>
+     * - Numbered lists (1. item)
+     * - Bulleted lists (- item or * item)
+     * - Links [text](url) or <a href="url">text</a>
+     */
+    private CharSequence formatRichText(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        
+        try {
+            // First, format lists
+            String processedText = formatLists(text);
+            
+            // Convert markdown to HTML for easier processing
+            processedText = convertMarkdownToHtml(processedText);
+            
+            // Use Html.fromHtml to handle HTML tags
+            CharSequence htmlFormatted = Html.fromHtml(processedText, Html.FROM_HTML_MODE_LEGACY);
+            SpannableString spannable = new SpannableString(htmlFormatted);
+            
+            // Auto-linkify URLs and email addresses
+            Linkify.addLinks(spannable, Linkify.WEB_URLS | Linkify.EMAIL_ADDRESSES);
+            
+            return spannable;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error formatting rich text: " + e.getMessage(), e);
+            return text; // Return original text on error
+        }
+    }
+    
+    /**
+     * Convert markdown-style formatting to HTML
+     */
+    private String convertMarkdownToHtml(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        
+        try {
+            // Handle markdown links: [text](url) -> <a href="url">text</a>
+            text = text.replaceAll("\\[([^\\]]+)\\]\\(([^\\)]+)\\)", "<a href=\"$2\">$1</a>");
+            
+            // Handle bold: **text** -> <b>text</b> (but preserve if already HTML)
+            text = text.replaceAll("\\*\\*([^*]+)\\*\\*", "<b>$1</b>");
+            
+            // Handle underline: __text__ -> <u>text</u> (but not if it's bold)
+            text = text.replaceAll("(?<!<b>)(?<!</b>)(?<!<u>)__(?![*])([^_]+)__(?!</u>)", "<u>$1</u>");
+            
+            // Handle italic: *text* -> <i>text</i> (but not **text** which is bold)
+            text = text.replaceAll("(?<!\\*)\\*(?!\\*)([^*]+)(?<!\\*)\\*(?!\\*)", "<i>$1</i>");
+            
+            return text;
+        } catch (Exception e) {
+            Log.e(TAG, "Error converting markdown to HTML: " + e.getMessage(), e);
+            return text;
+        }
+    }
+    
+    /**
+     * Format numbered and bulleted lists
+     */
+    private String formatLists(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+        
+        try {
+            StringBuilder result = new StringBuilder();
+            String[] lines = text.split("\n");
+            boolean inList = false;
+            
+            for (String line : lines) {
+                String trimmedLine = line.trim();
+                
+                // Numbered list: 1. item, 2. item, etc.
+                if (Pattern.matches("^\\d+\\.\\s+.+", trimmedLine)) {
+                    if (!inList) {
+                        result.append("\n");
+                        inList = true;
+                    }
+                    result.append("• ").append(trimmedLine.replaceFirst("^\\d+\\.\\s+", "")).append("\n");
+                }
+                // Bulleted list: - item or * item (but not markdown bold/italic)
+                else if (Pattern.matches("^[-]\\s+.+", trimmedLine) || 
+                        (Pattern.matches("^\\*\\s+.+", trimmedLine) && !trimmedLine.startsWith("**"))) {
+                    if (!inList) {
+                        result.append("\n");
+                        inList = true;
+                    }
+                    result.append("• ").append(trimmedLine.replaceFirst("^[-*]\\s+", "")).append("\n");
+                }
+                else {
+                    if (inList && !trimmedLine.isEmpty()) {
+                        result.append("\n");
+                        inList = false;
+                    }
+                    result.append(line).append("\n");
+                }
+            }
+            
+            return result.toString().trim();
+        } catch (Exception e) {
+            Log.e(TAG, "Error formatting lists: " + e.getMessage(), e);
+            return text;
         }
     }
 }

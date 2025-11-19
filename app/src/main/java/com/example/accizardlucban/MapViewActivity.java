@@ -283,11 +283,13 @@ public class MapViewActivity extends AppCompatActivity {
 
     private static class HotspotTutorialStep {
         final int iconResId;
+        final int fireIconResId;
         final int titleResId;
         final int descriptionResId;
 
-        HotspotTutorialStep(int iconResId, int titleResId, int descriptionResId) {
+        HotspotTutorialStep(int iconResId, int fireIconResId, int titleResId, int descriptionResId) {
             this.iconResId = iconResId;
+            this.fireIconResId = fireIconResId;
             this.titleResId = titleResId;
             this.descriptionResId = descriptionResId;
         }
@@ -6696,20 +6698,28 @@ public class MapViewActivity extends AppCompatActivity {
 
     private List<HotspotTutorialStep> buildHotspotTutorialSteps() {
         List<HotspotTutorialStep> steps = new ArrayList<>();
+        // Step 1: pin__2_ and fire__2_
         steps.add(new HotspotTutorialStep(
-                R.drawable.ic_hotspot_flame,
+                R.drawable.pin__2_,
+                R.drawable.fire__2_,
                 R.string.hotspot_tutorial_welcome_title,
                 R.string.hotspot_tutorial_welcome_description));
+        // Step 2: accizard_pin and fire__2_
         steps.add(new HotspotTutorialStep(
-                R.drawable.ic_hotspot_flame,
+                R.drawable.accizard_pin,
+                R.drawable.fire__2_,
                 R.string.view_incident_hotspots,
                 R.string.view_incident_hotspots_description));
+        // Step 3: hospital icon
         steps.add(new HotspotTutorialStep(
-                R.drawable.ic_hotspot_flame,
+                R.drawable.hospital,
+                R.drawable.hospital,
                 R.string.hotspot_tutorial_emergency_title,
                 R.string.hotspot_tutorial_emergency_description));
+        // Step 4: information icon
         steps.add(new HotspotTutorialStep(
-                R.drawable.ic_hotspot_flame,
+                R.drawable.ic_info_tutorial,
+                R.drawable.ic_info_tutorial,
                 R.string.hotspot_tutorial_pin_title,
                 R.string.hotspot_tutorial_pin_description));
         return steps;
@@ -6728,8 +6738,10 @@ public class MapViewActivity extends AppCompatActivity {
                 window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             }
 
-            ImageButton closeButton = dialog.findViewById(R.id.button_close);
+            ImageButton closeButton = dialog.findViewById(R.id.btnCloseHelp);
             ImageView iconView = dialog.findViewById(R.id.image_incident_flame);
+            ImageView fireIconView = dialog.findViewById(R.id.image_incident_fire);
+            ImageView titleIconView = dialog.findViewById(R.id.image_title_icon);
             TextView titleView = dialog.findViewById(R.id.text_title);
             TextView descriptionView = dialog.findViewById(R.id.text_description);
             LinearLayout indicatorContainer = dialog.findViewById(R.id.indicator_container);
@@ -6749,9 +6761,56 @@ public class MapViewActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     HotspotTutorialStep step = steps.get(currentIndex[0]);
-                    iconView.setImageResource(step.iconResId);
+                    
+                    // Step 1 (index 0): Show only pin__2_, hide fire icon
+                    // Step 2 (index 1): Show only fire__2_, hide pin icon
+                    // Step 3 (index 2): Show only hospital icon
+                    // Step 4 (index 3): Show only information icon
+                    if (currentIndex[0] == 0) {
+                        // First page: show pin__2_ only
+                        iconView.setImageResource(step.iconResId);
+                        iconView.setVisibility(View.VISIBLE);
+                        if (fireIconView != null) {
+                            fireIconView.setVisibility(View.GONE);
+                        }
+                    } else if (currentIndex[0] == 1) {
+                        // Second page: show fire__2_ only
+                        if (fireIconView != null) {
+                            fireIconView.setImageResource(step.fireIconResId);
+                            fireIconView.setVisibility(View.VISIBLE);
+                        }
+                        iconView.setVisibility(View.GONE);
+                    } else if (currentIndex[0] == 2) {
+                        // Third page: show hospital icon only
+                        iconView.setImageResource(step.iconResId);
+                        iconView.setVisibility(View.VISIBLE);
+                        if (fireIconView != null) {
+                            fireIconView.setVisibility(View.GONE);
+                        }
+                    } else if (currentIndex[0] == 3) {
+                        // Fourth page: show information icon only
+                        iconView.setImageResource(step.iconResId);
+                        iconView.setVisibility(View.VISIBLE);
+                        if (fireIconView != null) {
+                            fireIconView.setVisibility(View.GONE);
+                        }
+                    } else {
+                        // Other steps: show both icons
+                        iconView.setImageResource(step.iconResId);
+                        iconView.setVisibility(View.VISIBLE);
+                        if (fireIconView != null) {
+                            fireIconView.setImageResource(step.fireIconResId);
+                            fireIconView.setVisibility(View.VISIBLE);
+                        }
+                    }
+                    
                     titleView.setText(step.titleResId);
                     descriptionView.setText(step.descriptionResId);
+                    
+                    // Hide title icon for all steps
+                    if (titleIconView != null) {
+                        titleIconView.setVisibility(View.GONE);
+                    }
 
                     indicatorContainer.removeAllViews();
                     for (int i = 0; i < steps.size(); i++) {

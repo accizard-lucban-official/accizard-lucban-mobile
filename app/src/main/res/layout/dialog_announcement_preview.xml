@@ -76,11 +76,11 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Medium"
-            android:textSize="14sp"
+            android:textSize="12sp"
             android:textStyle="bold"
-            android:textColor="@android:color/white"
+            android:textColor="#FF9800"
             android:background="@drawable/medium_priority_bg"
-            android:padding="8dp"
+            android:padding="6dp"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
             android:layout_marginBottom="16dp" />
@@ -127,7 +127,9 @@
             android:background="#F5F5F5"
             android:minHeight="80dp"
             android:lineSpacingExtra="4dp"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"
+            android:linksClickable="true"
+            android:autoLink="web|email" />
 
         <!-- Announcement Image -->
         <LinearLayout

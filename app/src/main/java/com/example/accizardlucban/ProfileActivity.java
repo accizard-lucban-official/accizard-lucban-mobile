@@ -46,6 +46,8 @@ public class ProfileActivity extends AppCompatActivity {
     private LinearLayout termsLayout, deleteAccountLayout;
     private TextView createdDateText;
     private ImageView profilePictureImageView;
+    private TextView verifiedStatusText;
+    private View verifiedStatusDot;
     
     // Your Info section views
     private LinearLayout residentNameInfoLayout;
@@ -82,6 +84,7 @@ public class ProfileActivity extends AppCompatActivity {
         setupEditProfileLauncher();
         loadUserData();
         loadProfilePicture();
+        loadVerifiedStatus();
         
         // Update notification badge
         updateNotificationBadge();
@@ -98,6 +101,8 @@ public class ProfileActivity extends AppCompatActivity {
         deleteAccountLayout = findViewById(R.id.delete_account_layout);
         createdDateText = findViewById(R.id.created_date_text);
         profilePictureImageView = findViewById(R.id.profile_picture);
+        verifiedStatusText = findViewById(R.id.verified_status_text);
+        verifiedStatusDot = findViewById(R.id.verified_status_dot);
         
         // Apply circular clip to profile picture
         if (profilePictureImageView != null) {
@@ -1108,6 +1113,82 @@ public class ProfileActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Load verified status from Firestore and update UI
+     */
+    private void loadVerifiedStatus() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Log.w(TAG, "No user logged in, cannot load verified status");
+            return;
+        }
+        
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("users")
+            .whereEqualTo("firebaseUid", user.getUid())
+            .limit(1)
+            .get()
+            .addOnSuccessListener(queryDocumentSnapshots -> {
+                if (!queryDocumentSnapshots.isEmpty()) {
+                    QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
+                    
+                    // Get verified field from Firestore
+                    Object verifiedObj = doc.get("verified");
+                    boolean isVerified = false;
+                    
+                    // Handle different data types
+                    if (verifiedObj instanceof Boolean) {
+                        isVerified = (Boolean) verifiedObj;
+                    } else if (verifiedObj instanceof String) {
+                        isVerified = Boolean.parseBoolean((String) verifiedObj);
+                    } else if (verifiedObj != null) {
+                        // Try to convert to boolean
+                        isVerified = Boolean.parseBoolean(verifiedObj.toString());
+                    }
+                    
+                    Log.d(TAG, "Verified status from Firestore: " + isVerified);
+                    
+                    // Update UI based on verified status
+                    updateVerifiedStatusUI(isVerified);
+                } else {
+                    Log.w(TAG, "No user document found for firebaseUid: " + user.getUid());
+                    // Default to not verified if user document not found
+                    updateVerifiedStatusUI(false);
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error loading verified status from Firestore", e);
+                // Default to not verified on error
+                updateVerifiedStatusUI(false);
+            });
+    }
+    
+    /**
+     * Update verified status UI based on verification state
+     */
+    private void updateVerifiedStatusUI(boolean isVerified) {
+        if (verifiedStatusText == null || verifiedStatusDot == null) {
+            Log.w(TAG, "Verified status views are null, cannot update UI");
+            return;
+        }
+        
+        if (isVerified) {
+            // Verified account - green text and green dot
+            verifiedStatusText.setText("Account Verified");
+            verifiedStatusText.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+            verifiedStatusDot.setBackgroundResource(R.drawable.green_dot);
+            verifiedStatusDot.setVisibility(View.VISIBLE);
+            Log.d(TAG, "✅ Account is verified - showing green status");
+        } else {
+            // Not verified account - red text and red dot
+            verifiedStatusText.setText("Account Not Verified");
+            verifiedStatusText.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+            verifiedStatusDot.setBackgroundResource(R.drawable.red_dot);
+            verifiedStatusDot.setVisibility(View.VISIBLE);
+            Log.d(TAG, "⚠️ Account is not verified - showing red status");
+        }
+    }
+    
     private void loadProfilePicture() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null && profilePictureImageView != null) {
@@ -1369,11 +1450,13 @@ public class ProfileActivity extends AppCompatActivity {
                             // Refresh UI with updated data
                             loadUserData();
                             loadProfilePicture();
+                            loadVerifiedStatus();
                         } else {
                             Log.w(TAG, "Failed to sync profile from Firestore: " + message);
                             // Still refresh with local data
                             loadUserData();
                             loadProfilePicture();
+                            loadVerifiedStatus();
                         }
                     }
                 });
@@ -1381,6 +1464,7 @@ public class ProfileActivity extends AppCompatActivity {
                 // Just refresh local data
                 loadUserData();
                 loadProfilePicture();
+                loadVerifiedStatus();
             }
             
             updateNotificationBadge(); // Update notification badge
@@ -1389,6 +1473,7 @@ public class ProfileActivity extends AppCompatActivity {
             // Fallback to basic refresh
             loadUserData();
             loadProfilePicture();
+            loadVerifiedStatus();
             updateNotificationBadge();
         }
     }
