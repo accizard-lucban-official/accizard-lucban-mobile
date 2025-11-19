@@ -103,7 +103,8 @@ public class MapViewActivity extends AppCompatActivity {
             "Electrical Hazard",
             "Environmental Hazard",
             "Animal Concerns",
-            "Others"
+            "Others",
+            "Report" // My Reports - allow heatmap for user reports
     );
     private static final String PREFS_NAME = "AlertsActivityPrefs";
     private static final String KEY_LAST_VISIT_TIME = "last_visit_time";
@@ -144,7 +145,7 @@ public class MapViewActivity extends AppCompatActivity {
     private boolean heatmapEnabled = false;
     private Map<String, Boolean> incidentFilters = new HashMap<>();
     private Map<String, Boolean> facilityFilters = new HashMap<>();
-    private String selectedTimeRange = "Today";
+    private String selectedTimeRange = "All Time";
     
     // Filter indicators
     private TextView filterIndicator;
@@ -161,6 +162,9 @@ public class MapViewActivity extends AppCompatActivity {
     private boolean satelliteMapVisible = false; // Satellite map layer toggle - INITIAL VIEW: Street View (satellite hidden)
     private boolean healthFacilitiesVisible = false;
     private boolean evacuationCentersVisible = false;
+    
+    // Flag to prevent double-triggering when programmatically setting checkbox
+    private boolean isUpdatingSatelliteCheckbox = false;
     
     // Filter Panel Overlay
     private LinearLayout filterPanelOverlay;
@@ -180,7 +184,7 @@ public class MapViewActivity extends AppCompatActivity {
     private CheckBox reportCheck;
     
     // Timeline options
-    private TextView todayOption, thisWeekOption, thisMonthOption, thisYearOption;
+    private TextView allTimeOption, todayOption, thisWeekOption, thisMonthOption, thisYearOption;
     private TextView selectedTimelineOption;
     
     // Section visibility states
@@ -625,14 +629,15 @@ public class MapViewActivity extends AppCompatActivity {
         registerIncidentCheckbox(reportCheck, "Report"); // Report is now part of single-selection group
 
         // Timeline options
+        allTimeOption = findViewById(R.id.allTimeOption);
         todayOption = findViewById(R.id.todayOption);
         thisWeekOption = findViewById(R.id.thisWeekOption);
         thisMonthOption = findViewById(R.id.thisMonthOption);
         thisYearOption = findViewById(R.id.thisYearOption);
-
-        // Set default selection
-        if (todayOption != null) {
-            selectedTimelineOption = todayOption;
+        
+        // Set default selection to "All Time"
+        if (allTimeOption != null) {
+            selectedTimelineOption = allTimeOption;
         }
         
         // Setup checkbox listeners (similar to RegistrationActivity cbTerms functionality)
@@ -1035,6 +1040,25 @@ public class MapViewActivity extends AppCompatActivity {
                 try {
                     incidentFilters.put(incidentType, isChecked);
                     Log.d(TAG, "Incident filter '" + incidentType + "' changed: " + isChecked);
+                    
+                    // If "My Reports" is checked, reload user reports to ensure latest data
+                    if ("Report".equals(incidentType) && isChecked) {
+                        Log.d(TAG, "My Reports checked - reloading user reports");
+                        // Reload reports - the loadUserReportsAsPins method will apply filters after loading
+                        // Don't call applyFiltersToFirestorePins here because reports might not be loaded yet
+                        loadUserReportsAsPins();
+                    } else if ("Report".equals(incidentType) && !isChecked) {
+                        // When "My Reports" is unchecked, hide all user report pins
+                        Log.d(TAG, "My Reports unchecked - hiding user report pins");
+                        runOnUiThread(() -> {
+                            applyFiltersToFirestorePins(false);
+                        });
+                    } else {
+                        // For other incident types, apply filters immediately
+                        runOnUiThread(() -> {
+                            applyFiltersToFirestorePins(true);
+                        });
+                    }
                     
                     enforceSingleIncidentSelection(checkBox, incidentType, isChecked);
                 } catch (Exception e) {
@@ -2708,8 +2732,6 @@ public class MapViewActivity extends AppCompatActivity {
         try {
             Log.d(TAG, "Applying filters to map...");
 
-            boolean layersActive = hasAnyLayerActive();
-
             List<SimpleSearchAdapter.SearchPlace> filteredPlaces = new ArrayList<>();
             for (SimpleSearchAdapter.SearchPlace place : searchPlaces) {
                 if (shouldShowPlace(place)) {
@@ -2723,19 +2745,16 @@ public class MapViewActivity extends AppCompatActivity {
                 simpleSearchAdapter.updatePlaces(filteredPlaces);
             }
 
-            if (layersActive) {
-                setAllPinsVisibility(false);
-                hideHeatmapView();
-            } else {
-                applyFiltersToFirestorePins();
-                updateHeatmapToggleState();
+            // Always apply filters to pins, regardless of layer state
+            // Layers (Barangay Boundaries, Road Network, Waterways, Satellite Map) should NOT hide pins
+            applyFiltersToFirestorePins();
+            updateHeatmapToggleState();
 
-                if (heatmapEnabled && hasActiveHazardFilter()) {
-                    showHeatmapView();
-                    setAllPinsVisibility(false);
-                } else {
-                    hideHeatmapView();
-                }
+            if (heatmapEnabled && hasActiveHazardFilter()) {
+                showHeatmapView();
+                setAllPinsVisibility(false);
+            } else {
+                hideHeatmapView();
             }
 
         } catch (Exception e) {
@@ -2769,26 +2788,15 @@ public class MapViewActivity extends AppCompatActivity {
             int visiblePins = 0;
             int hiddenPins = 0;
             int totalPins = firestorePinMarkers.size() + userReportPinMarkers.size();
-            boolean layersActive = hasAnyLayerActive();
+            // Note: layersActive is no longer used to hide pins - layers should NOT hide pins
             boolean isMyReportsFilterActive = incidentFilters.getOrDefault("Report", false);
             
             // Process regular Firestore pins
             for (MapMarker mapMarker : firestorePinMarkers) {
                 if (mapMarker.pinData != null) {
                     boolean previouslyVisible = mapMarker.markerView.getVisibility() == View.VISIBLE;
-
-                    if (layersActive) {
-                        if (previouslyVisible) {
-                            mapMarker.markerView.clearAnimation();
-                            mapMarker.markerView.setAlpha(1f);
-                        }
-                        mapMarker.markerView.setVisibility(View.GONE);
-                        hiddenPins++;
-                        continue;
-                    }
-
-                    boolean shouldShow = shouldShowPinBasedOnFilters(mapMarker.pinData);
-
+                    
+                    // Check heatmap first - if heatmap is active, hide pins
                     if (heatmapEnabled && hasActiveHazardFilter()) {
                         if (previouslyVisible) {
                             mapMarker.markerView.clearAnimation();
@@ -2798,6 +2806,9 @@ public class MapViewActivity extends AppCompatActivity {
                         hiddenPins++;
                         continue;
                     }
+                    
+                    // Always check filter visibility - layers do NOT hide pins
+                    boolean shouldShow = shouldShowPinBasedOnFilters(mapMarker.pinData);
 
                     // Only update visibility if it changed to prevent glitching
                     if (shouldShow) {
@@ -2826,13 +2837,29 @@ public class MapViewActivity extends AppCompatActivity {
             }
             
             // Process user report pins
+            // When "My Reports" filter is active, show user report pins with their custom icons
+            int userReportPinsCount = userReportPinMarkers.size();
+            int visibleUserReportPins = 0;
+            
+            Log.d(TAG, "Processing " + userReportPinsCount + " user report pins. My Reports filter active: " + isMyReportsFilterActive);
+            
             for (MapMarker mapMarker : userReportPinMarkers) {
-                if (mapMarker.pinData != null) {
+                if (mapMarker.pinData != null && mapMarker.markerView != null) {
                     boolean previouslyVisible = mapMarker.markerView.getVisibility() == View.VISIBLE;
                     
-                    // When "My Reports" filter is active, show user report pins
-                    // Otherwise, hide them
-                    boolean shouldShow = isMyReportsFilterActive;
+                    // When "My Reports" is active, show ALL user report pins (shouldShowPinBasedOnFilters already handles this)
+                    // But we need to check if "My Reports" is actually active
+                    boolean shouldShow = false;
+                    if (isMyReportsFilterActive) {
+                        // When "My Reports" is active, shouldShowPinBasedOnFilters returns true for user report pins
+                        shouldShow = shouldShowPinBasedOnFilters(mapMarker.pinData);
+                        Log.d(TAG, "User report pin check - My Reports active: " + isMyReportsFilterActive + 
+                            ", shouldShow: " + shouldShow + ", Pin ID: " + mapMarker.pinData.getId() + 
+                            ", Type: " + mapMarker.pinData.getType());
+                    } else {
+                        // When "My Reports" is not active, hide user report pins
+                        shouldShow = false;
+                    }
                     
                     if (shouldShow) {
                         if (!previouslyVisible) {
@@ -2841,8 +2868,12 @@ public class MapViewActivity extends AppCompatActivity {
                             mapMarker.markerView.setVisibility(View.VISIBLE);
                             mapMarker.markerView.bringToFront();
                             visiblePins++;
+                            visibleUserReportPins++;
+                            Log.d(TAG, "✅ Showing user report pin: " + mapMarker.pinData.getType() + " at " + 
+                                mapMarker.pinData.getLatitude() + ", " + mapMarker.pinData.getLongitude());
                         } else {
                             visiblePins++;
+                            visibleUserReportPins++;
                         }
                     } else {
                         if (previouslyVisible) {
@@ -2850,17 +2881,55 @@ public class MapViewActivity extends AppCompatActivity {
                             mapMarker.markerView.setAlpha(1f);
                             mapMarker.markerView.setVisibility(View.GONE);
                             hiddenPins++;
+                            Log.d(TAG, "⚠️ Hiding user report pin: " + mapMarker.pinData.getType() + 
+                                " (My Reports: " + isMyReportsFilterActive + ")");
                         } else {
                             hiddenPins++;
                         }
                     }
+                } else {
+                    Log.w(TAG, "⚠️ User report pin marker has null data or view");
                 }
             }
             
-            Log.d(TAG, "Filtered Firestore pins - Total: " + totalPins + ", Visible: " + visiblePins + ", Hidden: " + hiddenPins);
+            Log.d(TAG, "═══════════════════════════════════════════════════════");
+            Log.d(TAG, "📊 FILTERING SUMMARY:");
+            Log.d(TAG, "  - Total pins: " + totalPins);
+            Log.d(TAG, "    • Firestore pins: " + firestorePinMarkers.size());
+            Log.d(TAG, "    • User report pins: " + userReportPinsCount);
+            Log.d(TAG, "  - Visible pins: " + visiblePins);
+            Log.d(TAG, "    • User report pins visible: " + visibleUserReportPins);
+            Log.d(TAG, "  - Hidden pins: " + hiddenPins);
+            Log.d(TAG, "  - My Reports filter active: " + isMyReportsFilterActive);
+            Log.d(TAG, "═══════════════════════════════════════════════════════");
+            
+            // Log details of each user report pin for debugging
+            if (isMyReportsFilterActive && userReportPinsCount > 0) {
+                Log.d(TAG, "🔍 DETAILED USER REPORT PINS STATUS:");
+                for (int i = 0; i < userReportPinMarkers.size(); i++) {
+                    MapMarker marker = userReportPinMarkers.get(i);
+                    if (marker != null && marker.pinData != null) {
+                        boolean isVisible = marker.markerView != null && marker.markerView.getVisibility() == View.VISIBLE;
+                        boolean shouldShow = shouldShowPinBasedOnFilters(marker.pinData);
+                        Log.d(TAG, "  Pin #" + (i + 1) + ":");
+                        Log.d(TAG, "    - ID: " + marker.pinData.getId());
+                        Log.d(TAG, "    - Type: " + marker.pinData.getType());
+                        Log.d(TAG, "    - Coordinates: " + marker.pinData.getLatitude() + ", " + marker.pinData.getLongitude());
+                        Log.d(TAG, "    - Should show (filter): " + shouldShow);
+                        Log.d(TAG, "    - Currently visible: " + isVisible);
+                        Log.d(TAG, "    - Marker view: " + (marker.markerView != null ? "EXISTS" : "NULL"));
+                        if (marker.markerView != null) {
+                            Log.d(TAG, "    - View visibility: " + (marker.markerView.getVisibility() == View.VISIBLE ? "VISIBLE" : "GONE/HIDDEN"));
+                        }
+                    }
+                }
+                Log.d(TAG, "═══════════════════════════════════════════════════════");
+            }
             
             // Show toast if no pins match the active filter
-            if (showToast && visiblePins == 0 && totalPins > 0 && !layersActive && !(heatmapEnabled && hasActiveHazardFilter())) {
+            // "My Reports" filter: No toast messages - just show/hide pins silently
+            if (showToast && !isMyReportsFilterActive && visiblePins == 0 && totalPins > 0 && !(heatmapEnabled && hasActiveHazardFilter())) {
+                // For other filters (not "My Reports"), show appropriate toast messages
                 // Get the active filter name(s)
                 String activeFilterName = getActiveFilterName();
                 if (activeFilterName != null && !activeFilterName.isEmpty()) {
@@ -2887,11 +2956,12 @@ public class MapViewActivity extends AppCompatActivity {
                     }
                 }
             }
+            // Removed success toast - only show toast when no pins are found
             
-            if (!layersActive && heatmapEnabled && hasActiveHazardFilter()) {
+            // Update heatmap if enabled and has active hazard filters
+            // Layers do NOT affect heatmap visibility - heatmap works independently
+            if (heatmapEnabled && hasActiveHazardFilter()) {
                 updateHeatmapLayerData();
-            } else if (layersActive) {
-                hideHeatmapView();
             }
             
         } catch (Exception e) {
@@ -3022,6 +3092,8 @@ public class MapViewActivity extends AppCompatActivity {
         }
 
         List<Feature> features = new ArrayList<>();
+        
+        // Add Firestore pins to heatmap
         for (MapMarker mapMarker : firestorePinMarkers) {
             if (mapMarker != null && mapMarker.location != null && mapMarker.pinData != null) {
                 if (isHazardCategory(mapMarker.pinData.getCategory()) &&
@@ -3030,6 +3102,22 @@ public class MapViewActivity extends AppCompatActivity {
                             mapMarker.location.longitude(),
                             mapMarker.location.latitude()
                     )));
+                }
+            }
+        }
+        
+        // Add user report pins to heatmap when "My Reports" is active
+        boolean isMyReportsActive = incidentFilters.getOrDefault("Report", false);
+        if (isMyReportsActive) {
+            for (MapMarker mapMarker : userReportPinMarkers) {
+                if (mapMarker != null && mapMarker.location != null && mapMarker.pinData != null) {
+                    // Include user report pins in heatmap - they can be any hazard type
+                    if (shouldShowPinBasedOnFilters(mapMarker.pinData)) {
+                        features.add(Feature.fromGeometry(Point.fromLngLat(
+                                mapMarker.location.longitude(),
+                                mapMarker.location.latitude()
+                        )));
+                    }
                 }
             }
         }
@@ -3186,7 +3274,11 @@ public class MapViewActivity extends AppCompatActivity {
             if (satelliteLayer != null && satelliteCheck != null) {
                 satelliteLayer.setOnClickListener(v -> {
                     boolean newState = !satelliteCheck.isChecked();
+                    // Prevent checkbox listener from firing when we programmatically set it
+                    isUpdatingSatelliteCheckbox = true;
                     satelliteCheck.setChecked(newState);
+                    isUpdatingSatelliteCheckbox = false;
+                    // Toggle satellite map directly (checkbox listener will be skipped)
                     toggleSatelliteMap(newState);
                 });
             }
@@ -3212,6 +3304,11 @@ public class MapViewActivity extends AppCompatActivity {
             
             if (satelliteCheck != null) {
                 satelliteCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    // Skip if we're programmatically updating the checkbox (to prevent double-trigger)
+                    if (isUpdatingSatelliteCheckbox) {
+                        return;
+                    }
+                    // Only handle direct checkbox clicks
                     toggleSatelliteMap(isChecked);
                 });
             }
@@ -3357,8 +3454,9 @@ public class MapViewActivity extends AppCompatActivity {
     
     /**
      * Update pins visibility based on whether any layers are active
-     * Pins are hidden when any layer is active
-     * When no layers are active, pins visibility is controlled by filters
+     * Pins are ALWAYS shown based on filters, regardless of layer state
+     * Layers (Barangay Boundaries, Road Network, Waterways, Satellite Map) do NOT hide pins
+     * Only heatmap with active hazard filters will hide pins
      */
     private void updatePinsVisibilityBasedOnLayers() {
         // Prevent infinite loops when filters and layers are applied simultaneously
@@ -3370,20 +3468,18 @@ public class MapViewActivity extends AppCompatActivity {
         try {
             isApplyingFiltersOrLayers = true;
             
+            // Only hide pins when heatmap is enabled with active hazard filters
             if (heatmapEnabled && hasActiveHazardFilter()) {
                 setAllPinsVisibility(false);
+                Log.d(TAG, "Pins visibility updated - Heatmap active, hiding all pins");
                 return; // Flag will be reset in finally block
             }
+            
+            // Always apply filter-based visibility, regardless of layer state
+            // Layers (Barangay Boundaries, Road Network, Waterways, Satellite Map) should NOT hide pins
+            applyFiltersToFirestorePins(false);
             boolean anyLayerActive = hasAnyLayerActive();
-            if (anyLayerActive) {
-                // Hide all pins when layers are active
-                setAllPinsVisibility(false);
-                Log.d(TAG, "Pins visibility updated - Layers active, hiding all pins");
-            } else {
-                // When no layers are active, apply filter-based visibility
-                applyFiltersToFirestorePins(false);
-                Log.d(TAG, "Pins visibility updated - No layers active, applying filters");
-            }
+            Log.d(TAG, "Pins visibility updated - Applying filters (layers active: " + anyLayerActive + ")");
         } finally {
             isApplyingFiltersOrLayers = false;
         }
@@ -3830,29 +3926,31 @@ public class MapViewActivity extends AppCompatActivity {
             // Toggle satellite raster base visibility without reloading the whole style
             Style style = mapboxMap != null ? mapboxMap.getStyle() : null;
             if (style != null) {
-                // Log all layers for debugging
-                logAllLayers(style, "Before satellite toggle");
-                
                 // Ensure satellite layer exists first
                 ensureSatelliteLayer(style);
                 
-                // IMPORTANT: Set satellite layer visibility FIRST
-                setSatelliteVisibility(style, visible);
+                // IMPORTANT: When enabling satellite, hide background layers FIRST, then show satellite
+                // When disabling satellite, hide satellite FIRST, then show background layers
+                if (visible) {
+                    // Enable satellite: Hide background layers first, then show satellite
+                    toggleBackgroundLayerForSatellite(style, true);
+                    setSatelliteVisibility(style, true);
+                } else {
+                    // Disable satellite: Hide satellite first, then show background layers
+                    setSatelliteVisibility(style, false);
+                    toggleBackgroundLayerForSatellite(style, false);
+                }
                 
-                // Immediately hide/show base map layers (no delay for better responsiveness)
-                toggleBackgroundLayerForSatellite(style, visible);
-                
-                // Force map to refresh/redraw
+                // Force map to refresh/redraw immediately
                 forceMapRefresh();
                 
-                // Log all layers after toggle for debugging
+                // Verify and fix any issues after a short delay
                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
                     Style currentStyle = mapboxMap != null ? mapboxMap.getStyle() : null;
                     if (currentStyle != null) {
-                        logAllLayers(currentStyle, "After satellite toggle");
                         verifySatelliteLayerState(currentStyle, visible);
                         
-                        // Double-check satellite layer properties
+                        // Double-check satellite layer properties if enabled
                         if (visible) {
                             verifySatelliteLayerProperties(currentStyle);
                         }
@@ -3880,8 +3978,14 @@ public class MapViewActivity extends AppCompatActivity {
                     Style style = mapboxMap != null ? mapboxMap.getStyle() : null;
                     if (style != null) {
                         ensureSatelliteLayer(style);
-                        setSatelliteVisibility(style, visible);
-                        toggleBackgroundLayerForSatellite(style, visible);
+                        if (visible) {
+                            toggleBackgroundLayerForSatellite(style, true);
+                            setSatelliteVisibility(style, true);
+                        } else {
+                            setSatelliteVisibility(style, false);
+                            toggleBackgroundLayerForSatellite(style, false);
+                        }
+                        forceMapRefresh();
                     }
                 } catch (Exception retryException) {
                     Log.e(TAG, "Error retrying satellite toggle: " + retryException.getMessage(), retryException);
@@ -4397,6 +4501,9 @@ public class MapViewActivity extends AppCompatActivity {
             }
             
             // Timeline options
+            if (allTimeOption != null) {
+                allTimeOption.setOnClickListener(v -> selectTimelineOption("All Time", allTimeOption));
+            }
             if (todayOption != null) {
                 todayOption.setOnClickListener(v -> selectTimelineOption("Today", todayOption));
             }
@@ -4516,6 +4623,10 @@ public class MapViewActivity extends AppCompatActivity {
         try {
             int defaultColor = getResources().getColor(android.R.color.black);
 
+            if (allTimeOption != null) {
+                allTimeOption.setTextColor(defaultColor);
+                allTimeOption.setBackground(null);
+            }
             if (todayOption != null) {
                 todayOption.setTextColor(defaultColor);
                 todayOption.setBackground(null);
@@ -4546,6 +4657,9 @@ public class MapViewActivity extends AppCompatActivity {
             TextView optionToSelect = null;
 
             switch (selectedTimeRange) {
+                case "All Time":
+                    optionToSelect = allTimeOption;
+                    break;
                 case "Today":
                     optionToSelect = todayOption;
                     break;
@@ -4668,7 +4782,7 @@ public class MapViewActivity extends AppCompatActivity {
             heatmapEnabled = false;
             
             // Reset timeline
-            selectedTimeRange = "Today";
+            selectedTimeRange = "All Time";
             
             // Re-enable all checkboxes when filters are cleared
             setIncidentCheckboxesEnabled(true);
@@ -4794,79 +4908,350 @@ public class MapViewActivity extends AppCompatActivity {
             clearUserReportPins();
 
             // Query user's reports from "reports" collection
+            String userId = currentUser.getUid();
+            Log.d(TAG, "═══════════════════════════════════════════════════════");
+            Log.d(TAG, "🔍 QUERYING USER REPORTS FROM FIRESTORE");
+            Log.d(TAG, "User ID: " + userId);
+            Log.d(TAG, "Collection: reports");
+            Log.d(TAG, "Filter: userId == " + userId);
+            Log.d(TAG, "═══════════════════════════════════════════════════════");
+            
             db.collection("reports")
-                .whereEqualTo("userId", currentUser.getUid())
+                .whereEqualTo("userId", userId)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     try {
-                        int reportCount = 0;
+                        Log.d(TAG, "═══════════════════════════════════════════════════════");
+                        Log.d(TAG, "✅ FIRESTORE QUERY SUCCESSFUL");
+                        Log.d(TAG, "Total documents found: " + queryDocumentSnapshots.size());
+                        Log.d(TAG, "═══════════════════════════════════════════════════════");
+                        
+                        // Use final array to allow modification inside lambda
+                        final int[] reportCount = {0};
+                        final int[] skippedCount = {0};
+                        
+                        if (queryDocumentSnapshots.isEmpty()) {
+                            Log.w(TAG, "═══════════════════════════════════════════════════════");
+                            Log.w(TAG, "⚠️ NO REPORTS FOUND IN FIRESTORE");
+                            Log.w(TAG, "User ID: " + userId);
+                            Log.w(TAG, "Collection: reports");
+                            Log.w(TAG, "This could mean:");
+                            Log.w(TAG, "  1. User hasn't submitted any reports yet");
+                            Log.w(TAG, "  2. Reports are stored with different userId field");
+                            Log.w(TAG, "  3. Reports are in a different collection");
+                            Log.w(TAG, "═══════════════════════════════════════════════════════");
+                            // No toast for "My Reports" - just apply filters silently
+                            runOnUiThread(() -> {
+                                // Apply filters without showing toast
+                                applyFiltersToFirestorePins(false);
+                            });
+                            return;
+                        }
+                        
+                        // Log all document IDs and key fields for debugging
+                        Log.d(TAG, "═══════════════════════════════════════════════════════");
+                        Log.d(TAG, "📋 DOCUMENTS FOUND - ANALYZING EACH REPORT:");
+                        Log.d(TAG, "═══════════════════════════════════════════════════════");
+                        for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                            Log.d(TAG, "Document ID: " + doc.getId());
+                            Log.d(TAG, "  - userId: " + doc.getString("userId"));
+                            Log.d(TAG, "  - reportType: " + doc.getString("reportType"));
+                            Log.d(TAG, "  - latitude: " + doc.getDouble("latitude"));
+                            Log.d(TAG, "  - longitude: " + doc.getDouble("longitude"));
+                            Log.d(TAG, "  - locationName: " + doc.getString("locationName"));
+                            Log.d(TAG, "  - coordinates: " + doc.getString("coordinates"));
+                            Log.d(TAG, "  - location: " + doc.getString("location"));
+                            Log.d(TAG, "  - Full data: " + doc.getData().toString());
+                            Log.d(TAG, "  ───────────────────────────────────────────────");
+                        }
+                        Log.d(TAG, "═══════════════════════════════════════════════════════");
+                        Log.d(TAG, "🔄 STARTING TO PROCESS " + queryDocumentSnapshots.size() + " REPORTS");
+                        Log.d(TAG, "═══════════════════════════════════════════════════════");
+                        
                         for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                             try {
                                 // Get report data
                                 String reportId = document.getId();
+                                Log.d(TAG, "═══════════════════════════════════════════════════════");
+                                Log.d(TAG, "📄 Processing report: " + reportId);
+                                Log.d(TAG, "Full document data: " + document.getData().toString());
+                                
                                 String reportType = document.getString("reportType");
                                 if (reportType == null || reportType.isEmpty()) {
                                     // Fallback to category if reportType is not available
                                     reportType = document.getString("category");
                                 }
                                 
+                                // If still empty, try "type" field
+                                if ((reportType == null || reportType.isEmpty())) {
+                                    reportType = document.getString("type");
+                                }
+                                
+                                // Try multiple ways to get coordinates
                                 Double latitude = document.getDouble("latitude");
                                 Double longitude = document.getDouble("longitude");
+                                
+                                // Fallback: Try alternative field names
+                                if (latitude == null) {
+                                    latitude = document.getDouble("lat");
+                                }
+                                if (longitude == null) {
+                                    longitude = document.getDouble("lng");
+                                }
+                                if (longitude == null) {
+                                    longitude = document.getDouble("lon");
+                                }
+                                
+                                // Fallback: Try parsing from coordinates string field
+                                if ((latitude == null || longitude == null) && document.contains("coordinates")) {
+                                    String coordinatesStr = document.getString("coordinates");
+                                    if (coordinatesStr != null && !coordinatesStr.isEmpty()) {
+                                        try {
+                                            // Parse format: "14.123456, 121.567890" or "14.123456,121.567890"
+                                            String[] coords = coordinatesStr.split(",");
+                                            if (coords.length == 2) {
+                                                if (latitude == null) {
+                                                    latitude = Double.parseDouble(coords[0].trim());
+                                                }
+                                                if (longitude == null) {
+                                                    longitude = Double.parseDouble(coords[1].trim());
+                                                }
+                                                Log.d(TAG, "Parsed coordinates from string: " + latitude + ", " + longitude);
+                                            }
+                                        } catch (Exception e) {
+                                            Log.w(TAG, "Could not parse coordinates string: " + coordinatesStr, e);
+                                        }
+                                    }
+                                }
+                                
+                                // Fallback: Try parsing from location field if it contains coordinates
+                                if ((latitude == null || longitude == null) && document.contains("location")) {
+                                    String locationStr = document.getString("location");
+                                    if (locationStr != null && locationStr.contains("(") && locationStr.contains(")")) {
+                                        try {
+                                            // Parse format: "Location Name (14.123456, 121.567890)"
+                                            int start = locationStr.indexOf("(");
+                                            int end = locationStr.indexOf(")");
+                                            if (start > 0 && end > start) {
+                                                String coordsStr = locationStr.substring(start + 1, end);
+                                                String[] coords = coordsStr.split(",");
+                                                if (coords.length == 2) {
+                                                    if (latitude == null) {
+                                                        latitude = Double.parseDouble(coords[0].trim());
+                                                    }
+                                                    if (longitude == null) {
+                                                        longitude = Double.parseDouble(coords[1].trim());
+                                                    }
+                                                    Log.d(TAG, "Parsed coordinates from location field: " + latitude + ", " + longitude);
+                                                }
+                                            }
+                                        } catch (Exception e) {
+                                            Log.w(TAG, "Could not parse coordinates from location field: " + locationStr, e);
+                                        }
+                                    }
+                                }
+                                
                                 String locationName = document.getString("locationName");
                                 if (locationName == null || locationName.isEmpty()) {
                                     locationName = document.getString("location");
+                                    // Remove coordinates from location name if present
+                                    if (locationName != null && locationName.contains("(")) {
+                                        locationName = locationName.substring(0, locationName.indexOf("(")).trim();
+                                    }
                                 }
 
-                                // Only create pin if coordinates are available
-                                if (latitude != null && longitude != null && 
-                                    latitude != 0.0 && longitude != 0.0) {
+                                Log.d(TAG, "📊 Report Summary:");
+                                Log.d(TAG, "  - Report ID: " + reportId);
+                                Log.d(TAG, "  - Type: " + reportType);
+                                Log.d(TAG, "  - Latitude: " + latitude);
+                                Log.d(TAG, "  - Longitude: " + longitude);
+                                Log.d(TAG, "  - Location Name: " + locationName);
+                                Log.d(TAG, "  - Coordinates Valid: " + (latitude != null && longitude != null && 
+                                    latitude != 0.0 && longitude != 0.0 &&
+                                    latitude >= -90 && latitude <= 90 &&
+                                    longitude >= -180 && longitude <= 180));
+
+                                // Only create pin if coordinates are available and valid
+                                boolean hasValidCoordinates = latitude != null && longitude != null && 
+                                    latitude != 0.0 && longitude != 0.0 &&
+                                    latitude >= -90 && latitude <= 90 &&
+                                    longitude >= -180 && longitude <= 180;
+                                
+                                if (hasValidCoordinates) {
+                                    Log.d(TAG, "✅ VALID COORDINATES - Creating pin...");
                                     
                                     // Create Pin object from report
                                     Pin pin = new Pin();
                                     pin.setId("report_" + reportId); // Prefix to distinguish from regular pins
-                                    pin.setType(reportType); // Use reportType for icon selection
-                                    pin.setCategory(reportType); // Also set category as fallback
+                                    pin.setType(reportType != null ? reportType : "Others"); // Use reportType for icon selection
+                                    pin.setCategory(reportType != null ? reportType : "Others"); // Also set category as fallback
                                     pin.setLocationName(locationName != null ? locationName : "Location not specified");
                                     pin.setLatitude(latitude);
                                     pin.setLongitude(longitude);
                                     pin.setCreatedBy(currentUser.getUid());
                                     pin.setReportId(reportId);
                                     
-                                    // Get timestamp
-                                    com.google.firebase.Timestamp timestamp = document.getTimestamp("timestamp");
-                                    if (timestamp != null) {
-                                        pin.setCreatedAt(timestamp.toDate());
+                                    // Get timestamp - reports store timestamp as long (milliseconds), not Firestore Timestamp
+                                    // Try to get as long first to avoid RuntimeException
+                                    java.util.Date pinDate = null;
+                                    
+                                    try {
+                                        // First try to get as long (milliseconds) - this is how reports store it
+                                        Long timestampLong = document.getLong("timestamp");
+                                        if (timestampLong != null && timestampLong > 0) {
+                                            pinDate = new java.util.Date(timestampLong);
+                                            Log.d(TAG, "  - Timestamp (long): " + timestampLong + " = " + pinDate);
+                                        }
+                                    } catch (Exception e) {
+                                        Log.w(TAG, "  - Could not get timestamp as long: " + e.getMessage());
                                     }
+                                    
+                                    // If long didn't work, try Firestore Timestamp
+                                    if (pinDate == null) {
+                                        try {
+                                            com.google.firebase.Timestamp timestamp = document.getTimestamp("timestamp");
+                                            if (timestamp != null) {
+                                                pinDate = timestamp.toDate();
+                                                Log.d(TAG, "  - Timestamp (Firestore): " + pinDate);
+                                            }
+                                        } catch (Exception e) {
+                                            Log.w(TAG, "  - Could not get timestamp as Firestore Timestamp: " + e.getMessage());
+                                        }
+                                    }
+                                    
+                                    // Fallback to createdAt field
+                                    if (pinDate == null) {
+                                        try {
+                                            Long createdAtLong = document.getLong("createdAt");
+                                            if (createdAtLong != null && createdAtLong > 0) {
+                                                pinDate = new java.util.Date(createdAtLong);
+                                                Log.d(TAG, "  - Using createdAt (long): " + pinDate);
+                                            }
+                                        } catch (Exception e) {
+                                            // Try as Firestore Timestamp
+                                            try {
+                                                com.google.firebase.Timestamp createdAt = document.getTimestamp("createdAt");
+                                                if (createdAt != null) {
+                                                    pinDate = createdAt.toDate();
+                                                    Log.d(TAG, "  - Using createdAt (Firestore): " + pinDate);
+                                                }
+                                            } catch (Exception e2) {
+                                                Log.w(TAG, "  - Could not get createdAt: " + e2.getMessage());
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Final fallback - use current date
+                                    if (pinDate == null) {
+                                        pinDate = new java.util.Date();
+                                        Log.w(TAG, "  - Using current date as fallback: " + pinDate);
+                                    }
+                                    
+                                    pin.setCreatedAt(pinDate);
                                     
                                     // Create point from coordinates
                                     Point pinPoint = Point.fromLngLat(longitude, latitude);
                                     
-                                    // Add pin to map (but keep it hidden initially - will be shown when filter is active)
-                                    addUserReportPinToMap(pin, pinPoint);
-                                    reportCount++;
+                                    // Add pin to map with custom icon based on report type
+                                    // The icon will be selected automatically by getDrawableForPin() based on reportType
+                                    Log.d(TAG, "Creating pin for report:");
+                                    Log.d(TAG, "  - Report ID: " + reportId);
+                                    Log.d(TAG, "  - Type: " + reportType);
+                                    Log.d(TAG, "  - Location: " + locationName);
+                                    Log.d(TAG, "  - Coordinates: " + latitude + ", " + longitude);
+                                    Log.d(TAG, "  - Icon Resource: " + getDrawableForPin(pin));
                                     
-                                    Log.d(TAG, "Added user report pin: " + reportType + " at " + latitude + ", " + longitude);
+                                    // Verify pin was created correctly before adding
+                                    Log.d(TAG, "About to add pin to map:");
+                                    Log.d(TAG, "  - Pin ID: " + pin.getId());
+                                    Log.d(TAG, "  - Pin Type: " + pin.getType());
+                                    Log.d(TAG, "  - Pin Coordinates: " + pin.getLatitude() + ", " + pin.getLongitude());
+                                    Log.d(TAG, "  - Point Coordinates: " + pinPoint.latitude() + ", " + pinPoint.longitude());
+                                    
+                                    addUserReportPinToMap(pin, pinPoint);
+                                    reportCount[0]++;
+                                    
+                                    // Verify pin was added to the list
+                                    Log.d(TAG, "✅ Successfully added user report pin: Type=" + reportType + ", Icon=" + getDrawableForPin(pin) + " at " + latitude + ", " + longitude);
+                                    Log.d(TAG, "  - Total pins in userReportPinMarkers list: " + userReportPinMarkers.size());
+                                    Log.d(TAG, "═══════════════════════════════════════");
                                 } else {
-                                    Log.w(TAG, "Report " + reportId + " has invalid coordinates, skipping");
+                                    skippedCount[0]++;
+                                    Log.w(TAG, "❌ INVALID COORDINATES - Skipping report:");
+                                    Log.w(TAG, "  - Report ID: " + reportId);
+                                    Log.w(TAG, "  - Latitude: " + latitude + " (valid: -90 to 90, not null, not 0.0)");
+                                    Log.w(TAG, "  - Longitude: " + longitude + " (valid: -180 to 180, not null, not 0.0)");
+                                    Log.w(TAG, "  - Location Name: " + locationName);
+                                    Log.w(TAG, "  - Reason: " + 
+                                        (latitude == null ? "Latitude is NULL" : 
+                                         longitude == null ? "Longitude is NULL" :
+                                         latitude == 0.0 ? "Latitude is 0.0" :
+                                         longitude == 0.0 ? "Longitude is 0.0" :
+                                         latitude < -90 || latitude > 90 ? "Latitude out of range" :
+                                         longitude < -180 || longitude > 180 ? "Longitude out of range" : "Unknown"));
+                                    Log.d(TAG, "═══════════════════════════════════════════════════════");
                                 }
                             } catch (Exception e) {
-                                Log.e(TAG, "Error processing report document: " + document.getId(), e);
+                                Log.e(TAG, "❌ Error processing report document: " + document.getId(), e);
+                                e.printStackTrace();
                             }
                         }
                         
-                        Log.d(TAG, "Successfully loaded " + reportCount + " user reports as pins");
+                        final int finalReportCount = reportCount[0];
+                        final int finalSkippedCount = skippedCount[0];
+                        final int totalReportsFound = queryDocumentSnapshots.size();
                         
-                        // Apply filters to update visibility
+                        Log.d(TAG, "═══════════════════════════════════════════════════════");
+                        Log.d(TAG, "📊 LOADING SUMMARY:");
+                        Log.d(TAG, "  - Total reports found in Firestore: " + totalReportsFound);
+                        Log.d(TAG, "  - Pins successfully created: " + finalReportCount);
+                        Log.d(TAG, "  - Reports skipped (invalid coordinates): " + finalSkippedCount);
+                        Log.d(TAG, "  - User report pins in list: " + userReportPinMarkers.size());
+                        Log.d(TAG, "═══════════════════════════════════════════════════════");
+                        
+                        // Apply filters to update visibility and show pins if "My Reports" is active
                         runOnUiThread(() -> {
-                            applyFiltersToFirestorePins(false); // Don't show toast during initial load
+                            // Check if "My Reports" filter is active
+                            boolean isMyReportsActive = incidentFilters.getOrDefault("Report", false);
+                            Log.d(TAG, "My Reports filter active: " + isMyReportsActive);
+                            
+                            if (isMyReportsActive) {
+                                // Apply filters to show user report pins with their custom icons
+                                // This will show appropriate toast messages based on results
+                                applyFiltersToFirestorePins(true); // Show toast to inform user
+                                Log.d(TAG, "✅ My Reports filter active - showing " + finalReportCount + " user report pins with custom icons");
+                                
+                                // Additional helpful message if reports were found but skipped
+                                if (finalSkippedCount > 0 && finalReportCount == 0) {
+                                    Toast.makeText(MapViewActivity.this, 
+                                        "Found " + totalReportsFound + " report(s) but none have valid coordinates. Please ensure reports include location data.", 
+                                        Toast.LENGTH_LONG).show();
+                                }
+                            } else {
+                                // Just apply filters without toast (pins will be hidden)
+                                applyFiltersToFirestorePins(false);
+                                Log.d(TAG, "My Reports filter not active - pins will be hidden");
+                            }
                         });
                         
                     } catch (Exception e) {
-                        Log.e(TAG, "Error processing user reports", e);
+                        Log.e(TAG, "❌ Error processing user reports", e);
+                        e.printStackTrace();
+                        runOnUiThread(() -> {
+                            Toast.makeText(MapViewActivity.this, 
+                                "Error loading reports: " + e.getMessage(), 
+                                Toast.LENGTH_SHORT).show();
+                        });
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error loading user reports from Firestore", e);
+                    Log.e(TAG, "❌ Error loading user reports from Firestore", e);
+                    e.printStackTrace();
+                    runOnUiThread(() -> {
+                        Toast.makeText(MapViewActivity.this, 
+                            "Error loading reports: " + e.getMessage(), 
+                            Toast.LENGTH_SHORT).show();
+                    });
                 });
                 
         } catch (Exception e) {
@@ -4878,11 +5263,28 @@ public class MapViewActivity extends AppCompatActivity {
      * Add user report pin to map
      */
     private void addUserReportPinToMap(Pin pin, Point point) {
-        if (mapContainer == null || pin == null) {
+        if (mapContainer == null) {
+            Log.e(TAG, "❌ Cannot add pin - mapContainer is null");
+            return;
+        }
+        
+        if (pin == null) {
+            Log.e(TAG, "❌ Cannot add pin - pin data is null");
+            return;
+        }
+        
+        if (point == null) {
+            Log.e(TAG, "❌ Cannot add pin - point is null for pin: " + pin.getType());
             return;
         }
         
         try {
+            Log.d(TAG, "Adding pin to map container:");
+            Log.d(TAG, "  - Pin Type: " + pin.getType());
+            Log.d(TAG, "  - Coordinates: " + pin.getLatitude() + ", " + pin.getLongitude());
+            Log.d(TAG, "  - Point: " + point.longitude() + ", " + point.latitude());
+            Log.d(TAG, "  - Map Container: " + (mapContainer != null ? "Ready" : "NULL"));
+            
             ensurePinDimensions();
             
             ImageView markerView = new ImageView(this);
@@ -4892,25 +5294,61 @@ public class MapViewActivity extends AppCompatActivity {
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(pinWidthPx, pinHeightPx);
             markerView.setLayoutParams(params);
             
-            // Initially hide the pin - it will be shown when "My Reports" filter is active
-            markerView.setVisibility(View.GONE);
+            // Add click listener to show pin details modal (same as regular pins)
+            markerView.setOnClickListener(v -> showPinDetails(pin));
+            Log.d(TAG, "  - Click listener added to pin");
             
+            // Add to container
             mapContainer.addView(markerView);
+            Log.d(TAG, "  - Pin view added to container");
             
             MapMarker mapMarker = new MapMarker(markerView, point, pin.getDisplayTitle(), pin, "report_" + pin.getReportId());
             userReportPinMarkers.add(mapMarker);
+            Log.d(TAG, "  - Pin marker added to list (total: " + userReportPinMarkers.size() + ")");
             
             // Position the pin using the correct method
             positionFirestorePinAtCoordinates(mapMarker, point);
+            Log.d(TAG, "  - Pin positioned at coordinates");
+            
+            // Check if "My Reports" filter is active - if so, show the pin immediately
+            boolean isMyReportsActive = incidentFilters.getOrDefault("Report", false);
+            Log.d(TAG, "  - My Reports filter active: " + isMyReportsActive);
+            
+            if (isMyReportsActive) {
+                // When "My Reports" is active, ALWAYS show user report pins
+                // shouldShowPinBasedOnFilters should return true for user report pins when "My Reports" is active
+                boolean shouldShow = shouldShowPinBasedOnFilters(pin);
+                if (!shouldShow) {
+                    // Force show if it's a user report pin (shouldn't happen, but just in case)
+                    if (pin.getId() != null && pin.getId().startsWith("report_")) {
+                        shouldShow = true;
+                        Log.w(TAG, "  ⚠️ Force showing user report pin (filter returned false but should be true)");
+                    }
+                }
+                markerView.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
+                if (shouldShow) {
+                    markerView.bringToFront();
+                    Log.d(TAG, "  ✅ Pin immediately shown: " + pin.getType() + " at " + pin.getLatitude() + ", " + pin.getLongitude());
+                } else {
+                    Log.w(TAG, "  ⚠️ Pin hidden by filter: " + pin.getType() + " (ID: " + pin.getId() + ")");
+                }
+            } else {
+                // Initially hide the pin - it will be shown when "My Reports" filter is active
+                markerView.setVisibility(View.GONE);
+                Log.d(TAG, "  ⚠️ Pin hidden (My Reports not active): " + pin.getType());
+            }
             
             // Start camera tracking if not already active (tracking is global for all pins)
             if (!isFirestorePinTrackingActive) {
                 startFirestorePinCameraTracking();
-                Log.d(TAG, "Started camera tracking for user report pins");
+                Log.d(TAG, "  ✅ Started camera tracking for user report pins");
             }
             
+            Log.d(TAG, "✅ Successfully added user report pin to map");
+            
         } catch (Exception e) {
-            Log.e(TAG, "Error adding user report pin to map", e);
+            Log.e(TAG, "❌ Error adding user report pin to map", e);
+            e.printStackTrace();
         }
     }
     
@@ -5092,16 +5530,17 @@ public class MapViewActivity extends AppCompatActivity {
             
             mapMarker.markerView.setLayoutParams(params);
             
-            // Check both filter visibility AND layer state
-            // Hide pins if any layers are active, otherwise respect filter visibility
-            boolean anyLayerActive = hasAnyLayerActive();
-            if (anyLayerActive) {
-                // Hide pin if any layer is active
-                mapMarker.markerView.setVisibility(View.GONE);
-            } else if (mapMarker.pinData != null) {
-                // Show pin based on filters only when no layers are active
-                boolean shouldShow = shouldShowPinBasedOnFilters(mapMarker.pinData);
-                mapMarker.markerView.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
+            // Always check filter visibility - layers do NOT hide pins
+            // Layers (Barangay Boundaries, Road Network, Waterways, Satellite Map) should NOT hide pins
+            if (mapMarker.pinData != null) {
+                // Check heatmap first - if heatmap is active, hide pins
+                if (heatmapEnabled && hasActiveHazardFilter()) {
+                    mapMarker.markerView.setVisibility(View.GONE);
+                } else {
+                    // Show pin based on filters - layers do NOT affect pin visibility
+                    boolean shouldShow = shouldShowPinBasedOnFilters(mapMarker.pinData);
+                    mapMarker.markerView.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
+                }
             } else {
                 mapMarker.markerView.setVisibility(View.VISIBLE);
             }
@@ -5326,8 +5765,10 @@ public class MapViewActivity extends AppCompatActivity {
             return true; // If no timeline selected or pin is null, show all pins
         }
         
-        // If timeline is "Today" (default), show all pins
-        if (selectedTimeRange.equals("Today")) {
+        // If timeline is "All Time" (default), show all pins
+        if (selectedTimeRange.equals("All Time")) {
+            return true; // Show all pins regardless of date
+        } else if (selectedTimeRange.equals("Today")) {
             return isPinCreatedToday(pin);
         } else if (selectedTimeRange.equals("This Week")) {
             return isPinCreatedThisWeek(pin);
@@ -5463,28 +5904,33 @@ public class MapViewActivity extends AppCompatActivity {
             return false; // Hide pins with no data
         }
         
-        // Check timeline filter first - if pin doesn't match timeline, hide it immediately
-        if (!matchesTimelineFilter(pin)) {
-            return false;
-        }
-        
-        // Check if "My Reports" filter is active
+        // Check if "My Reports" filter is active FIRST
         boolean isMyReportsFilterActive = incidentFilters.getOrDefault("Report", false);
         if (isMyReportsFilterActive) {
             // When "My Reports" is active, only show pins from user reports
             // User report pins have IDs starting with "report_"
             if (pin.getId() != null && pin.getId().startsWith("report_")) {
-                // This is a user report pin - show it (if it matches timeline)
+                // This is a user report pin - show ALL user reports when "My Reports" is active
+                // DO NOT apply timeline filter to user reports - show all of them
+                // This ensures users can see all their submitted reports regardless of when they were created
+                Log.d(TAG, "✅ My Reports active - showing user report pin: " + pin.getId() + " (Type: " + pin.getType() + ")");
                 return true;
             } else {
                 // This is a regular pin - hide it when "My Reports" is active
+                Log.d(TAG, "⚠️ My Reports active - hiding regular pin: " + pin.getId());
                 return false;
             }
         } else {
             // When "My Reports" is NOT active, hide user report pins
             if (pin.getId() != null && pin.getId().startsWith("report_")) {
+                Log.d(TAG, "⚠️ My Reports NOT active - hiding user report pin: " + pin.getId());
                 return false;
             }
+        }
+        
+        // For regular pins (not user reports), check timeline filter
+        if (!matchesTimelineFilter(pin)) {
+            return false;
         }
         
         // Check if ANY filters are active
@@ -5819,7 +6265,6 @@ public class MapViewActivity extends AppCompatActivity {
             
             // Build description message following required format
             StringBuilder description = new StringBuilder();
-            description.append("Tap on a pin to view details.\n\n");
 
             boolean isFacilityPin = isFacilityCategory(pin.getCategory());
             String fullAddress = pin.getFullAddress();

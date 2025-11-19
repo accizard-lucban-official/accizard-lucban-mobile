@@ -167,3 +167,4 @@ Just build and run your app. The camera photo display will work perfectly.
 
 
 
+

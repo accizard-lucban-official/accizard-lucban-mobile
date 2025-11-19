@@ -119,6 +119,19 @@
                         android:visibility="gone">
 
                         <TextView
+                            android:id="@+id/allTimeOption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="All Time"
+                            android:textSize="14sp"
+                            android:textColor="#333333"
+                            android:padding="12dp"
+                            android:background="?android:attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
                             android:id="@+id/todayOption"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"

@@ -339,3 +339,4 @@ if (message.hasImage() && messageImage != null && imageContainer != null) {
 
 
 
+
