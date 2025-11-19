@@ -23,6 +23,8 @@ import com.mapbox.geojson.FeatureCollection;
 import com.mapbox.maps.CameraOptions;
 import com.mapbox.maps.CameraState;
 import com.mapbox.maps.Style;
+import com.mapbox.maps.StyleObjectInfo;
+import com.mapbox.maps.StylePropertyValue;
 import com.mapbox.maps.MapboxMap;
 import com.mapbox.maps.MapView;
 import com.mapbox.maps.plugin.animation.CameraAnimationsPlugin;
@@ -41,11 +43,13 @@ import android.graphics.drawable.Drawable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Set;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -154,7 +158,7 @@ public class MapViewActivity extends AppCompatActivity {
     private boolean barangayBoundariesVisible = false;
     private boolean roadNetworkVisible = false;
     private boolean waterwaysVisible = false;
-    private boolean satelliteMapVisible = false; // Satellite map layer toggle
+    private boolean satelliteMapVisible = false; // Satellite map layer toggle - INITIAL VIEW: Street View (satellite hidden)
     private boolean healthFacilitiesVisible = false;
     private boolean evacuationCentersVisible = false;
     
@@ -3219,29 +3223,55 @@ public class MapViewActivity extends AppCompatActivity {
     
     /**
      * Load the base custom style and prepare optional satellite raster base layer
+     * INITIAL VIEW: Street View Map (satellite is hidden by default)
      */
     private void loadMapStyle() {
         try {
             if (mapboxMap == null) return;
             
-            // Always load the custom style; overlay satellite imagery as a raster layer when enabled
+            // Ensure satellite is disabled for initial street view
+            satelliteMapVisible = false;
+            
+            // Always load the custom street style as the base map
+            // This is the default initial view - Street View Map
             String styleUri = "mapbox://styles/accizard-lucban-official/cmhox8ita005o01sr1psmbgp6";
             
             mapboxMap.loadStyleUri(styleUri, loadedStyle -> {
-                Log.d(TAG, "Map style loaded (custom street base). Satellite enabled: " + satelliteMapVisible);
+                Log.d(TAG, "Map style loaded - INITIAL VIEW: Street View Map (same as MapPickerActivity)");
                 
                 // Initialize camera animations plugin
                 if (cameraAnimationsPlugin == null) {
                     cameraAnimationsPlugin = mapView.getPlugin("com.mapbox.maps.plugin.animation.camera");
                 }
                 
-                // Set initial camera position to Lucban center
+                // Set initial camera position to Lucban center (same as MapPickerActivity)
                 Point lucbanCenter = Point.fromLngLat(121.5564, 14.1136);
                 CameraOptions initialCamera = new CameraOptions.Builder()
                         .center(lucbanCenter)
                         .zoom(14.0)
                         .build();
                 mapboxMap.setCamera(initialCamera);
+                
+                // Ensure Lucban boundary is visible on initial load (same as MapPickerActivity)
+                ensureLucbanBoundaryVisible(loadedStyle);
+                showOnlyLucbanBoundary(loadedStyle);
+                
+                // Retry with delays to ensure the layer is accessible (same as MapPickerActivity)
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    Style reloadedStyle = mapboxMap.getStyle();
+                    if (reloadedStyle != null) {
+                        ensureLucbanBoundaryVisible(reloadedStyle);
+                        showOnlyLucbanBoundary(reloadedStyle);
+                    }
+                }, 300);
+                
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    Style reloadedStyle = mapboxMap.getStyle();
+                    if (reloadedStyle != null) {
+                        ensureLucbanBoundaryVisible(reloadedStyle);
+                        showOnlyLucbanBoundary(reloadedStyle);
+                    }
+                }, 800);
                 
                 // Update marker positions if any pins exist
                 updateAllMarkerPositions();
@@ -3250,26 +3280,16 @@ public class MapViewActivity extends AppCompatActivity {
                 // This ensures: lucban-boundary is visible, all other layers are hidden
                 initializeMapLayers(loadedStyle);
 
-                // Ensure satellite raster base exists and apply current visibility
+                // Ensure satellite raster base exists but keep it HIDDEN for initial street view
                 ensureSatelliteLayer(loadedStyle);
-                setSatelliteVisibility(loadedStyle, satelliteMapVisible);
-                
-                // Ensure lucban-boundary is always visible (safety check)
-                ensureLucbanBoundaryVisible();
+                setSatelliteVisibility(loadedStyle, false); // Explicitly hide satellite for street view
+                Log.d(TAG, "Initial map view set to: Street View (satellite layer hidden) - Same as MapPickerActivity");
                 
                 // Re-apply current layer states after style loads
                 // Use multiple delays to ensure the style is fully loaded and layers are accessible
                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
                     reapplyLayerStates();
-                }, 300); // First attempt after 300ms
-                
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    reapplyLayerStates();
-                }, 800); // Second attempt after 800ms
-                
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    reapplyLayerStates();
-                }, 1500); // Third attempt after 1.5 seconds (final retry)
+                }, 1500); // Final retry after 1.5 seconds
                 
                 // Reload Firestore pins after style change
                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
@@ -3430,7 +3450,9 @@ public class MapViewActivity extends AppCompatActivity {
 
     /**
      * Ensure a raster satellite base layer and source exist in the current style.
-     * Keeps custom vector layers (barangays, roads, waterways) available over satellite imagery.
+     * Satellite layer is positioned at the bottom (right above background) to act as base map.
+     * When visible: Shows satellite imagery as base map
+     * When hidden: Street view (default style background) shows through
      */
     private void ensureSatelliteLayer(Style style) {
         if (style == null) return;
@@ -3438,6 +3460,7 @@ public class MapViewActivity extends AppCompatActivity {
             // Add raster source if missing
             try {
                 style.getStyleSourceProperty(SATELLITE_SOURCE_ID, "type");
+                Log.d(TAG, "✅ Satellite source already exists");
             } catch (Exception missingSource) {
                 java.util.HashMap<String, com.mapbox.bindgen.Value> source = new java.util.HashMap<>();
                 source.put("type", com.mapbox.bindgen.Value.valueOf("raster"));
@@ -3445,38 +3468,207 @@ public class MapViewActivity extends AppCompatActivity {
                 // Use long for integers in Value
                 source.put("tileSize", com.mapbox.bindgen.Value.valueOf(256L));
                 style.addStyleSource(SATELLITE_SOURCE_ID, com.mapbox.bindgen.Value.valueOf(source));
-                Log.d(TAG, "Satellite raster source added");
+                Log.d(TAG, "✅ Satellite raster source added successfully");
             }
 
-            // Add raster layer if missing (place it below our boundary/overlays)
+            // Add raster layer if missing
+            // Position it at the very bottom (right above background) so it acts as base map
             if (!layerExists(style, SATELLITE_LAYER_ID)) {
                 java.util.HashMap<String, com.mapbox.bindgen.Value> layer = new java.util.HashMap<>();
                 layer.put("id", com.mapbox.bindgen.Value.valueOf(SATELLITE_LAYER_ID));
                 layer.put("type", com.mapbox.bindgen.Value.valueOf("raster"));
                 layer.put("source", com.mapbox.bindgen.Value.valueOf(SATELLITE_SOURCE_ID));
-                // Insert below a known overlay layer so overlays remain on top
-                com.mapbox.maps.LayerPosition position = new com.mapbox.maps.LayerPosition(
-                        null, /* above */
-                        "lucban-boundary", /* below */
-                        null /* index */
-                );
-                style.addStyleLayer(com.mapbox.bindgen.Value.valueOf(layer), position);
-                Log.d(TAG, "Satellite raster layer added");
+                
+                // Set opacity to 1.0 (fully opaque) to ensure satellite is visible
+                layer.put("raster-opacity", com.mapbox.bindgen.Value.valueOf(1.0));
+                
+                // Try multiple positioning strategies to ensure satellite layer is visible
+                // Strategy 1: Position right below lucban-boundary (so it's above most base map layers)
+                boolean layerAdded = false;
+                try {
+                    com.mapbox.maps.LayerPosition position1 = new com.mapbox.maps.LayerPosition(
+                            "lucban-boundary", /* above - place satellite below boundary */
+                            null, /* below - no specific layer below */
+                            null  /* index */
+                    );
+                    style.addStyleLayer(com.mapbox.bindgen.Value.valueOf(layer), position1);
+                    Log.d(TAG, "✅ Satellite raster layer added (positioned below lucban-boundary)");
+                    layerAdded = true;
+                } catch (Exception e1) {
+                    Log.w(TAG, "Strategy 1 failed, trying strategy 2: " + e1.getMessage());
+                    
+                    // Strategy 2: Position right above background
+                    try {
+                        com.mapbox.maps.LayerPosition position2 = new com.mapbox.maps.LayerPosition(
+                                null, /* above */
+                                "background", /* below - place satellite right above background */
+                                null  /* index */
+                        );
+                        style.addStyleLayer(com.mapbox.bindgen.Value.valueOf(layer), position2);
+                        Log.d(TAG, "✅ Satellite raster layer added (positioned above background)");
+                        layerAdded = true;
+                    } catch (Exception e2) {
+                        Log.w(TAG, "Strategy 2 failed, trying strategy 3: " + e2.getMessage());
+                        
+                        // Strategy 3: Default position (will be added at end of layer stack)
+                        try {
+                            com.mapbox.maps.LayerPosition position3 = new com.mapbox.maps.LayerPosition(
+                                    null, /* above */
+                                    null, /* below */
+                                    null  /* index */
+                            );
+                            style.addStyleLayer(com.mapbox.bindgen.Value.valueOf(layer), position3);
+                            Log.d(TAG, "✅ Satellite raster layer added (default position)");
+                            layerAdded = true;
+                        } catch (Exception e3) {
+                            Log.e(TAG, "❌ All positioning strategies failed: " + e3.getMessage(), e3);
+                            throw e3;
+                        }
+                    }
+                }
+                
+                if (layerAdded) {
+                    // After adding, try to move it to a better position if needed
+                    // This ensures satellite is visible above base map layers
+                    try {
+                        // Verify the layer was added and log its position
+                        if (layerExists(style, SATELLITE_LAYER_ID)) {
+                            Log.d(TAG, "✅ Satellite layer confirmed to exist in style");
+                        }
+                    } catch (Exception e) {
+                        Log.w(TAG, "Could not verify satellite layer after adding: " + e.getMessage());
+                    }
+                }
+            } else {
+                Log.d(TAG, "✅ Satellite layer already exists");
+                // Ensure opacity is set to 1.0
+                try {
+                    style.setStyleLayerProperty(SATELLITE_LAYER_ID, "raster-opacity", com.mapbox.bindgen.Value.valueOf(1.0));
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not set satellite layer opacity: " + e.getMessage());
+                }
             }
         } catch (Exception e) {
-            Log.w(TAG, "Unable to ensure satellite layer: " + e.getMessage());
+            Log.w(TAG, "Unable to ensure satellite layer: " + e.getMessage(), e);
         }
     }
 
     /**
      * Set satellite raster base visibility.
+     * When visible: Satellite imagery shows as base map (fully opaque)
+     * When hidden: Street view (default style) shows through
      */
     private void setSatelliteVisibility(Style style, boolean visible) {
+        if (style == null) {
+            Log.w(TAG, "Style is null, cannot set satellite visibility");
+            return;
+        }
+        try {
+            // First, ensure the layer exists
+            if (!layerExists(style, SATELLITE_LAYER_ID)) {
+                Log.d(TAG, "Satellite layer doesn't exist, creating it first");
+                ensureSatelliteLayer(style);
+            }
+            
+            // Set visibility
+            String visibilityValue = visible ? "visible" : "none";
+            com.mapbox.bindgen.Value value = com.mapbox.bindgen.Value.valueOf(visibilityValue);
+            style.setStyleLayerProperty(SATELLITE_LAYER_ID, "visibility", value);
+            Log.d(TAG, "✅ Satellite layer visibility set to: " + visibilityValue);
+            
+            // When visible, ensure opacity is 1.0 (fully opaque) to show satellite clearly
+            if (visible) {
+                try {
+                    style.setStyleLayerProperty(SATELLITE_LAYER_ID, "raster-opacity", com.mapbox.bindgen.Value.valueOf(1.0));
+                    Log.d(TAG, "✅ Satellite layer opacity set to 1.0 (fully opaque)");
+                    
+                    // Also ensure brightness and contrast are at default for clear satellite view
+                    try {
+                        style.setStyleLayerProperty(SATELLITE_LAYER_ID, "raster-brightness-min", com.mapbox.bindgen.Value.valueOf(0.0));
+                        style.setStyleLayerProperty(SATELLITE_LAYER_ID, "raster-brightness-max", com.mapbox.bindgen.Value.valueOf(1.0));
+                        style.setStyleLayerProperty(SATELLITE_LAYER_ID, "raster-contrast", com.mapbox.bindgen.Value.valueOf(0.0));
+                    } catch (Exception e) {
+                        // These properties might not be supported, that's okay
+                    }
+                } catch (Exception opacityException) {
+                    Log.w(TAG, "Could not set satellite opacity: " + opacityException.getMessage());
+                }
+            }
+            
+            Log.d(TAG, "🛰️ Map view switched to: " + (visible ? "SATELLITE" : "STREET"));
+            
+            // Force a style refresh to ensure changes are applied
+            try {
+                // Trigger a style update by getting the style again
+                Style refreshedStyle = mapboxMap != null ? mapboxMap.getStyle() : null;
+                if (refreshedStyle != null && refreshedStyle != style) {
+                    Log.d(TAG, "Style refreshed to ensure satellite changes are applied");
+                }
+            } catch (Exception e) {
+                Log.d(TAG, "Could not refresh style: " + e.getMessage());
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Error setting satellite visibility: " + e.getMessage(), e);
+            // Retry if layer doesn't exist yet
+            if (e.getMessage() != null && (e.getMessage().contains("not found") || e.getMessage().contains("does not exist"))) {
+                Log.d(TAG, "Satellite layer not found, ensuring it exists first");
+                ensureSatelliteLayer(style);
+                // Try again after ensuring layer exists
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    try {
+                        String visibilityValue = visible ? "visible" : "none";
+                        com.mapbox.bindgen.Value value = com.mapbox.bindgen.Value.valueOf(visibilityValue);
+                        style.setStyleLayerProperty(SATELLITE_LAYER_ID, "visibility", value);
+                        if (visible) {
+                            style.setStyleLayerProperty(SATELLITE_LAYER_ID, "raster-opacity", com.mapbox.bindgen.Value.valueOf(1.0));
+                        }
+                        Log.d(TAG, "✅ Satellite layer visibility set after retry: " + visibilityValue);
+                    } catch (Exception retryException) {
+                        Log.e(TAG, "❌ Error setting satellite visibility after retry: " + retryException.getMessage(), retryException);
+                    }
+                }, 200);
+            }
+        }
+    }
+    
+    /**
+     * Verify satellite layer state and fix if needed
+     */
+    private void verifySatelliteLayerState(Style style, boolean shouldBeVisible) {
         if (style == null) return;
         try {
-            setLayerVisibility(style, SATELLITE_LAYER_ID, visible);
+            if (layerExists(style, SATELLITE_LAYER_ID)) {
+                // Check current visibility
+                try {
+                    // getStyleLayerProperty returns StylePropertyValue, we need to extract the value
+                    StylePropertyValue propertyValue = style.getStyleLayerProperty(SATELLITE_LAYER_ID, "visibility");
+                    // Get the value from StylePropertyValue
+                    com.mapbox.bindgen.Value currentVisibilityValue = propertyValue.getValue();
+                    String visibilityStr = currentVisibilityValue.toString();
+                    boolean isCurrentlyVisible = visibilityStr.contains("visible");
+                    
+                    if (shouldBeVisible && !isCurrentlyVisible) {
+                        Log.w(TAG, "⚠️ Satellite layer should be visible but isn't - fixing...");
+                        setSatelliteVisibility(style, true);
+                    } else if (!shouldBeVisible && isCurrentlyVisible) {
+                        Log.w(TAG, "⚠️ Satellite layer should be hidden but isn't - fixing...");
+                        setSatelliteVisibility(style, false);
+                    } else {
+                        Log.d(TAG, "✅ Satellite layer state verified: " + (shouldBeVisible ? "VISIBLE" : "HIDDEN"));
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not verify satellite layer visibility: " + e.getMessage());
+                    // If verification fails, just ensure the state is set correctly
+                    setSatelliteVisibility(style, shouldBeVisible);
+                }
+            } else {
+                Log.w(TAG, "⚠️ Satellite layer doesn't exist - creating it...");
+                ensureSatelliteLayer(style);
+                setSatelliteVisibility(style, shouldBeVisible);
+            }
         } catch (Exception e) {
-            Log.w(TAG, "Unable to set satellite visibility: " + e.getMessage());
+            Log.e(TAG, "Error verifying satellite layer state: " + e.getMessage(), e);
         }
     }
     
@@ -3627,20 +3819,298 @@ public class MapViewActivity extends AppCompatActivity {
     
     /**
      * Toggle Satellite Map layer visibility
+     * When enabled: Shows satellite imagery as base map (hides street view background)
+     * When disabled: Returns to street view (shows street view background, hides satellite)
      */
     private void toggleSatelliteMap(boolean visible) {
         try {
             satelliteMapVisible = visible;
+            Log.d(TAG, "🛰️ Satellite map toggle: " + (visible ? "ENABLED (switching to satellite view)" : "DISABLED (switching to street view)"));
+            
             // Toggle satellite raster base visibility without reloading the whole style
             Style style = mapboxMap != null ? mapboxMap.getStyle() : null;
             if (style != null) {
+                // Log all layers for debugging
+                logAllLayers(style, "Before satellite toggle");
+                
+                // Ensure satellite layer exists first
                 ensureSatelliteLayer(style);
+                
+                // IMPORTANT: Set satellite layer visibility FIRST
                 setSatelliteVisibility(style, visible);
+                
+                // Immediately hide/show base map layers (no delay for better responsiveness)
+                toggleBackgroundLayerForSatellite(style, visible);
+                
+                // Force map to refresh/redraw
+                forceMapRefresh();
+                
+                // Log all layers after toggle for debugging
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    Style currentStyle = mapboxMap != null ? mapboxMap.getStyle() : null;
+                    if (currentStyle != null) {
+                        logAllLayers(currentStyle, "After satellite toggle");
+                        verifySatelliteLayerState(currentStyle, visible);
+                        
+                        // Double-check satellite layer properties
+                        if (visible) {
+                            verifySatelliteLayerProperties(currentStyle);
+                        }
+                    }
+                }, 300);
+                
+                Log.d(TAG, "✅ Satellite toggle complete - Map view: " + (visible ? "SATELLITE" : "STREET"));
+            } else {
+                // Style not ready yet, retry after a short delay
+                Log.d(TAG, "Style not ready, will retry satellite toggle");
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    toggleSatelliteMap(visible);
+                }, 300);
+                return;
             }
+            
             // Update pins visibility based on all layers
             updatePinsVisibilityBasedOnLayers();
+            
         } catch (Exception e) {
             Log.e(TAG, "Error toggling satellite map: " + e.getMessage(), e);
+            // Retry on error
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                try {
+                    Style style = mapboxMap != null ? mapboxMap.getStyle() : null;
+                    if (style != null) {
+                        ensureSatelliteLayer(style);
+                        setSatelliteVisibility(style, visible);
+                        toggleBackgroundLayerForSatellite(style, visible);
+                    }
+                } catch (Exception retryException) {
+                    Log.e(TAG, "Error retrying satellite toggle: " + retryException.getMessage(), retryException);
+                }
+            }, 500);
+        }
+    }
+    
+    /**
+     * Log all layers in the style for debugging
+     */
+    private void logAllLayers(Style style, String context) {
+        if (style == null) return;
+        try {
+            List<StyleObjectInfo> allLayers = style.getStyleLayers();
+            Log.d(TAG, "=== " + context + " - Total layers: " + allLayers.size() + " ===");
+            for (StyleObjectInfo layerInfo : allLayers) {
+                String layerId = layerInfo.getId();
+                try {
+                    StylePropertyValue visibilityProp = style.getStyleLayerProperty(layerId, "visibility");
+                    String visibility = visibilityProp.getValue().toString();
+                    Log.d(TAG, "  Layer: " + layerId + " | Visibility: " + visibility);
+                } catch (Exception e) {
+                    Log.d(TAG, "  Layer: " + layerId + " | Visibility: (unknown)");
+                }
+            }
+            Log.d(TAG, "=== End of layer list ===");
+        } catch (Exception e) {
+            Log.e(TAG, "Error logging layers: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Force map to refresh/redraw to ensure satellite changes are visible
+     */
+    private void forceMapRefresh() {
+        try {
+            if (mapboxMap != null && mapView != null) {
+                // Trigger a camera update to force redraw
+                CameraState currentCamera = mapboxMap.getCameraState();
+                if (currentCamera != null) {
+                    // Slightly adjust zoom to force refresh (then restore)
+                    double currentZoom = currentCamera.getZoom();
+                    Point currentCenter = currentCamera.getCenter();
+                    
+                    CameraOptions refreshCamera = new CameraOptions.Builder()
+                            .center(currentCenter)
+                            .zoom(currentZoom + 0.0001) // Tiny zoom change
+                            .build();
+                    mapboxMap.setCamera(refreshCamera);
+                    
+                    // Immediately restore original camera
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        CameraOptions restoreCamera = new CameraOptions.Builder()
+                                .center(currentCenter)
+                                .zoom(currentZoom)
+                                .build();
+                        mapboxMap.setCamera(restoreCamera);
+                    }, 50);
+                    
+                    Log.d(TAG, "🔄 Map refresh triggered");
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Could not force map refresh: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Verify satellite layer properties are correct
+     */
+    private void verifySatelliteLayerProperties(Style style) {
+        if (style == null) return;
+        try {
+            if (!layerExists(style, SATELLITE_LAYER_ID)) {
+                Log.w(TAG, "⚠️ Satellite layer does not exist!");
+                return;
+            }
+            
+            // Check visibility
+            try {
+                StylePropertyValue visibilityProp = style.getStyleLayerProperty(SATELLITE_LAYER_ID, "visibility");
+                String visibility = visibilityProp.getValue().toString();
+                Log.d(TAG, "🔍 Satellite layer visibility: " + visibility);
+                if (!visibility.contains("visible")) {
+                    Log.w(TAG, "⚠️ Satellite layer is not visible! Setting to visible...");
+                    setSatelliteVisibility(style, true);
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Could not check satellite visibility: " + e.getMessage());
+            }
+            
+            // Check opacity
+            try {
+                StylePropertyValue opacityProp = style.getStyleLayerProperty(SATELLITE_LAYER_ID, "raster-opacity");
+                com.mapbox.bindgen.Value opacityValue = opacityProp.getValue();
+                String opacityStr = opacityValue.toString();
+                Log.d(TAG, "🔍 Satellite layer opacity: " + opacityStr);
+                
+                // Try to parse the opacity value
+                try {
+                    // Remove any quotes or brackets from the string representation
+                    String cleanOpacity = opacityStr.replaceAll("[^0-9.]", "");
+                    if (!cleanOpacity.isEmpty()) {
+                        double opacity = Double.parseDouble(cleanOpacity);
+                        if (opacity < 1.0) {
+                            Log.w(TAG, "⚠️ Satellite layer opacity is " + opacity + ", setting to 1.0...");
+                            style.setStyleLayerProperty(SATELLITE_LAYER_ID, "raster-opacity", com.mapbox.bindgen.Value.valueOf(1.0));
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    // If we can't parse it, just log the string value
+                    Log.d(TAG, "Could not parse opacity as number, value is: " + opacityStr);
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Could not check satellite opacity: " + e.getMessage());
+            }
+            
+            // Check source
+            try {
+                StylePropertyValue sourceProp = style.getStyleLayerProperty(SATELLITE_LAYER_ID, "source");
+                String source = sourceProp.getValue().toString();
+                Log.d(TAG, "🔍 Satellite layer source: " + source);
+            } catch (Exception e) {
+                Log.w(TAG, "Could not check satellite source: " + e.getMessage());
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error verifying satellite layer properties: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Toggle all base map layers visibility based on satellite state
+     * When satellite is enabled: Hide all base map layers (except custom layers) to show satellite imagery
+     * When satellite is disabled: Show all base map layers to show street view
+     */
+    private void toggleBackgroundLayerForSatellite(Style style, boolean satelliteEnabled) {
+        if (style == null) return;
+        try {
+            String visibilityValue = satelliteEnabled ? "none" : "visible";
+            com.mapbox.bindgen.Value value = com.mapbox.bindgen.Value.valueOf(visibilityValue);
+            
+            // List of our custom layers that should ALWAYS remain visible (regardless of satellite state)
+            // Note: road and waterway will be handled by their individual toggle states
+            Set<String> customLayers = new HashSet<>(Arrays.asList(
+                "lucban-boundary",      // Lucban boundary (always visible)
+                "lucban-brgys",         // Barangay boundaries (if enabled)
+                "lucban-fill",          // Barangay fill (if enabled)
+                "lucban-brgy-names",    // Barangay names (if enabled)
+                "health-facilities",    // Health facilities (if enabled)
+                "evacuation-centers",   // Evacuation centers (if enabled)
+                SATELLITE_LAYER_ID      // Satellite layer itself
+            ));
+            
+            // Also preserve road and waterway if they are currently enabled
+            // (They will be toggled by their own methods, but we don't want to hide them if user enabled them)
+            if (roadNetworkVisible) {
+                customLayers.add("road");
+            }
+            if (waterwaysVisible) {
+                customLayers.add("waterway");
+            }
+            
+            // Explicitly handle background layer - must be hidden when satellite is enabled
+            try {
+                if (layerExists(style, "background")) {
+                    style.setStyleLayerProperty("background", "visibility", value);
+                    Log.d(TAG, "Background layer toggled to: " + visibilityValue);
+                }
+            } catch (Exception e) {
+                Log.d(TAG, "Could not toggle background layer: " + e.getMessage());
+            }
+            
+            // Get all layers in the style
+            List<StyleObjectInfo> allLayers = style.getStyleLayers();
+            int hiddenCount = 0;
+            int shownCount = 0;
+            List<String> layersToggled = new ArrayList<>();
+            List<String> layersSkipped = new ArrayList<>();
+            
+            Log.d(TAG, "Starting to toggle base map layers. Custom layers to preserve: " + customLayers.toString());
+            
+            for (StyleObjectInfo layerInfo : allLayers) {
+                String layerId = layerInfo.getId();
+                
+                // Skip our custom layers - they should remain visible
+                if (customLayers.contains(layerId)) {
+                    layersSkipped.add(layerId + " (custom)");
+                    continue;
+                }
+                
+                // Skip the satellite layer itself (handled separately)
+                if (layerId.equals(SATELLITE_LAYER_ID)) {
+                    layersSkipped.add(layerId + " (satellite)");
+                    continue;
+                }
+                
+                // Skip background (already handled above)
+                if (layerId.equals("background")) {
+                    layersSkipped.add(layerId + " (background)");
+                    continue;
+                }
+                
+                // Toggle visibility for all other layers (base map layers)
+                try {
+                    if (layerExists(style, layerId)) {
+                        style.setStyleLayerProperty(layerId, "visibility", value);
+                        if (satelliteEnabled) {
+                            hiddenCount++;
+                        } else {
+                            shownCount++;
+                        }
+                        layersToggled.add(layerId);
+                        Log.d(TAG, "✅ Toggled base map layer '" + layerId + "' to: " + visibilityValue);
+                    }
+                } catch (Exception e) {
+                    // Layer might not support visibility property or can't be modified
+                    Log.w(TAG, "⚠️ Could not toggle layer '" + layerId + "': " + e.getMessage());
+                }
+            }
+            
+            Log.d(TAG, "📊 Base map layers summary:");
+            Log.d(TAG, "  - Toggled: " + hiddenCount + " hidden, " + shownCount + " shown (satellite: " + satelliteEnabled + ")");
+            Log.d(TAG, "  - Layers toggled: " + layersToggled.toString());
+            Log.d(TAG, "  - Layers skipped: " + layersSkipped.toString());
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error toggling base map layers for satellite: " + e.getMessage(), e);
         }
     }
     
@@ -3689,7 +4159,27 @@ public class MapViewActivity extends AppCompatActivity {
     }
     
     /**
-     * Ensure Lucban Boundary layer is always visible
+     * Ensure Lucban Boundary layer is always visible on initial load
+     * This layer shows the main Lucban boundary outline
+     * Same implementation as MapPickerActivity
+     */
+    private void ensureLucbanBoundaryVisible(Style style) {
+        try {
+            if (style == null) return;
+            
+            // Set visibility property using Value object
+            String visibilityValue = "visible";
+            com.mapbox.bindgen.Value value = com.mapbox.bindgen.Value.valueOf(visibilityValue);
+            style.setStyleLayerProperty("lucban-boundary", "visibility", value);
+            Log.d(TAG, "Lucban boundary layer visibility set to: visible");
+        } catch (Exception e) {
+            // Layer might not exist in the style yet, will retry
+            Log.w(TAG, "Lucban boundary layer not accessible yet (will retry): " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Ensure Lucban Boundary layer is always visible (overload without Style parameter)
      * This layer should never be hidden - it's the main boundary outline
      */
     private void ensureLucbanBoundaryVisible() {
@@ -3703,6 +4193,33 @@ public class MapViewActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             Log.e(TAG, "Error ensuring lucban boundary visibility: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Hide all layers except the Lucban boundary and background to ensure only the boundary is visible.
+     * Same implementation as MapPickerActivity - shows only background and lucban-boundary on initial load
+     */
+    private void showOnlyLucbanBoundary(Style style) {
+        if (style == null) return;
+
+        final Set<String> allowedLayers = new HashSet<>(Arrays.asList(
+                "background",
+                "lucban-boundary"
+        ));
+
+        try {
+            List<StyleObjectInfo> layerInfos = style.getStyleLayers();
+            for (StyleObjectInfo layerInfo : layerInfos) {
+                String layerId = layerInfo.getId();
+                com.mapbox.bindgen.Value visibilityValue = allowedLayers.contains(layerId)
+                        ? com.mapbox.bindgen.Value.valueOf("visible")
+                        : com.mapbox.bindgen.Value.valueOf("none");
+                style.setStyleLayerProperty(layerId, "visibility", visibilityValue);
+            }
+            Log.d(TAG, "Map layers updated to show only Lucban boundary (same as MapPickerActivity).");
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to update map layers for boundary-only view: " + e.getMessage());
         }
     }
     
