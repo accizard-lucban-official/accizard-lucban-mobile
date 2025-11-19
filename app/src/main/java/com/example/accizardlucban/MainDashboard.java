@@ -166,7 +166,8 @@ public class MainDashboard extends AppCompatActivity {
             "Poor Infrastructure",
             "Electrical Hazard",
             "Environmental Hazard",
-            "Obstructions"
+            "Obstructions",
+            "Animal Concerns"
     };
     private static final String[] LEGEND_ORDER = new String[]{
             "Road Crash",
@@ -183,6 +184,7 @@ public class MainDashboard extends AppCompatActivity {
             "Electrical Hazard",
             "Environmental Hazard",
             "Obstructions",
+            "Animal Concerns",
             "Others"
     };
     private static final Map<String, Integer> REPORT_TYPE_COLOR_MAP = createReportTypeColorMap();
@@ -587,6 +589,7 @@ public class MainDashboard extends AppCompatActivity {
         map.put("Electrical Hazard", R.color.report_electrical_hazard);
         map.put("Environmental Hazard", R.color.report_environmental_hazard);
         map.put("Obstructions", R.color.report_obstructions);
+        map.put("Animal Concerns", R.color.report_animal_concerns);
         map.put("Others", R.color.report_others);
         return map;
     }
@@ -626,6 +629,9 @@ public class MainDashboard extends AppCompatActivity {
                 return "Environmental Hazard";
             case "obstructions":
                 return "Obstructions";
+            case "animal concerns":
+            case "animal concern":
+                return "Animal Concerns";
             case "others":
             case "uncategorized":
                 return "Others";
@@ -1705,17 +1711,25 @@ public class MainDashboard extends AppCompatActivity {
             // Get user's barangay from profile
             String userBarangay = getUserBarangay();
             
-            // Update barangay name (without "Brgy." prefix)
+            // Update barangay name display (clean up prefix if present)
             if (barangayName != null) {
-                String barangayDisplay = userBarangay != null && !userBarangay.isEmpty() 
-                    ? userBarangay 
+                String barangayDisplay = userBarangay != null && !userBarangay.trim().isEmpty() 
+                    ? cleanBarangayNameForDisplay(userBarangay)
                     : "Kulapi"; // Default fallback
                 barangayName.setText(barangayDisplay);
-                Log.d(TAG, "Barangay name set to: " + barangayDisplay);
+                Log.d(TAG, "✅ Barangay name displayed: " + barangayDisplay);
             }
             
             // Fetch and update statistics from Firestore
-            fetchReportStatistics(userBarangay);
+            // Only fetch if we have a barangay, otherwise wait for Firestore to load it
+            if (userBarangay != null && !userBarangay.trim().isEmpty()) {
+                fetchReportStatistics(userBarangay);
+            } else {
+                Log.w(TAG, "⚠️ Barangay is empty, waiting for Firestore to load it...");
+                // Firestore load will trigger updateStatisticsCards() again when barangay is loaded
+                // For now, set default values
+                setDefaultStatistics();
+            }
             
         } catch (Exception e) {
             Log.e(TAG, "Error updating statistics cards: " + e.getMessage(), e);
@@ -1725,15 +1739,135 @@ public class MainDashboard extends AppCompatActivity {
     }
     
     /**
-     * Get user's barangay from SharedPreferences
+     * Clean barangay name for display (remove common prefixes)
+     */
+    private String cleanBarangayNameForDisplay(String barangay) {
+        if (barangay == null || barangay.trim().isEmpty()) {
+            return "";
+        }
+        
+        String cleaned = barangay.trim();
+        
+        // Remove common prefixes but keep the rest
+        cleaned = cleaned.replaceAll("(?i)^(brgy\\.?|barangay|brg\\.?)\\s*", "");
+        
+        return cleaned.trim();
+    }
+    
+    /**
+     * Get user's barangay from SharedPreferences with fallback options
+     * Tries multiple sources to ensure we get the current location
      */
     private String getUserBarangay() {
         try {
             SharedPreferences prefs = getSharedPreferences("user_profile_prefs", MODE_PRIVATE);
-            return prefs.getString("barangay", "");
-        } catch (Exception e) {
-            Log.e(TAG, "Error getting user barangay: " + e.getMessage());
+            
+            // Priority 1: Direct barangay field
+            String barangay = prefs.getString("barangay", "");
+            if (barangay != null && !barangay.trim().isEmpty()) {
+                Log.d(TAG, "✅ Retrieved barangay from 'barangay' field: " + barangay);
+                return barangay.trim();
+            }
+            
+            // Priority 2: Extract from location_text (format: "City, Barangay")
+            String locationText = prefs.getString("location_text", "");
+            if (locationText != null && !locationText.trim().isEmpty() && locationText.contains(",")) {
+                String[] parts = locationText.split(",");
+                if (parts.length >= 2) {
+                    String extractedBarangay = parts[parts.length - 1].trim(); // Last part is usually barangay
+                    if (!extractedBarangay.isEmpty()) {
+                        Log.d(TAG, "✅ Extracted barangay from 'location_text': " + extractedBarangay);
+                        return extractedBarangay;
+                    }
+                }
+            }
+            
+            // Priority 3: Try selected_barangay field
+            String selectedBarangay = prefs.getString("selected_barangay", "");
+            if (selectedBarangay != null && !selectedBarangay.trim().isEmpty() && 
+                !"Other".equalsIgnoreCase(selectedBarangay) &&
+                !"Choose a barangay".equalsIgnoreCase(selectedBarangay)) {
+                Log.d(TAG, "✅ Retrieved barangay from 'selected_barangay' field: " + selectedBarangay);
+                return selectedBarangay.trim();
+            }
+            
+            // Priority 4: Try barangay_other field
+            String barangayOther = prefs.getString("barangay_other", "");
+            if (barangayOther != null && !barangayOther.trim().isEmpty()) {
+                Log.d(TAG, "✅ Retrieved barangay from 'barangay_other' field: " + barangayOther);
+                return barangayOther.trim();
+            }
+            
+            // Priority 5: Try to get from Firestore as last resort
+            Log.w(TAG, "⚠️ No barangay found in SharedPreferences, will try Firestore");
+            loadBarangayFromFirestore();
+            
+            // Return empty for now, will be updated when Firestore loads
             return "";
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting user barangay: " + e.getMessage(), e);
+            return "";
+        }
+    }
+    
+    /**
+     * Load barangay from Firestore and update SharedPreferences
+     * Called as fallback when barangay is not found in SharedPreferences
+     */
+    private void loadBarangayFromFirestore() {
+        try {
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            if (user == null) {
+                Log.w(TAG, "No user logged in, cannot load barangay from Firestore");
+                return;
+            }
+
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            db.collection("users")
+                .whereEqualTo("firebaseUid", user.getUid())
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
+                        String barangay = doc.getString("barangay");
+                        
+                        if (barangay != null && !barangay.trim().isEmpty()) {
+                            // Save to SharedPreferences for future use
+                            SharedPreferences prefs = getSharedPreferences("user_profile_prefs", MODE_PRIVATE);
+                            SharedPreferences.Editor editor = prefs.edit();
+                            editor.putString("barangay", barangay);
+                            
+                            // Also update location_text if needed
+                            String cityTown = doc.getString("cityTown");
+                            if (cityTown == null || cityTown.isEmpty()) {
+                                cityTown = doc.getString("city");
+                            }
+                            if (cityTown != null && !cityTown.isEmpty() && barangay != null) {
+                                String fullLocation = cityTown + ", " + barangay;
+                                editor.putString("location_text", fullLocation);
+                            }
+                            editor.apply();
+                            
+                            Log.d(TAG, "✅ Loaded barangay from Firestore: " + barangay);
+                            
+                            // Refresh the statistics with the newly loaded barangay
+                            runOnUiThread(() -> {
+                                updateStatisticsCards();
+                            });
+                        } else {
+                            Log.w(TAG, "No barangay found in Firestore document");
+                        }
+                    } else {
+                        Log.w(TAG, "No user document found in Firestore");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading barangay from Firestore: " + e.getMessage(), e);
+                });
+        } catch (Exception e) {
+            Log.e(TAG, "Error in loadBarangayFromFirestore: " + e.getMessage(), e);
         }
     }
     
@@ -1842,46 +1976,215 @@ public class MainDashboard extends AppCompatActivity {
     }
     
     /**
-     * Fetch barangay-specific report count
+     * Fetch barangay-specific report count based on user's current location
+     * This method queries reports that match the user's barangay using flexible matching
      */
     private void fetchBarangayReportsCount(String barangay) {
         try {
+            if (barangay == null || barangay.trim().isEmpty()) {
+                Log.w(TAG, "Barangay is null or empty, cannot fetch reports count");
+                updateBarangayReportsCount(0);
+                return;
+            }
+            
+            Log.d(TAG, "📍 Fetching reports count for barangay: " + barangay);
+            
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             String collection = activeReportsCollection != null ? activeReportsCollection : "reports";
             fetchBarangayReportsCountFromCollection(db, collection, barangay, activeReportsCollection == null);
         } catch (Exception e) {
-            Log.e(TAG, "Error fetching barangay reports count: " + e.getMessage());
+            Log.e(TAG, "Error fetching barangay reports count: " + e.getMessage(), e);
             updateBarangayReportsCount(0);
         }
     }
 
+    /**
+     * Fetch barangay reports count from Firestore collection with flexible matching
+     * Handles different field names and formats (barangay, locationName, location)
+     */
     private void fetchBarangayReportsCountFromCollection(FirebaseFirestore db,
                                                          String collectionName,
                                                          String barangay,
                                                          boolean allowFallback) {
-        db.collection(collectionName)
-                .whereEqualTo("barangay", barangay)
+        try {
+            // Normalize barangay name for matching (remove prefixes, trim, lowercase)
+            String normalizedBarangay = normalizeBarangayName(barangay);
+            Log.d(TAG, "🔍 Normalized barangay name: '" + normalizedBarangay + "' from original: '" + barangay + "'");
+            
+            // Get all reports and filter in memory for flexible matching
+            // This allows us to check multiple fields and handle different formats
+            db.collection(collectionName)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (queryDocumentSnapshots.isEmpty() && allowFallback && !"Reports".equals(collectionName)) {
-                        fetchBarangayReportsCountFromCollection(db, "Reports", barangay, false);
-                        return;
+                    try {
+                        int matchingCount = 0;
+                        
+                        for (DocumentSnapshot document : queryDocumentSnapshots) {
+                            if (isReportMatchingBarangay(document, normalizedBarangay, barangay)) {
+                                matchingCount++;
+                            }
+                        }
+                        
+                        if (matchingCount == 0 && allowFallback && !"Reports".equals(collectionName)) {
+                            Log.d(TAG, "No reports found in '" + collectionName + "', trying 'Reports' collection");
+                            fetchBarangayReportsCountFromCollection(db, "Reports", barangay, false);
+                            return;
+                        }
+                        
+                        if (matchingCount > 0) {
+                            activeReportsCollection = collectionName;
+                        }
+                        
+                        updateBarangayReportsCount(matchingCount);
+                        Log.d(TAG, "✅ Barangay '" + barangay + "' reports count (" + collectionName + "): " + matchingCount);
+                        
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error processing barangay reports: " + e.getMessage(), e);
+                        if (allowFallback && !"Reports".equals(collectionName)) {
+                            fetchBarangayReportsCountFromCollection(db, "Reports", barangay, false);
+                        } else {
+                            updateBarangayReportsCount(0);
+                        }
                     }
-                    if (!queryDocumentSnapshots.isEmpty()) {
-                        activeReportsCollection = collectionName;
-                    }
-                    int barangayCount = queryDocumentSnapshots.size();
-                    updateBarangayReportsCount(barangayCount);
-                    Log.d(TAG, "Barangay " + barangay + " reports count (" + collectionName + "): " + barangayCount);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error fetching barangay reports from '" + collectionName + "': " + e.getMessage());
+                    Log.e(TAG, "Error fetching barangay reports from '" + collectionName + "': " + e.getMessage(), e);
                     if (allowFallback && !"Reports".equals(collectionName)) {
                         fetchBarangayReportsCountFromCollection(db, "Reports", barangay, false);
                     } else {
                         updateBarangayReportsCount(0);
                     }
                 });
+                
+        } catch (Exception e) {
+            Log.e(TAG, "Error initiating barangay reports fetch: " + e.getMessage(), e);
+            if (allowFallback && !"Reports".equals(collectionName)) {
+                fetchBarangayReportsCountFromCollection(db, "Reports", barangay, false);
+            } else {
+                updateBarangayReportsCount(0);
+            }
+        }
+    }
+    
+    /**
+     * Normalize barangay name for comparison
+     * Removes common prefixes and formats consistently
+     */
+    private String normalizeBarangayName(String barangay) {
+        if (barangay == null || barangay.trim().isEmpty()) {
+            return "";
+        }
+        
+        String normalized = barangay.trim();
+        
+        // Remove common prefixes (case-insensitive)
+        normalized = normalized.replaceAll("(?i)^(brgy\\.?|barangay|brg\\.?)\\s*", "");
+        
+        // Remove extra whitespace and convert to lowercase for comparison
+        normalized = normalized.trim().toLowerCase(Locale.ROOT);
+        
+        return normalized;
+    }
+    
+    /**
+     * Check if a report matches the given barangay
+     * Checks multiple fields and handles different formats
+     */
+    private boolean isReportMatchingBarangay(DocumentSnapshot document, String normalizedBarangay, String originalBarangay) {
+        try {
+            // Method 1: Check explicit barangay field
+            String reportBarangay = document.getString("barangay");
+            if (reportBarangay != null && !reportBarangay.trim().isEmpty()) {
+                String normalizedReportBarangay = normalizeBarangayName(reportBarangay);
+                if (normalizedReportBarangay.equals(normalizedBarangay)) {
+                    Log.d(TAG, "✅ Match found via 'barangay' field: " + reportBarangay);
+                    return true;
+                }
+            }
+            
+            // Method 2: Check locationName field
+            String locationName = document.getString("locationName");
+            if (locationName != null && !locationName.trim().isEmpty()) {
+                String normalizedLocationName = normalizeBarangayName(locationName);
+                if (normalizedLocationName.equals(normalizedBarangay)) {
+                    Log.d(TAG, "✅ Match found via 'locationName' field: " + locationName);
+                    return true;
+                }
+                
+                // Also check if locationName contains the barangay name
+                if (normalizedLocationName.contains(normalizedBarangay) || 
+                    normalizedBarangay.contains(normalizedLocationName)) {
+                    Log.d(TAG, "✅ Match found via 'locationName' contains: " + locationName);
+                    return true;
+                }
+            }
+            
+            // Method 3: Check location field (may contain full address)
+            String location = document.getString("location");
+            if (location != null && !location.trim().isEmpty()) {
+                String normalizedLocation = normalizeBarangayName(location);
+                
+                // Check if location contains the barangay name
+                if (normalizedLocation.contains(normalizedBarangay)) {
+                    Log.d(TAG, "✅ Match found via 'location' field contains: " + location);
+                    return true;
+                }
+                
+                // Also try extracting barangay from location string
+                String extractedBarangay = extractBarangayFromLocationString(location);
+                if (!extractedBarangay.isEmpty()) {
+                    String normalizedExtracted = normalizeBarangayName(extractedBarangay);
+                    if (normalizedExtracted.equals(normalizedBarangay)) {
+                        Log.d(TAG, "✅ Match found via extracted from 'location': " + extractedBarangay);
+                        return true;
+                    }
+                }
+            }
+            
+            // Method 4: Check for exact match with original (case-insensitive)
+            if (locationName != null && locationName.equalsIgnoreCase(originalBarangay)) {
+                return true;
+            }
+            if (reportBarangay != null && reportBarangay.equalsIgnoreCase(originalBarangay)) {
+                return true;
+            }
+            
+            return false;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking report match: " + e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    /**
+     * Extract barangay name from location string
+     * Handles formats like "Street, Barangay, City" or "Barangay, City"
+     */
+    private String extractBarangayFromLocationString(String location) {
+        if (location == null || location.trim().isEmpty()) {
+            return "";
+        }
+        
+        try {
+            // Remove coordinates if present (e.g., "Location Name (lat, lon)")
+            String cleaned = location.replaceAll("\\([^)]*\\)", "").trim();
+            
+            // Split by comma and get the first part (usually barangay)
+            String[] parts = cleaned.split(",");
+            if (parts.length > 0) {
+                String candidate = parts[0].trim();
+                
+                // Remove common location prefixes
+                candidate = candidate.replaceAll("(?i)^(brgy\\.?|barangay|brg\\.?)\\s*", "");
+                
+                return candidate.trim();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error extracting barangay from location: " + e.getMessage(), e);
+        }
+        
+        return "";
     }
     
     /**

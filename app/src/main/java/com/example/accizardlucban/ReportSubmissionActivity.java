@@ -1350,6 +1350,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         reportData.put("description", description);
         
         // Auto-fill reporter info from registration (SharedPreferences)
+        String userBarangay = "";
         try {
             SharedPreferences userPrefs = getSharedPreferences(USER_PREFS_NAME, MODE_PRIVATE);
             String firstName = userPrefs.getString("first_name", "");
@@ -1363,7 +1364,48 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             if (mobile != null && !mobile.trim().isEmpty()) {
                 reportData.put("reporterMobile", mobile.trim());
             }
-        } catch (Exception ignored) {}
+            
+            // ✅ CRITICAL: Get user's barangay from profile for report matching
+            // Priority 1: Direct barangay field
+            userBarangay = userPrefs.getString("barangay", "");
+            
+            // Priority 2: Extract from location_text (format: "City, Barangay")
+            if ((userBarangay == null || userBarangay.trim().isEmpty()) && userPrefs.contains("location_text")) {
+                String locationText = userPrefs.getString("location_text", "");
+                if (locationText != null && !locationText.trim().isEmpty() && locationText.contains(",")) {
+                    String[] parts = locationText.split(",");
+                    if (parts.length >= 2) {
+                        userBarangay = parts[parts.length - 1].trim(); // Last part is usually barangay
+                    }
+                }
+            }
+            
+            // Priority 3: Try selected_barangay field
+            if ((userBarangay == null || userBarangay.trim().isEmpty())) {
+                String selectedBarangay = userPrefs.getString("selected_barangay", "");
+                if (selectedBarangay != null && !selectedBarangay.trim().isEmpty() && 
+                    !"Other".equalsIgnoreCase(selectedBarangay) &&
+                    !"Choose a barangay".equalsIgnoreCase(selectedBarangay)) {
+                    userBarangay = selectedBarangay.trim();
+                }
+            }
+            
+            // Priority 4: Try barangay_other field
+            if ((userBarangay == null || userBarangay.trim().isEmpty())) {
+                String barangayOther = userPrefs.getString("barangay_other", "");
+                if (barangayOther != null && !barangayOther.trim().isEmpty()) {
+                    userBarangay = barangayOther.trim();
+                }
+            }
+            
+            if (userBarangay != null && !userBarangay.trim().isEmpty()) {
+                Log.d(TAG, "✅ User barangay retrieved: " + userBarangay);
+            } else {
+                Log.w(TAG, "⚠️ No barangay found in user profile");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting user info: " + e.getMessage(), e);
+        }
         
         // Store location information from map picker
         if (isLocationSelected && selectedLongitude != 0.0 && selectedLatitude != 0.0) {
@@ -1375,8 +1417,23 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             reportData.put("coordinates", coordinatesText);
             reportData.put("location", selectedLocationName + " (" + coordinatesText + ")");
             
+            // ✅ CRITICAL: Store barangay field for report matching
+            // Try to extract barangay from locationName first, fallback to user's barangay
+            String reportBarangay = extractBarangayFromLocationName(selectedLocationName);
+            if (reportBarangay == null || reportBarangay.trim().isEmpty()) {
+                reportBarangay = userBarangay;
+            }
+            
+            if (reportBarangay != null && !reportBarangay.trim().isEmpty()) {
+                reportData.put("barangay", reportBarangay.trim());
+                Log.d(TAG, "✅ Barangay stored in report: " + reportBarangay);
+            } else {
+                Log.w(TAG, "⚠️ No barangay available to store in report");
+            }
+            
             Log.d(TAG, "✅ Using map picker location data:");
             Log.d(TAG, "   Name: " + selectedLocationName);
+            Log.d(TAG, "   Barangay: " + (reportBarangay != null ? reportBarangay : "Not found"));
             Log.d(TAG, "   Lat: " + selectedLatitude + ", Lon: " + selectedLongitude);
         } else {
             // No location selected from map (should not happen due to validation)
@@ -1386,6 +1443,12 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             reportData.put("longitude", null);
             reportData.put("coordinates", "");
             reportData.put("location", location);
+            
+            // Still try to store user's barangay even if location not selected
+            if (userBarangay != null && !userBarangay.trim().isEmpty()) {
+                reportData.put("barangay", userBarangay.trim());
+                Log.d(TAG, "✅ Barangay stored in report (no location): " + userBarangay);
+            }
         }
         
         // Reporter information auto-filled above; user also identified by userId (Firebase Auth UID)
@@ -1404,6 +1467,66 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         reportData.put("createdTime", timeFormat.format(currentDate));
         
         return reportData;
+    }
+    
+    /**
+     * Extract barangay name from location name string
+     * Handles different formats like "Street, Barangay, City" or "Barangay, City"
+     * @param locationName The location name string from map picker
+     * @return Extracted barangay name or null if not found
+     */
+    private String extractBarangayFromLocationName(String locationName) {
+        if (locationName == null || locationName.trim().isEmpty()) {
+            return null;
+        }
+        
+        try {
+            String cleaned = locationName.trim();
+            
+            // Common barangay patterns in location names
+            // Pattern 1: "Street, Barangay Name, City" or "Barangay Name, City"
+            if (cleaned.contains(",")) {
+                String[] parts = cleaned.split(",");
+                
+                // Try to find barangay in the parts
+                for (String part : parts) {
+                    String trimmed = part.trim();
+                    
+                    // Check if this part looks like a barangay
+                    // Barangays often have "Brgy", "Barangay", or are standalone names
+                    if (trimmed.toLowerCase().contains("brgy") || 
+                        trimmed.toLowerCase().contains("barangay") ||
+                        trimmed.matches("^[A-Za-z\\s]+$")) { // Simple name without numbers/special chars
+                        
+                        // Remove common prefixes
+                        String barangay = trimmed.replaceAll("(?i)^(brgy\\.?|barangay|brg\\.?)\\s*", "");
+                        barangay = barangay.trim();
+                        
+                        // Skip if it's too short or looks like a city name
+                        if (barangay.length() >= 3 && 
+                            !barangay.equalsIgnoreCase("Lucban") &&
+                            !barangay.equalsIgnoreCase("Quezon") &&
+                            !barangay.equalsIgnoreCase("Philippines")) {
+                            Log.d(TAG, "✅ Extracted barangay from location name: " + barangay);
+                            return barangay;
+                        }
+                    }
+                }
+            }
+            
+            // Pattern 2: Check if the whole string is a barangay name
+            String normalized = cleaned.replaceAll("(?i)^(brgy\\.?|barangay|brg\\.?)\\s*", "");
+            if (normalized.length() >= 3 && 
+                !normalized.equalsIgnoreCase("Lucban") &&
+                !normalized.equalsIgnoreCase("Quezon")) {
+                return normalized.trim();
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error extracting barangay from location name: " + e.getMessage(), e);
+        }
+        
+        return null;
     }
 
     private boolean validateForm() {

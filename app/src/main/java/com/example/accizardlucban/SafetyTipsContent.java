@@ -568,7 +568,7 @@ public class SafetyTipsContent {
         SafetyTipPage page2 = new SafetyTipPage();
         page2.title = "Major Contributing Factors";
         page2.subtitle = "";
-        page2.content = "Understanding the main causes of civil and disturbance can help prevent them:";
+        page2.content = "Understanding the main causes of infectious disease can help prevent them:";
         page2.bulletPoints = new String[]{
             "Global travel and trade: Rapid movement of people and goods spreads pathogens across borders.",
             "Urbanization and overcrowding: Dense populations facilitate faster transmission.",

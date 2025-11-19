@@ -643,6 +643,8 @@ public class MapViewActivity extends AppCompatActivity {
 
     /**
      * Ensure only one incident checkbox is selected at a time
+     * MUTUAL EXCLUSIVITY: When an incident is selected, clear and disable all facility checkboxes.
+     * When an incident is unchecked, re-enable all facility checkboxes.
      */
     private void enforceSingleIncidentSelection(CheckBox changedCheckBox, String incidentType, boolean isChecked) {
         if (isUpdatingIncidentCheckboxes) {
@@ -653,9 +655,32 @@ public class MapViewActivity extends AppCompatActivity {
         try {
             String activeIncidentType = null;
 
-            if (changedCheckBox != null && isChecked) {
-                activeIncidentType = incidentType;
+            if (changedCheckBox != null) {
+                // Update the filter state immediately for the changed checkbox
+                incidentFilters.put(incidentType, isChecked);
+                
+                if (isChecked) {
+                    // Incident checkbox was checked
+                    activeIncidentType = incidentType;
+                    // When an incident is selected, clear all facility checkboxes
+                    clearAndDisableFacilityCheckboxes();
+                } else {
+                    // Incident checkbox was unchecked - check if any other incident is still checked
+                    Log.d(TAG, "Incident filter '" + incidentType + "' unchecked");
+                    for (Map.Entry<String, Boolean> entry : incidentFilters.entrySet()) {
+                        if (Boolean.TRUE.equals(entry.getValue()) && !entry.getKey().equals(incidentType)) {
+                            activeIncidentType = entry.getKey();
+                            break;
+                        }
+                    }
+                    // If no incident is checked, re-enable facility checkboxes
+                    if (activeIncidentType == null) {
+                        setFacilityCheckboxesEnabled(true);
+                        Log.d(TAG, "No incident selected - re-enabled facility checkboxes");
+                    }
+                }
             } else {
+                // Called without a specific checkbox change - find active incident
                 for (Map.Entry<String, Boolean> entry : incidentFilters.entrySet()) {
                     if (Boolean.TRUE.equals(entry.getValue())) {
                         activeIncidentType = entry.getKey();
@@ -678,6 +703,13 @@ public class MapViewActivity extends AppCompatActivity {
                 incidentFilters.put(entry.incidentType, shouldCheck);
                 updateCheckboxVisualState(entry.checkBox, shouldCheck);
             }
+            
+            // Enable/disable facility checkboxes based on whether any incident is selected
+            if (activeIncidentType != null) {
+                setFacilityCheckboxesEnabled(false);
+            } else {
+                setFacilityCheckboxesEnabled(true);
+            }
         } finally {
             isUpdatingIncidentCheckboxes = false;
         }
@@ -699,6 +731,8 @@ public class MapViewActivity extends AppCompatActivity {
 
     /**
      * Apply facility selection to UI and filters, ensuring only one facility is active.
+     * MUTUAL EXCLUSIVITY: When a facility is selected, clear and disable all incident checkboxes.
+     * When a facility is unchecked, re-enable all incident checkboxes.
      */
     private void enforceSingleFacilitySelection(CheckBox changedCheckBox, String facilityType, boolean isChecked) {
         if (isUpdatingFacilityCheckboxes) {
@@ -719,10 +753,33 @@ public class MapViewActivity extends AppCompatActivity {
         try {
             String activeFacilityType = null;
 
-            if (changedCheckBox != null && isChecked) {
-                Log.d(TAG, "Facility filter '" + facilityType + "' changed to: " + isChecked);
-                activeFacilityType = facilityType;
+            if (changedCheckBox != null) {
+                // Update the filter state immediately for the changed checkbox
+                facilityFilters.put(facilityType, isChecked);
+                
+                if (isChecked) {
+                    // Facility checkbox was checked
+                    Log.d(TAG, "Facility filter '" + facilityType + "' checked");
+                    activeFacilityType = facilityType;
+                    // When a facility is selected, clear all incident checkboxes
+                    clearAndDisableIncidentCheckboxes();
+                } else {
+                    // Facility checkbox was unchecked - check if any other facility is still checked
+                    Log.d(TAG, "Facility filter '" + facilityType + "' unchecked");
+                    for (Map.Entry<String, Boolean> entry : facilityFilters.entrySet()) {
+                        if (Boolean.TRUE.equals(entry.getValue()) && !entry.getKey().equals(facilityType)) {
+                            activeFacilityType = entry.getKey();
+                            break;
+                        }
+                    }
+                    // If no facility is checked, re-enable incident checkboxes
+                    if (activeFacilityType == null) {
+                        setIncidentCheckboxesEnabled(true);
+                        Log.d(TAG, "No facility selected - re-enabled incident checkboxes");
+                    }
+                }
             } else {
+                // Called without a specific checkbox change - find active facility
                 for (Map.Entry<String, Boolean> entry : facilityFilters.entrySet()) {
                     if (Boolean.TRUE.equals(entry.getValue())) {
                         activeFacilityType = entry.getKey();
@@ -748,12 +805,126 @@ public class MapViewActivity extends AppCompatActivity {
                 updateCheckboxVisualState(entry.checkBox, shouldCheck);
                 applyFacilityLayerVisibility(entry.facilityType, shouldCheck);
             }
+            
+            // Enable/disable incident checkboxes based on whether any facility is selected
+            if (activeFacilityType != null) {
+                setIncidentCheckboxesEnabled(false);
+            } else {
+                setIncidentCheckboxesEnabled(true);
+            }
         } finally {
             isUpdatingFacilityCheckboxes = false;
         }
 
         applyFiltersToMap();
         updateFilterIndicator();
+    }
+
+    /**
+     * Clear all facility checkboxes and disable them
+     * Called when an incident checkbox is selected
+     */
+    private void clearAndDisableFacilityCheckboxes() {
+        isUpdatingFacilityCheckboxes = true;
+        try {
+            // Clear all facility filters
+            for (String facilityType : facilityFilters.keySet()) {
+                facilityFilters.put(facilityType, false);
+            }
+            activeFacilityFilter = null;
+            
+            // Uncheck and disable all facility checkboxes
+            for (FacilityCheckboxEntry entry : facilityCheckboxes) {
+                if (entry.checkBox != null) {
+                    entry.checkBox.setChecked(false);
+                    entry.checkBox.setEnabled(false);
+                    entry.checkBox.setAlpha(0.5f); // Visual indication that it's disabled
+                    updateCheckboxVisualState(entry.checkBox, false);
+                    applyFacilityLayerVisibility(entry.facilityType, false);
+                }
+            }
+            
+            Log.d(TAG, "Cleared and disabled all facility checkboxes");
+        } finally {
+            isUpdatingFacilityCheckboxes = false;
+        }
+    }
+
+    /**
+     * Clear all incident checkboxes and disable them
+     * Called when a facility checkbox is selected
+     */
+    private void clearAndDisableIncidentCheckboxes() {
+        isUpdatingIncidentCheckboxes = true;
+        try {
+            // Clear all incident filters
+            for (String incidentType : incidentFilters.keySet()) {
+                incidentFilters.put(incidentType, false);
+            }
+            
+            // Uncheck and disable all incident checkboxes
+            for (IncidentCheckboxEntry entry : incidentCheckboxes) {
+                if (entry.checkBox != null) {
+                    entry.checkBox.setChecked(false);
+                    entry.checkBox.setEnabled(false);
+                    entry.checkBox.setAlpha(0.5f); // Visual indication that it's disabled
+                    updateCheckboxVisualState(entry.checkBox, false);
+                }
+            }
+            
+            // Disable heatmap switch when incidents are disabled
+            if (heatmapSwitch != null) {
+                heatmapSwitch.setEnabled(false);
+                heatmapSwitch.setAlpha(0.5f);
+            }
+            
+            // Hide heatmap if it was visible
+            if (heatmapEnabled) {
+                heatmapEnabled = false;
+                hideHeatmapView();
+            }
+            
+            Log.d(TAG, "Cleared and disabled all incident checkboxes");
+        } finally {
+            isUpdatingIncidentCheckboxes = false;
+        }
+    }
+
+    /**
+     * Enable or disable all facility checkboxes
+     * @param enabled true to enable, false to disable
+     */
+    private void setFacilityCheckboxesEnabled(boolean enabled) {
+        for (FacilityCheckboxEntry entry : facilityCheckboxes) {
+            if (entry.checkBox != null) {
+                entry.checkBox.setEnabled(enabled);
+                entry.checkBox.setAlpha(enabled ? 1.0f : 0.5f);
+            }
+        }
+        Log.d(TAG, "Facility checkboxes " + (enabled ? "enabled" : "disabled"));
+    }
+
+    /**
+     * Enable or disable all incident checkboxes
+     * @param enabled true to enable, false to disable
+     */
+    private void setIncidentCheckboxesEnabled(boolean enabled) {
+        for (IncidentCheckboxEntry entry : incidentCheckboxes) {
+            if (entry.checkBox != null) {
+                entry.checkBox.setEnabled(enabled);
+                entry.checkBox.setAlpha(enabled ? 1.0f : 0.5f);
+            }
+        }
+        
+        // Also enable/disable heatmap switch based on incident checkbox state
+        if (heatmapSwitch != null) {
+            // Heatmap switch should be enabled only if incidents are enabled AND a hazard filter is active
+            boolean heatmapShouldBeEnabled = enabled && hasActiveHazardFilter();
+            heatmapSwitch.setEnabled(heatmapShouldBeEnabled);
+            heatmapSwitch.setAlpha(heatmapShouldBeEnabled ? 1.0f : 0.5f);
+        }
+        
+        Log.d(TAG, "Incident checkboxes " + (enabled ? "enabled" : "disabled"));
     }
 
     /**
@@ -850,6 +1021,12 @@ public class MapViewActivity extends AppCompatActivity {
                 if (isUpdatingIncidentCheckboxes) {
                     return;
                 }
+                
+                // Prevent interaction if checkbox is disabled
+                if (!checkBox.isEnabled() && isChecked) {
+                    checkBox.setChecked(false);
+                    return;
+                }
 
                 try {
                     incidentFilters.put(incidentType, isChecked);
@@ -889,6 +1066,12 @@ public class MapViewActivity extends AppCompatActivity {
 
             checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingFacilityCheckboxes) {
+                    return;
+                }
+                
+                // Prevent interaction if checkbox is disabled
+                if (!checkBox.isEnabled() && isChecked) {
+                    checkBox.setChecked(false);
                     return;
                 }
 
@@ -3800,7 +3983,9 @@ public class MapViewActivity extends AppCompatActivity {
                 selectedOption.setBackground(getResources().getDrawable(android.R.drawable.btn_default));
             }
 
-            // Selected time range (toast removed)
+            // Apply timeline filter to pins
+            Log.d(TAG, "Timeline filter changed to: " + timeRange);
+            applyFiltersToMap();
             
         } catch (Exception e) {
             Log.e(TAG, "Error selecting timeline option: " + e.getMessage(), e);
@@ -3951,6 +4136,7 @@ public class MapViewActivity extends AppCompatActivity {
             incidentFilters.put("Electrical Hazard", false);
             incidentFilters.put("Environmental Hazard", false);
             incidentFilters.put("Animal Concerns", false);
+            incidentFilters.put("Report", false);
             incidentFilters.put("Others", false);
 
             // Reset all facility filters to false (unchecked)
@@ -3966,6 +4152,16 @@ public class MapViewActivity extends AppCompatActivity {
             
             // Reset timeline
             selectedTimeRange = "Today";
+            
+            // Re-enable all checkboxes when filters are cleared
+            setIncidentCheckboxesEnabled(true);
+            setFacilityCheckboxesEnabled(true);
+            
+            // Re-enable heatmap switch
+            if (heatmapSwitch != null) {
+                heatmapSwitch.setEnabled(false); // Will be enabled when a hazard filter is active
+                heatmapSwitch.setAlpha(0.5f);
+            }
             
             // Reload UI with cleared states
             loadFilterStatesIntoUI();
@@ -4604,9 +4800,138 @@ public class MapViewActivity extends AppCompatActivity {
     }
     
     /**
+     * Check if a pin matches the selected timeline filter
+     * @param pin The pin to check
+     * @return true if pin matches timeline filter, false otherwise
+     */
+    private boolean matchesTimelineFilter(Pin pin) {
+        if (pin == null || selectedTimeRange == null) {
+            return true; // If no timeline selected or pin is null, show all pins
+        }
+        
+        // If timeline is "Today" (default), show all pins
+        if (selectedTimeRange.equals("Today")) {
+            return isPinCreatedToday(pin);
+        } else if (selectedTimeRange.equals("This Week")) {
+            return isPinCreatedThisWeek(pin);
+        } else if (selectedTimeRange.equals("This Month")) {
+            return isPinCreatedThisMonth(pin);
+        } else if (selectedTimeRange.equals("This Year")) {
+            return isPinCreatedThisYear(pin);
+        }
+        
+        // Default: show all pins if timeline filter is not recognized
+        return true;
+    }
+    
+    /**
+     * Check if a pin was created today
+     */
+    private boolean isPinCreatedToday(Pin pin) {
+        if (pin == null || pin.getCreatedAt() == null) {
+            return false;
+        }
+        
+        Date pinDate = pin.getCreatedAt();
+        Date today = new Date();
+        
+        // Get start of today (00:00:00)
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.setTime(today);
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        cal.set(java.util.Calendar.MINUTE, 0);
+        cal.set(java.util.Calendar.SECOND, 0);
+        cal.set(java.util.Calendar.MILLISECOND, 0);
+        Date startOfToday = cal.getTime();
+        
+        // Get end of today (23:59:59.999)
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 23);
+        cal.set(java.util.Calendar.MINUTE, 59);
+        cal.set(java.util.Calendar.SECOND, 59);
+        cal.set(java.util.Calendar.MILLISECOND, 999);
+        Date endOfToday = cal.getTime();
+        
+        return pinDate.compareTo(startOfToday) >= 0 && pinDate.compareTo(endOfToday) <= 0;
+    }
+    
+    /**
+     * Check if a pin was created this week
+     */
+    private boolean isPinCreatedThisWeek(Pin pin) {
+        if (pin == null || pin.getCreatedAt() == null) {
+            return false;
+        }
+        
+        Date pinDate = pin.getCreatedAt();
+        Date today = new Date();
+        
+        // Get start of this week (Monday 00:00:00)
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.setTime(today);
+        cal.set(java.util.Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek());
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        cal.set(java.util.Calendar.MINUTE, 0);
+        cal.set(java.util.Calendar.SECOND, 0);
+        cal.set(java.util.Calendar.MILLISECOND, 0);
+        Date startOfWeek = cal.getTime();
+        
+        return pinDate.compareTo(startOfWeek) >= 0;
+    }
+    
+    /**
+     * Check if a pin was created this month
+     */
+    private boolean isPinCreatedThisMonth(Pin pin) {
+        if (pin == null || pin.getCreatedAt() == null) {
+            return false;
+        }
+        
+        Date pinDate = pin.getCreatedAt();
+        Date today = new Date();
+        
+        // Get start of this month (1st day, 00:00:00)
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.setTime(today);
+        cal.set(java.util.Calendar.DAY_OF_MONTH, 1);
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        cal.set(java.util.Calendar.MINUTE, 0);
+        cal.set(java.util.Calendar.SECOND, 0);
+        cal.set(java.util.Calendar.MILLISECOND, 0);
+        Date startOfMonth = cal.getTime();
+        
+        return pinDate.compareTo(startOfMonth) >= 0;
+    }
+    
+    /**
+     * Check if a pin was created this year
+     */
+    private boolean isPinCreatedThisYear(Pin pin) {
+        if (pin == null || pin.getCreatedAt() == null) {
+            return false;
+        }
+        
+        Date pinDate = pin.getCreatedAt();
+        Date today = new Date();
+        
+        // Get start of this year (January 1st, 00:00:00)
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.setTime(today);
+        cal.set(java.util.Calendar.MONTH, java.util.Calendar.JANUARY);
+        cal.set(java.util.Calendar.DAY_OF_MONTH, 1);
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        cal.set(java.util.Calendar.MINUTE, 0);
+        cal.set(java.util.Calendar.SECOND, 0);
+        cal.set(java.util.Calendar.MILLISECOND, 0);
+        Date startOfYear = cal.getTime();
+        
+        return pinDate.compareTo(startOfYear) >= 0;
+    }
+    
+    /**
      * Check if a pin should be visible based on current filter settings
      * 
      * Behavior:
+     * - Timeline filter: Shows only pins created within the selected time range (Today, This Week, This Month, This Year)
      * - "My Reports" filter: When active, shows only pins created by the current user
      *   (pins display with their appropriate icons based on their type: Fire, Medical Emergency, etc.)
      * - Pins are visible when their corresponding filter is ENABLED (checked)
@@ -4621,13 +4946,18 @@ public class MapViewActivity extends AppCompatActivity {
             return false; // Hide pins with no data
         }
         
+        // Check timeline filter first - if pin doesn't match timeline, hide it immediately
+        if (!matchesTimelineFilter(pin)) {
+            return false;
+        }
+        
         // Check if "My Reports" filter is active
         boolean isMyReportsFilterActive = incidentFilters.getOrDefault("Report", false);
         if (isMyReportsFilterActive) {
             // When "My Reports" is active, only show pins from user reports
             // User report pins have IDs starting with "report_"
             if (pin.getId() != null && pin.getId().startsWith("report_")) {
-                // This is a user report pin - show it
+                // This is a user report pin - show it (if it matches timeline)
                 return true;
             } else {
                 // This is a regular pin - hide it when "My Reports" is active
