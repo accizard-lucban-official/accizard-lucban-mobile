@@ -12,6 +12,17 @@ public class ChatActivityTracker {
     private static boolean isChatActivityVisible = false;
     
     /**
+     * Reset the tracker - call this when app starts to ensure clean state
+     */
+    public static void reset() {
+        boolean previousState = isChatActivityVisible;
+        isChatActivityVisible = false;
+        if (previousState) {
+            Log.d(TAG, "🔄 RESET: Chat visibility reset to false");
+        }
+    }
+    
+    /**
      * Call this when ChatActivity becomes visible (onResume)
      */
     public static void setChatActivityVisible(boolean visible) {

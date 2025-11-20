@@ -4,6 +4,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.media.AudioAttributes;
+import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
@@ -139,11 +140,20 @@ public class NotificationChannelManager {
             );
             channel.setDescription("Messages from AcciZard Support");
             channel.enableVibration(true);
+            channel.setVibrationPattern(new long[]{0, 300}); // Short vibration for chat
             channel.setShowBadge(true);
             channel.enableLights(true);
+            channel.setLightColor(0xFFFF5722); // Orange color
+            channel.setSound(
+                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                    new AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                            .build()
+            );
             
             notificationManager.createNotificationChannel(channel);
-            Log.d(TAG, "Created channel: " + CHANNEL_CHAT_MESSAGES);
+            Log.d(TAG, "✅ Created channel: " + CHANNEL_CHAT_MESSAGES + " with HIGH importance");
         }
     }
     

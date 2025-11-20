@@ -396,6 +396,9 @@ public class ChatActivity extends AppCompatActivity {
                 backButton.setOnClickListener(v -> {
                     Log.d(TAG, "Back button clicked");
                     hideKeyboard();
+                    // ✅ CRITICAL FIX: Reset chat tracker BEFORE finishing activity
+                    ChatActivityTracker.setChatActivityVisible(false);
+                    Log.d(TAG, "🔴 Chat tracker reset to FALSE before back button finish");
                     finish();
                     overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
                 });
@@ -445,6 +448,10 @@ public class ChatActivity extends AppCompatActivity {
                 Log.d(TAG, "Home tab clicked");
                 try {
                     hideKeyboard();
+                    // ✅ CRITICAL FIX: Reset chat tracker BEFORE navigating away
+                    ChatActivityTracker.setChatActivityVisible(false);
+                    Log.d(TAG, "🔴 Chat tracker reset to FALSE before navigating to home");
+                    
                     Intent intent = new Intent(ChatActivity.this, MainDashboard.class);
                     intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                     startActivity(intent);
@@ -471,6 +478,10 @@ public class ChatActivity extends AppCompatActivity {
                 Log.d(TAG, "Report tab clicked - navigating to ReportSubmissionActivity");
                 try {
                     hideKeyboard();
+                    // ✅ CRITICAL FIX: Reset chat tracker BEFORE navigating away
+                    ChatActivityTracker.setChatActivityVisible(false);
+                    Log.d(TAG, "🔴 Chat tracker reset to FALSE before navigating to report");
+                    
                     Intent intent = new Intent(ChatActivity.this, ReportSubmissionActivity.class);
                     intent.putExtra("from_activity", "ChatActivity");
                     startActivity(intent);
@@ -489,6 +500,10 @@ public class ChatActivity extends AppCompatActivity {
                 Log.d(TAG, "Map tab clicked");
                 try {
                     hideKeyboard();
+                    // ✅ CRITICAL FIX: Reset chat tracker BEFORE navigating away
+                    ChatActivityTracker.setChatActivityVisible(false);
+                    Log.d(TAG, "🔴 Chat tracker reset to FALSE before navigating to map");
+                    
                     Intent intent = new Intent(ChatActivity.this, MapViewActivity.class);
                     startActivity(intent);
                     overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
@@ -505,6 +520,10 @@ public class ChatActivity extends AppCompatActivity {
                 Log.d(TAG, "Alerts tab clicked");
                 try {
                     hideKeyboard();
+                    // ✅ CRITICAL FIX: Reset chat tracker BEFORE navigating away
+                    ChatActivityTracker.setChatActivityVisible(false);
+                    Log.d(TAG, "🔴 Chat tracker reset to FALSE before navigating to alerts");
+                    
                     Intent intent = new Intent(ChatActivity.this, AlertsActivity.class);
                     startActivity(intent);
                     overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
@@ -1038,6 +1057,9 @@ public class ChatActivity extends AppCompatActivity {
     public void onBackPressed() {
         Log.d(TAG, "onBackPressed called");
         hideKeyboard();
+        // ✅ CRITICAL FIX: Reset chat tracker BEFORE back pressed
+        ChatActivityTracker.setChatActivityVisible(false);
+        Log.d(TAG, "🔴 Chat tracker reset to FALSE before onBackPressed");
         super.onBackPressed();
         overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
     }
@@ -1118,6 +1140,10 @@ public class ChatActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "ChatActivity onDestroy");
+        
+        // ✅ CRITICAL FIX: Reset chat tracker in onDestroy to ensure clean state
+        ChatActivityTracker.setChatActivityVisible(false);
+        Log.d(TAG, "🔴 CRITICAL: Chat marked as NOT VISIBLE in onDestroy - notifications ALLOWED");
         
         try {
             // Unregister badge from notification manager

@@ -93,6 +93,10 @@ public class MainActivity extends AppCompatActivity {
         
         super.onCreate(savedInstanceState);
         FirebaseApp.initializeApp(this);
+        
+        // ✅ CRITICAL FIX: Reset ChatActivityTracker to ensure clean state on app start
+        ChatActivityTracker.reset();
+        Log.d(TAG, "✅ ChatActivityTracker reset in MainActivity onCreate");
 
         // FirebaseAuth instance
         mAuth = FirebaseAuth.getInstance();

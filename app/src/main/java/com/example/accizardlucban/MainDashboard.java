@@ -101,6 +101,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import android.content.SharedPreferences;
+import com.example.accizardlucban.NotificationChannelManager;
 
 public class MainDashboard extends AppCompatActivity {
 
@@ -256,6 +257,20 @@ public class MainDashboard extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         try {
             Log.d(TAG, "Starting MainDashboard onCreate");
+            
+            // ✅ CRITICAL: Initialize notification channels FIRST (required for notifications to work)
+            try {
+                NotificationChannelManager channelManager = new NotificationChannelManager(this);
+                channelManager.createAllChannels();
+                Log.d(TAG, "✅ Notification channels initialized");
+            } catch (Exception e) {
+                Log.e(TAG, "❌ CRITICAL: Error initializing notification channels: " + e.getMessage(), e);
+            }
+            
+            // ✅ FIXED: Reset ChatActivityTracker to ensure clean state
+            ChatActivityTracker.reset();
+            Log.d(TAG, "✅ ChatActivityTracker reset");
+            
             setContentView(R.layout.activity_dashboard);
             Log.d(TAG, "✅ Layout loaded successfully");
             

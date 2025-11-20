@@ -50,19 +50,14 @@ public class AcciZardNotificationManager {
             }
             
             // Determine notification type and channel
-            String notificationType = data.get("type");
+            String notificationType = data != null ? data.get("type") : null;
             
-            // ✅ FIXED: Double-check if user is viewing chat (additional safety check)
+            // ✅ CRITICAL FIX: Removed suppression check - upstream already handles it
+            // If notification reached here, it means MyFirebaseMessagingService already determined it should be shown
+            // We trust the upstream logic and always show notifications that reach this point
             if ("chat_message".equals(notificationType)) {
-                boolean isChatVisible = ChatActivityTracker.isChatActivityVisible();
-                Log.d(TAG, "💬 Double-checking chat visibility: " + isChatVisible);
-                
-                if (isChatVisible) {
-                    Log.d(TAG, "🚫 SUPPRESSED in NotificationManager: User is viewing chat");
-                    return; // Don't show notification if user is already in chat
-                } else {
-                    Log.d(TAG, "✅ Proceeding to show notification - chat not visible");
-                }
+                Log.d(TAG, "💬 Chat message notification reached NotificationManager - will show");
+                Log.d(TAG, "💬 Upstream already approved this notification");
             }
             
             String priority = data.get("priority");
@@ -87,7 +82,7 @@ public class AcciZardNotificationManager {
             
             // Build notification
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
-                    .setSmallIcon(R.drawable.accizard_logo_svg) // Your app icon
+                    .setSmallIcon(R.drawable.appiconpng) // Your app icon
                     .setContentTitle(title)
                     .setContentText(body)
                     .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
@@ -98,7 +93,7 @@ public class AcciZardNotificationManager {
                     .setVibrate(getVibrationPattern(channelId));
             
             // Add large icon (optional)
-            builder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.drawable.accizard_logo_svg));
+            builder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.drawable.appiconpng));
             
             // Add notification color (orange theme)
             builder.setColor(0xFFFF5722); // #FF5722 - your app's orange color
@@ -106,14 +101,42 @@ public class AcciZardNotificationManager {
             // Add specific actions based on notification type
             addNotificationActions(builder, notificationType, data, channelId);
             
+            // ✅ CRITICAL: Verify notification channel exists before showing
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                android.app.NotificationChannel channel = notificationManager.getNotificationChannel(channelId);
+                if (channel == null) {
+                    Log.e(TAG, "❌ CRITICAL ERROR: Notification channel does not exist: " + channelId);
+                    Log.e(TAG, "❌ Creating channel on-the-fly as fallback");
+                    // Create channel on-the-fly as emergency fallback
+                    NotificationChannelManager channelManager = new NotificationChannelManager(context);
+                    channelManager.createAllChannels();
+                } else {
+                    Log.d(TAG, "✅ Notification channel verified: " + channelId + " (importance: " + channel.getImportance() + ")");
+                }
+            }
+            
             // Show the notification
             int notificationId = generateNotificationId(data);
-            notificationManager.notify(notificationId, builder.build());
-            
-            Log.d(TAG, "✅ Notification displayed - ID: " + notificationId);
+            try {
+                notificationManager.notify(notificationId, builder.build());
+                Log.d(TAG, "✅ Notification displayed successfully - ID: " + notificationId);
+                Log.d(TAG, "✅ Notification Type: " + notificationType);
+                Log.d(TAG, "✅ Notification Title: " + title);
+                Log.d(TAG, "✅ Notification Body: " + body);
+            } catch (Exception notifyException) {
+                Log.e(TAG, "❌ CRITICAL ERROR: Failed to display notification", notifyException);
+                Log.e(TAG, "❌ Notification ID: " + notificationId);
+                Log.e(TAG, "❌ Channel ID: " + channelId);
+                Log.e(TAG, "❌ Error: " + notifyException.getMessage());
+                throw notifyException; // Re-throw to be caught by outer try-catch
+            }
             
         } catch (Exception e) {
-            Log.e(TAG, "Error showing notification: " + e.getMessage(), e);
+            Log.e(TAG, "❌ CRITICAL ERROR: Error showing notification: " + e.getMessage(), e);
+            Log.e(TAG, "❌ Notification Type: " + (data != null ? data.get("type") : "null"));
+            Log.e(TAG, "❌ Title: " + title);
+            Log.e(TAG, "❌ Body: " + body);
+            e.printStackTrace();
         }
     }
     
