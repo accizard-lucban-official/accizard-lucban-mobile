@@ -1,6 +1,9 @@
 package com.example.accizardlucban;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Rect;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +14,10 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Calendar;
+import java.util.Date;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
 
 // Use the Report class from models package
 import com.example.accizardlucban.models.Report;
@@ -22,7 +29,6 @@ public class ReportLogAdapter extends RecyclerView.Adapter<ReportLogAdapter.Repo
     private OnReportClickListener onReportClickListener;
 
     public interface OnReportClickListener {
-        void onReportClick(Report report);
         void onViewAttachmentsClick(Report report);
     }
 
@@ -66,34 +72,29 @@ public class ReportLogAdapter extends RecyclerView.Adapter<ReportLogAdapter.Repo
     class ReportViewHolder extends RecyclerView.ViewHolder {
         private TextView reportTypeText;
         private TextView statusText;
-        private TextView locationText;
         private TextView descriptionText;
         private TextView timestampText;
         private TextView viewAttachmentsText;
-        private ImageView locationIcon;
+        private View statusDot;
+        private LinearLayout statusBadgeContainer;
         private ImageView timeIcon;
-        private ImageView attachmentIcon;
-        private LinearLayout attachmentsContainer;
 
         public ReportViewHolder(@NonNull View itemView) {
             super(itemView);
             reportTypeText = itemView.findViewById(R.id.reportTypeText);
             statusText = itemView.findViewById(R.id.statusText);
-            locationText = itemView.findViewById(R.id.locationText);
             descriptionText = itemView.findViewById(R.id.descriptionText);
             timestampText = itemView.findViewById(R.id.timestampText);
             viewAttachmentsText = itemView.findViewById(R.id.viewAttachmentsText);
-            locationIcon = itemView.findViewById(R.id.locationIcon);
+            statusDot = itemView.findViewById(R.id.statusDot);
+            statusBadgeContainer = itemView.findViewById(R.id.statusBadgeContainer);
             timeIcon = itemView.findViewById(R.id.timeIcon);
-            attachmentIcon = itemView.findViewById(R.id.attachmentIcon);
-            attachmentsContainer = itemView.findViewById(R.id.attachmentsContainer);
 
-            // Remove click listener from itemView - reports are no longer clickable
-            // Only the "View Attachments" button remains clickable
+            // Make card NOT clickable - removed click listener
             itemView.setClickable(false);
             itemView.setFocusable(false);
 
-            // Keep "View Attachments" clickable
+            // Only "View Attachments" button is clickable (when images exist)
             viewAttachmentsText.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -106,92 +107,189 @@ public class ReportLogAdapter extends RecyclerView.Adapter<ReportLogAdapter.Repo
 
         public void bind(Report report) {
             try {
-                // Safely set text with null checks
-                // Use getCategory() instead of getReportType()
+                // Set report type (title)
                 reportTypeText.setText(report.getCategory() != null ? report.getCategory() : "Unknown Type");
-                statusText.setText(report.getStatus() != null ? report.getStatus() : "Unknown Status");
-                locationText.setText(report.getLocation() != null ? report.getLocation() : "Unknown Location");
+                
+                // Set description
                 descriptionText.setText(report.getDescription() != null ? report.getDescription() : "No description available");
                 
-                // Convert long timestamp to formatted string
+                // Convert timestamp to relative time format
                 long timestampLong = report.getTimestamp();
                 String timestampString = formatTimestamp(timestampLong);
                 timestampText.setText(timestampString);
 
-                // Set status text color and background based on status
-                setStatusStyle(report.getStatus());
+                // Set status badge based on report status
+                String status = report.getStatus();
+                setStatusBadge(status);
 
-                // Show/hide view attachments based on image count
+                // Show/hide "View Attachments" button only when images exist
                 int imageCount = report.getImageCount();
-                if (imageCount > 0) {
+                if (imageCount > 0 && report.getImageUrls() != null && !report.getImageUrls().isEmpty()) {
                     viewAttachmentsText.setVisibility(View.VISIBLE);
-                    attachmentIcon.setVisibility(View.VISIBLE);
                     viewAttachmentsText.setText("View Attachments (" + imageCount + ")");
                 } else {
                     viewAttachmentsText.setVisibility(View.GONE);
-                    attachmentIcon.setVisibility(View.GONE);
                 }
+
             } catch (Exception e) {
                 // Log error and set default values
                 android.util.Log.e("ReportLogAdapter", "Error binding report data", e);
                 reportTypeText.setText("Error loading report");
                 statusText.setText("Error");
-                locationText.setText("Error");
                 descriptionText.setText("Error loading report data");
                 timestampText.setText("Error");
                 viewAttachmentsText.setVisibility(View.GONE);
             }
         }
         
+        /**
+         * Format timestamp to relative time (like "1 day ago", "Jul 15, 2023")
+         */
         private String formatTimestamp(long timestamp) {
             if (timestamp <= 0) {
                 return "No timestamp";
             }
             try {
-                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MMM dd, yyyy HH:mm", java.util.Locale.getDefault());
-                return sdf.format(new java.util.Date(timestamp));
+                Date reportDate = new Date(timestamp);
+                Date currentDate = new Date();
+                
+                long diffInMillis = currentDate.getTime() - reportDate.getTime();
+                long diffInSeconds = diffInMillis / 1000;
+                long diffInMinutes = diffInSeconds / 60;
+                long diffInHours = diffInMinutes / 60;
+                long diffInDays = diffInHours / 24;
+                
+                // Show relative time for recent reports
+                if (diffInDays == 0) {
+                    if (diffInHours == 0) {
+                        if (diffInMinutes == 0) {
+                            return "Just now";
+                        } else {
+                            return diffInMinutes + " minute" + (diffInMinutes > 1 ? "s" : "") + " ago";
+                        }
+                    } else {
+                        return diffInHours + " hour" + (diffInHours > 1 ? "s" : "") + " ago";
+                    }
+                } else if (diffInDays == 1) {
+                    return "1 day ago";
+                } else if (diffInDays < 7) {
+                    return diffInDays + " days ago";
+                } else if (diffInDays < 30) {
+                    long weeks = diffInDays / 7;
+                    return weeks + " week" + (weeks > 1 ? "s" : "") + " ago";
+                } else {
+                    // For older reports, show date format like "Jul 15, 2023"
+                    SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
+                    return sdf.format(reportDate);
+                }
             } catch (Exception e) {
+                android.util.Log.e("ReportLogAdapter", "Error formatting timestamp", e);
                 return "Invalid timestamp";
             }
         }
 
-        private void setStatusStyle(String status) {
-            int textColor;
-            int backgroundRes;
-
+        /**
+         * Set status badge based on report status (Pending, Ongoing, Responded, Not Responded, Redundant)
+         */
+        private void setStatusBadge(String status) {
             if (status == null) {
-                status = "Unknown";
+                status = "Pending";
             }
+
+            String statusDisplayText;
+            String statusTextColor;
+            int badgeBackgroundRes;
+            int dotBackgroundRes;
 
             switch (status.toLowerCase()) {
                 case "pending":
-                    textColor = context.getResources().getColor(android.R.color.holo_orange_dark);
-                    backgroundRes = R.drawable.status_pending_bg;
+                    statusDisplayText = "Pending";
+                    statusTextColor = "#FFB300";
+                    badgeBackgroundRes = R.drawable.status_pending_bg;
+                    dotBackgroundRes = R.drawable.status_dot_pending;
                     break;
                 case "ongoing":
-                    textColor = context.getResources().getColor(android.R.color.holo_blue_dark);
-                    backgroundRes = R.drawable.status_ongoing_bg;
+                    statusDisplayText = "Ongoing";
+                    statusTextColor = "#2196F3";
+                    badgeBackgroundRes = R.drawable.status_ongoing_bg;
+                    dotBackgroundRes = R.drawable.status_dot_ongoing;
                     break;
                 case "responded":
-                    textColor = context.getResources().getColor(android.R.color.holo_green_dark);
-                    backgroundRes = R.drawable.status_responded_bg;
+                    statusDisplayText = "Responded";
+                    statusTextColor = "#4CAF50";
+                    badgeBackgroundRes = R.drawable.status_responded_bg;
+                    dotBackgroundRes = R.drawable.status_dot_responded;
                     break;
                 case "not responded":
-                    textColor = context.getResources().getColor(android.R.color.holo_red_dark);
-                    backgroundRes = R.drawable.status_not_responded_bg;
+                    statusDisplayText = "Not Responded";
+                    statusTextColor = "#E53935";
+                    badgeBackgroundRes = R.drawable.status_not_responded_bg;
+                    dotBackgroundRes = R.drawable.status_dot_not_responded;
                     break;
                 case "redundant":
-                    textColor = context.getResources().getColor(android.R.color.holo_purple);
-                    backgroundRes = R.drawable.status_redundant_bg;
+                    statusDisplayText = "Redundant";
+                    statusTextColor = "#9C27B0";
+                    badgeBackgroundRes = R.drawable.status_redundant_bg;
+                    dotBackgroundRes = R.drawable.status_dot_redundant;
                     break;
                 default:
-                    textColor = context.getResources().getColor(android.R.color.darker_gray);
-                    backgroundRes = R.drawable.status_pending_bg;
+                    statusDisplayText = "Pending";
+                    statusTextColor = "#FFB300";
+                    badgeBackgroundRes = R.drawable.status_pending_bg;
+                    dotBackgroundRes = R.drawable.status_dot_pending;
                     break;
             }
 
-            statusText.setTextColor(textColor);
-            statusText.setBackgroundResource(backgroundRes);
+            // Update status text
+            statusText.setText(statusDisplayText);
+            statusText.setTextColor(android.graphics.Color.parseColor(statusTextColor));
+
+            // Update badge background
+            statusBadgeContainer.setBackgroundResource(badgeBackgroundRes);
+
+            // Update dot background
+            statusDot.setBackgroundResource(dotBackgroundRes);
+        }
+    }
+
+    /**
+     * ItemDecoration to add dividers between report cards
+     */
+    public static class ReportItemDivider extends RecyclerView.ItemDecoration {
+        private final int dividerHeight;
+        private final Paint dividerPaint;
+
+        public ReportItemDivider() {
+            dividerHeight = 1;
+            dividerPaint = new Paint();
+            dividerPaint.setColor(0xFFE0E0E0); // Light gray divider color
+            dividerPaint.setStyle(Paint.Style.FILL);
+        }
+
+        @Override
+        public void getItemOffsets(Rect outRect, View view, RecyclerView parent, RecyclerView.State state) {
+            super.getItemOffsets(outRect, view, parent, state);
+            
+            // Add bottom divider for all items except the last one
+            if (parent.getChildAdapterPosition(view) < parent.getAdapter().getItemCount() - 1) {
+                outRect.bottom = dividerHeight;
+            }
+        }
+
+        @Override
+        public void onDraw(Canvas c, RecyclerView parent, RecyclerView.State state) {
+            super.onDraw(c, parent, state);
+            
+            int childCount = parent.getChildCount();
+            int left = parent.getPaddingLeft();
+            int right = parent.getWidth() - parent.getPaddingRight();
+            
+            for (int i = 0; i < childCount - 1; i++) {
+                View child = parent.getChildAt(i);
+                int top = child.getBottom();
+                int bottom = top + dividerHeight;
+                c.drawRect(left, top, right, bottom, dividerPaint);
+            }
         }
     }
 }

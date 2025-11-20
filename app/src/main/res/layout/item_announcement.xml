@@ -1,71 +1,110 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="2dp"
-    android:background="@android:color/white"
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:padding="16dp"
     android:clickable="true"
-    android:focusable="true"
-    android:foreground="?android:attr/selectableItemBackground">
+    android:focusable="true">
 
+    <!-- Title and Priority Badge Row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
 
+        <!-- Title (Announcement Type) -->
+        <TextView
+            android:id="@+id/tvAnnouncementType"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Weather Warning"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#333333"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <!-- Priority Badge (oval with dot) -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/priorityBadgeContainer"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:background="@drawable/high_priority_bg"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:layout_marginStart="8dp">
 
-            <TextView
-                android:id="@+id/tvAnnouncementType"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Announcement Type"
-                android:textSize="18sp"
-                android:textColor="#333333"
-                android:textStyle="bold" />
+            <!-- Priority Dot -->
+            <View
+                android:id="@+id/priorityDot"
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:background="@drawable/priority_dot_high"
+                android:layout_marginEnd="6dp" />
 
+            <!-- Priority Text -->
             <TextView
                 android:id="@+id/tvAnnouncementPriority"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Priority"
-                android:background="@drawable/medium_priority_bg"
-                android:textColor="#FF9800"
-                android:padding="6dp"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
+                android:text="High"
                 android:textSize="12sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:textColor="#E53935" />
+
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/tvAnnouncementMessage"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Announcement message goes here."
-            android:textSize="14sp"
-            android:textColor="#666666"
-            android:lineSpacingExtra="2dp"
-            android:linksClickable="true"
-            android:autoLink="web|email" />
+    </LinearLayout>
 
+    <!-- Description/Message -->
+    <TextView
+        android:id="@+id/tvAnnouncementMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Description of the announcement goes here..."
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="12dp"
+        android:maxLines="3"
+        android:ellipsize="end"
+        android:linksClickable="true"
+        android:autoLink="web|email" />
+
+    <!-- Timestamp Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- Clock Icon -->
+        <ImageView
+            android:id="@+id/timeIcon"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_time"
+            android:tint="#999999"
+            android:layout_marginEnd="6dp" />
+
+        <!-- Timestamp -->
         <TextView
             android:id="@+id/tvAnnouncementDate"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Date"
+            android:text="Jul 15, 2023"
             android:textSize="12sp"
             android:textColor="#999999" />
+
     </LinearLayout>
-</androidx.cardview.widget.CardView> 
+
+</LinearLayout>

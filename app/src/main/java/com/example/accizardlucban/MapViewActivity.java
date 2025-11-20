@@ -123,7 +123,7 @@ public class MapViewActivity extends AppCompatActivity {
     // Navigation tabs
     private LinearLayout homeTab;
     private LinearLayout chatTab;
-    private LinearLayout reportTab;
+    private FrameLayout reportTab; // Changed to FrameLayout for circular button design
     private LinearLayout mapTab;
     private LinearLayout alertsTab;
     private TextView alertsBadgeMap;

@@ -5,7 +5,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFF"
-    android:fitsSystemWindows="true">
+    android:fitsSystemWindows="true"
+    android:clipChildren="false"
+    android:clipToPadding="false">
 
     <!-- Header -->
     <LinearLayout
@@ -76,18 +78,21 @@
             android:focusable="true"/>
     </LinearLayout>
 
-    <!-- Logo Section as Background -->
+    <!-- Logo Section as Background (positioned behind messages) -->
     <LinearLayout
         android:id="@+id/logoSection"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:orientation="vertical"
         android:gravity="center"
         android:padding="20dp"
         android:background="#F8F9FA"
         android:alpha="0.3"
+        android:elevation="1dp"
         app:layout_constraintTop_toBottomOf="@id/headerLayout"
-        app:layout_constraintBottom_toTopOf="@id/inputContainer">
+        app:layout_constraintBottom_toTopOf="@id/inputContainer"
+        app:layout_constraintHeight_default="percent"
+        app:layout_constraintVertical_bias="0.0">
 
         <ImageView
             android:layout_width="@dimen/logo_size_medium"
@@ -142,32 +147,30 @@
         android:id="@+id/messagesRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:paddingTop="200dp"
+        android:paddingTop="16dp"
         android:paddingHorizontal="16dp"
-        android:paddingBottom="200dp"
+        android:paddingBottom="16dp"
         android:clipToPadding="false"
         android:background="@android:color/transparent"
         android:elevation="2dp"
         app:layout_constraintTop_toBottomOf="@id/headerLayout"
-        app:layout_constraintBottom_toTopOf="@id/inputContainer"
-        app:layout_constraintHeight_default="wrap"/>
+        app:layout_constraintBottom_toTopOf="@id/inputContainer"/>
 
-    <!-- Input Container -->
-
-    <!-- Bottom Navigation -->
-
+    <!-- Input Container - Fixed at bottom above navigation (like messaging app) -->
     <LinearLayout
         android:id="@+id/inputContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="@dimen/margin_small"
-        android:elevation="@dimen/card_elevation_large"
+        android:layout_marginBottom="20dp"
+        android:background="#FFFFFF"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:padding="@dimen/padding_medium"
         android:paddingHorizontal="@dimen/padding_large"
-        app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
-        tools:layout_editor_absoluteX="0dp">
+        android:paddingBottom="@dimen/padding_medium"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavigationContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <ImageButton
             android:id="@+id/addActionButton"
@@ -209,156 +212,175 @@
             android:src="@drawable/vector__5_" />
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/bottomNavigation"
+    <!-- Bottom Navigation Container (FrameLayout for floating button) -->
+    <FrameLayout
+        android:id="@+id/bottomNavigationContainer"
         android:layout_width="match_parent"
-        android:layout_height="70dp"
-        android:orientation="horizontal"
+        android:layout_height="wrap_content"
+        android:minHeight="70dp"
+        android:paddingBottom="0dp"
         android:background="#FFFFFF"
-        android:elevation="8dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         app:layout_constraintBottom_toBottomOf="parent">
 
+        <!-- Bottom Navigation Bar -->
         <LinearLayout
-            android:id="@+id/homeTab"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?android:attr/selectableItemBackground">
+            android:id="@+id/bottomNavigation"
+            android:layout_width="match_parent"
+            android:layout_height="70dp"
+            android:orientation="horizontal"
+            android:background="#FFFFFF"
+            android:elevation="8dp"
+            android:clipChildren="false">
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/frame__10_"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Home"
-                android:textColor="#999999"
-                android:textSize="12sp"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/chatTab"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?android:attr/selectableItemBackground">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_chat_selected"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Chat"
-                android:textColor="#FF5722"
-                android:textSize="12sp"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/reportTab"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?android:attr/selectableItemBackground">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/iconoir__reports_solid"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Report"
-                android:textColor="#999999"
-                android:textSize="12sp"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/mapTab"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?android:attr/selectableItemBackground">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/frame__8_"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Map"
-                android:textColor="#999999"
-                android:textSize="12sp"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/alertsTab"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?android:attr/selectableItemBackground">
-
-            <FrameLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="2dp">
+            <LinearLayout
+                android:id="@+id/homeTab"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="?android:attr/selectableItemBackground">
 
                 <ImageView
-                    android:id="@+id/alerts_icon_chat"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/frame__9_"/>
+                    android:src="@drawable/frame__10_"/>
 
-                <!-- Notification Badge - Positioned above the icon -->
                 <TextView
-                    android:id="@+id/alerts_badge_chat"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="top|center_horizontal"
-                    android:layout_marginTop="-2dp"
-                    android:background="@drawable/notification_badge"
-                    android:gravity="center"
-                    android:text=""
-                    android:textColor="@android:color/white"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:minWidth="20dp"
-                    android:minHeight="20dp"
-                    android:visibility="gone" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Home"
+                    android:textColor="#999999"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
 
-            </FrameLayout>
+            <LinearLayout
+                android:id="@+id/chatTab"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="?android:attr/selectableItemBackground">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Alerts"
-                android:textColor="#999999"
-                android:textSize="12sp"
-                android:layout_marginTop="4dp"/>
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_chat_selected"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Chat"
+                    android:textColor="#FF5722"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- Empty space for Report button (same weight as other tabs) -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
+
+            <LinearLayout
+                android:id="@+id/mapTab"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="?android:attr/selectableItemBackground">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/frame__8_"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Map"
+                    android:textColor="#999999"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/alertsTab"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="?android:attr/selectableItemBackground">
+
+                <FrameLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="2dp">
+
+                    <ImageView
+                        android:id="@+id/alerts_icon_chat"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/frame__9_"/>
+
+                    <!-- Notification Badge - Positioned above the icon -->
+                    <TextView
+                        android:id="@+id/alerts_badge_chat"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="top|center_horizontal"
+                        android:layout_marginTop="-2dp"
+                        android:background="@drawable/notification_badge"
+                        android:gravity="center"
+                        android:text=""
+                        android:textColor="@android:color/white"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:minWidth="20dp"
+                        android:minHeight="20dp"
+                        android:visibility="gone" />
+
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Alerts"
+                    android:textColor="#999999"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
         </LinearLayout>
 
-    </LinearLayout>
+        <!-- Floating Circular Report Button (overlaps navigation bar) -->
+        <FrameLayout
+            android:id="@+id/reportTab"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_gravity="center_horizontal|top"
+            android:layout_marginTop="-20dp"
+            android:elevation="19dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="@drawable/report_tab_circular_selector"
+            android:foreground="?android:attr/selectableItemBackgroundBorderless"
+            android:clipToOutline="false"
+            android:outlineProvider="none">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_report_selected"
+                android:tint="#333333"/>
+        </FrameLayout>
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

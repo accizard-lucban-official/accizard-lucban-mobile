@@ -23,6 +23,7 @@ import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -239,7 +240,7 @@ public class MainDashboard extends AppCompatActivity {
     // Bottom navigation
     private LinearLayout homeTab;
     private LinearLayout chatTab;
-    private LinearLayout reportTab;
+    private FrameLayout reportTab; // Changed to FrameLayout for circular button design
     private LinearLayout mapTab;
     private LinearLayout alertsTab;
     private TextView alertsBadgeDashboard;
@@ -2425,7 +2426,7 @@ public class MainDashboard extends AppCompatActivity {
                 TextView labelView = new TextView(this);
                 labelView.setText(label);
                 labelView.setTextColor(getColorSafe(R.color.black, android.R.color.black));
-                labelView.setTypeface(Typeface.DEFAULT_BOLD);
+                labelView.setTypeface(Typeface.DEFAULT);
                 labelView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
 
                 legendItem.addView(colorDot);

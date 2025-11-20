@@ -7,6 +7,7 @@ import android.os.Looper;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
@@ -63,7 +64,8 @@ public class AlertsActivity extends AppCompatActivity {
     
     private Spinner filterSpinner;
     private ImageView profileIcon;
-    private LinearLayout navHome, navChat, navReport, navMap, navAlerts;
+    private LinearLayout navHome, navChat, navMap, navAlerts;
+    private FrameLayout navReport; // Changed to FrameLayout for circular button design
     private RecyclerView announcementsRecyclerView;
     private AnnouncementAdapter announcementAdapter;
     private List<Announcement> announcementList = new ArrayList<>();
@@ -253,6 +255,10 @@ public class AlertsActivity extends AppCompatActivity {
     private void setupAnnouncementsRecyclerView() {
         announcementAdapter = new AnnouncementAdapter(announcementList);
         announcementsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        
+        // Add divider decoration between cards (like the image design)
+        announcementsRecyclerView.addItemDecoration(new AnnouncementItemDivider());
+        
         announcementsRecyclerView.setAdapter(announcementAdapter);
         
         // Set click listener to show preview dialog
@@ -262,6 +268,47 @@ public class AlertsActivity extends AppCompatActivity {
                 showAnnouncementPreview(announcement);
             }
         });
+    }
+    
+    /**
+     * ItemDecoration to add dividers between announcement cards
+     */
+    private static class AnnouncementItemDivider extends RecyclerView.ItemDecoration {
+        private final int dividerHeight;
+        private final android.graphics.Paint dividerPaint;
+
+        public AnnouncementItemDivider() {
+            dividerHeight = 1;
+            dividerPaint = new android.graphics.Paint();
+            dividerPaint.setColor(0xFFE0E0E0); // Light gray divider color
+            dividerPaint.setStyle(android.graphics.Paint.Style.FILL);
+        }
+
+        @Override
+        public void getItemOffsets(android.graphics.Rect outRect, View view, RecyclerView parent, RecyclerView.State state) {
+            super.getItemOffsets(outRect, view, parent, state);
+            
+            // Add bottom divider for all items except the last one
+            if (parent.getChildAdapterPosition(view) < parent.getAdapter().getItemCount() - 1) {
+                outRect.bottom = dividerHeight;
+            }
+        }
+
+        @Override
+        public void onDraw(android.graphics.Canvas c, RecyclerView parent, RecyclerView.State state) {
+            super.onDraw(c, parent, state);
+            
+            int childCount = parent.getChildCount();
+            int left = parent.getPaddingLeft();
+            int right = parent.getWidth() - parent.getPaddingRight();
+            
+            for (int i = 0; i < childCount - 1; i++) {
+                View child = parent.getChildAt(i);
+                int top = child.getBottom();
+                int bottom = top + dividerHeight;
+                c.drawRect(left, top, right, bottom, dividerPaint);
+            }
+        }
     }
 
     private void setupRealtimeAnnouncementListener() {
@@ -321,17 +368,27 @@ public class AlertsActivity extends AppCompatActivity {
                             String imageUrl = extractImageUrlFromDocument(docSnapshot);
                             Log.d(TAG, "✅ Final imageUrl value: '" + imageUrl + "'");
                             
+                            // Extract date field from Firestore (handles Timestamp, Long, String formats)
+                            String dateString = extractDateFromDocument(docSnapshot);
+                            Log.d(TAG, "✅ Final date value: '" + dateString + "'");
+                            
+                            // Extract timestamp from Firestore date field (for accurate calculations)
+                            long timestamp = extractTimestampFromDateField(docSnapshot);
+                            Log.d(TAG, "✅ Extracted timestamp (milliseconds): " + timestamp);
+                            
                             // Extract updatedAt field
                             String updatedAt = extractUpdatedAtFromDocument(docSnapshot);
                             Log.d(TAG, "✅ Final updatedAt value: '" + updatedAt + "'");
                             
+                            // Create announcement with explicit timestamp for accurate date/time
                             Announcement announcement = new Announcement(
                                     docSnapshot.getString("type"),
                                     docSnapshot.getString("priority"),
                                     docSnapshot.getString("description"),
-                                    docSnapshot.getString("date"),
+                                    dateString, // Use extracted date field (for display)
                                     imageUrl,
-                                    updatedAt
+                                    updatedAt,
+                                    timestamp // Use exact timestamp for accurate calculations
                             );
                             fullAnnouncementList.add(announcement);
                             Log.d(TAG, "✅ Added announcement: " + announcement.type + 
@@ -411,16 +468,26 @@ public class AlertsActivity extends AppCompatActivity {
             // Extract image URL using helper method
             String urlValue = extractImageUrlFromDocument(doc);
             
+            // Extract date field from Firestore (handles Timestamp, Long, String formats)
+            String dateString = extractDateFromDocument(doc);
+            Log.d(TAG, "New announcement date from Firestore: '" + dateString + "'");
+            
+            // Extract timestamp from Firestore date field (for accurate calculations)
+            long timestamp = extractTimestampFromDateField(doc);
+            Log.d(TAG, "New announcement timestamp (milliseconds): " + timestamp);
+            
             // Extract updatedAt field
             String updatedAt = extractUpdatedAtFromDocument(doc);
             
+            // Create announcement with explicit timestamp for accurate date/time
             Announcement newAnnouncement = new Announcement(
                     doc.getString("type"),
                     doc.getString("priority"),
                     doc.getString("description"),
-                    doc.getString("date"),
+                    dateString, // Use extracted date field (for display)
                     urlValue,
-                    updatedAt
+                    updatedAt,
+                    timestamp // Use exact timestamp for accurate calculations
             );
             
             Log.d(TAG, "New announcement imageUrl from Firestore: '" + urlValue + "'");
@@ -460,16 +527,26 @@ public class AlertsActivity extends AppCompatActivity {
             // Extract image URL using helper method
             String urlValue = extractImageUrlFromDocument(doc);
             
+            // Extract date field from Firestore (handles Timestamp, Long, String formats)
+            String dateString = extractDateFromDocument(doc);
+            Log.d(TAG, "Modified announcement date from Firestore: '" + dateString + "'");
+            
+            // Extract timestamp from Firestore date field (for accurate calculations)
+            long timestamp = extractTimestampFromDateField(doc);
+            Log.d(TAG, "Modified announcement timestamp (milliseconds): " + timestamp);
+            
             // Extract updatedAt field
             String updatedAt = extractUpdatedAtFromDocument(doc);
             
+            // Create announcement with explicit timestamp for accurate date/time
             Announcement modifiedAnnouncement = new Announcement(
                     doc.getString("type"),
                     doc.getString("priority"),
                     doc.getString("description"),
-                    doc.getString("date"),
+                    dateString, // Use extracted date field (for display)
                     urlValue,
-                    updatedAt
+                    updatedAt,
+                    timestamp // Use exact timestamp for accurate calculations
             );
             
             // Find and update the announcement in the list
@@ -863,6 +940,202 @@ public class AlertsActivity extends AppCompatActivity {
     }
     
     /**
+     * Extract exact timestamp from Firestore date field (for accurate date/time calculations)
+     * Returns timestamp in milliseconds since epoch
+     * Handles Firestore Timestamp, Long, Integer, String, and Date formats
+     */
+    private long extractTimestampFromDateField(com.google.firebase.firestore.DocumentSnapshot doc) {
+        try {
+            Object dateObj = doc.get("date");
+            
+            if (dateObj == null) {
+                Log.d(TAG, "No 'date' field found, trying alternative fields");
+                // Try alternative field names as fallback
+                dateObj = doc.get("createdAt");
+                if (dateObj == null) {
+                    dateObj = doc.get("created_at");
+                }
+                if (dateObj == null) {
+                    dateObj = doc.get("createdTime");
+                }
+                if (dateObj == null) {
+                    dateObj = doc.get("timestamp");
+                }
+                if (dateObj == null) {
+                    dateObj = doc.get("updatedAt");
+                }
+            }
+            
+            if (dateObj == null) {
+                Log.w(TAG, "No date field found in document, using current time");
+                return System.currentTimeMillis();
+            }
+            
+            // Handle Firestore Timestamp (PRIMARY FORMAT - most accurate)
+            if (dateObj instanceof Timestamp) {
+                Timestamp timestamp = (Timestamp) dateObj;
+                Date date = timestamp.toDate(); // Converts Firestore Timestamp (UTC) to local timezone Date
+                long timestampMillis = date.getTime(); // Get milliseconds since epoch (already in local timezone)
+                Log.d(TAG, "✅ Found Firestore Timestamp:");
+                Log.d(TAG, "   Seconds: " + timestamp.getSeconds());
+                Log.d(TAG, "   Nanoseconds: " + timestamp.getNanoseconds());
+                Log.d(TAG, "   Converted to Date: " + date);
+                Log.d(TAG, "   Timestamp (milliseconds): " + timestampMillis);
+                Log.d(TAG, "   Formatted date: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.getDefault()).format(date));
+                return timestampMillis;
+            }
+            
+            // Handle Long timestamp (milliseconds since epoch)
+            if (dateObj instanceof Long) {
+                Long timestamp = (Long) dateObj;
+                Log.d(TAG, "✅ Found Long timestamp: " + timestamp);
+                return timestamp;
+            }
+            
+            // Handle Integer timestamp (seconds since epoch - convert to milliseconds)
+            if (dateObj instanceof Integer) {
+                Integer timestamp = (Integer) dateObj;
+                long timestampMillis = timestamp.longValue() * 1000L; // Convert seconds to milliseconds
+                Log.d(TAG, "✅ Found Integer timestamp (seconds), converted to milliseconds: " + timestampMillis);
+                return timestampMillis;
+            }
+            
+            // Handle String date - try to parse it
+            if (dateObj instanceof String) {
+                String dateStr = (String) dateObj;
+                Log.d(TAG, "Found String date, parsing: '" + dateStr + "'");
+                
+                // Try multiple date formats (with timezone handling)
+                // Note: ISO format strings without timezone are assumed to be in local timezone
+                
+                // First, handle ISO format with UTC timezone (Z) - common in Firestore
+                if (dateStr.contains("T") && dateStr.endsWith("Z")) {
+                    try {
+                        SimpleDateFormat isoFormatUTC = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault());
+                        isoFormatUTC.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                        
+                        Date parsedDate = null;
+                        try {
+                            parsedDate = isoFormatUTC.parse(dateStr);
+                        } catch (Exception e) {
+                            // Try with milliseconds
+                            if (dateStr.contains(".")) {
+                                SimpleDateFormat isoFormatUTCWithMs = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
+                                isoFormatUTCWithMs.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                                parsedDate = isoFormatUTCWithMs.parse(dateStr);
+                            }
+                        }
+                        
+                        if (parsedDate != null) {
+                            long timestampMillis = parsedDate.getTime();
+                            Log.d(TAG, "✅ Successfully parsed ISO UTC string date to timestamp: " + timestampMillis);
+                            return timestampMillis;
+                        }
+                    } catch (Exception e) {
+                        Log.d(TAG, "ISO UTC parsing failed, trying other formats: " + e.getMessage());
+                    }
+                }
+                
+                // Try other date formats (assume local timezone unless specified)
+                SimpleDateFormat[] formats = {
+                    // ISO format (yyyy-MM-dd HH:mm:ss) - assumes local timezone
+                    new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
+                    // Firestore Timestamp string format with timezone
+                    new SimpleDateFormat("MMMM dd, yyyy 'at' h:mm:ssa z", Locale.ENGLISH),
+                    new SimpleDateFormat("MMMM dd, yyyy 'at' hh:mm:ssa z", Locale.ENGLISH),
+                    // ISO format with timezone offset
+                    new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault()),
+                    // Standard display formats
+                    new SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault()),
+                    new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()),
+                    // Additional formats
+                    new SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()),
+                    new SimpleDateFormat("MM/dd/yyyy HH:mm:ss", Locale.getDefault())
+                };
+                
+                // Try other formats
+                for (SimpleDateFormat format : formats) {
+                    try {
+                        Date parsedDate = format.parse(dateStr);
+                        if (parsedDate != null) {
+                            long timestampMillis = parsedDate.getTime();
+                            Log.d(TAG, "✅ Successfully parsed string date to timestamp: " + timestampMillis);
+                            return timestampMillis;
+                        }
+                    } catch (Exception e) {
+                        // Try next format
+                    }
+                }
+                
+                Log.w(TAG, "Could not parse string date: '" + dateStr + "', using current time");
+                return System.currentTimeMillis();
+            }
+            
+            // Handle Date object
+            if (dateObj instanceof Date) {
+                Date date = (Date) dateObj;
+                long timestampMillis = date.getTime();
+                Log.d(TAG, "✅ Found Date object, extracted timestamp: " + timestampMillis);
+                return timestampMillis;
+            }
+            
+            // If we can't handle the type, use current time
+            Log.w(TAG, "Unknown date field type: " + (dateObj != null ? dateObj.getClass().getSimpleName() : "null") + ", using current time");
+            return System.currentTimeMillis();
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error extracting timestamp from date field: " + e.getMessage(), e);
+            return System.currentTimeMillis(); // Fallback to current time
+        }
+    }
+    
+    /**
+     * Extract date field from Firestore document
+     * Handles Firestore Timestamp, Long, String, and Date formats
+     * This is the PRIMARY date field used for announcement timestamps
+     * Returns date in ISO format (yyyy-MM-dd HH:mm:ss) for easy parsing while preserving original value
+     */
+    private String extractDateFromDocument(com.google.firebase.firestore.DocumentSnapshot doc) {
+        try {
+            Object dateObj = doc.get("date");
+            
+            if (dateObj == null) {
+                Log.d(TAG, "No 'date' field found in document");
+                // Try alternative field names as fallback
+                dateObj = doc.get("createdAt");
+                if (dateObj == null) {
+                    dateObj = doc.get("created_at");
+                }
+                if (dateObj == null) {
+                    dateObj = doc.get("createdTime");
+                }
+                if (dateObj == null) {
+                    dateObj = doc.get("timestamp");
+                }
+            }
+            
+            if (dateObj == null) {
+                Log.d(TAG, "No date field found in document (tried: date, createdAt, created_at, createdTime, timestamp)");
+                return null;
+            }
+            
+            // Use extractTimestampFromDateField to get accurate timestamp, then format it
+            long timestamp = extractTimestampFromDateField(doc);
+            Date dateToFormat = new Date(timestamp);
+            
+            // Format date to ISO format (yyyy-MM-dd HH:mm:ss) for storage and easy parsing
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+            String formattedDate = isoFormat.format(dateToFormat);
+            Log.d(TAG, "✅ Date extracted from Firestore 'date' field and formatted: '" + formattedDate + "' (timestamp: " + timestamp + ")");
+            return formattedDate;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error extracting date from document: " + e.getMessage(), e);
+            return null;
+        }
+    }
+    
+    /**
      * Extract updatedAt timestamp from Firestore document
      * Handles Firestore Timestamp, Long, String, and Date formats
      */
@@ -1235,22 +1508,39 @@ public class AlertsActivity extends AppCompatActivity {
     private void loadSampleAnnouncements() {
         fullAnnouncementList.clear();
         
-        // Add sample announcements for testing
-        fullAnnouncementList.add(new Announcement("Weather Warning", "High", "Heavy rainfall expected in the next 24 hours. Please stay indoors.", "Today"));
-        fullAnnouncementList.add(new Announcement("Flood", "High", "Flood warning issued for low-lying areas. Evacuation may be necessary.", "Today"));
-        fullAnnouncementList.add(new Announcement("Road Closure", "Medium", "Main Street closed due to construction work. Use alternative routes.", "Yesterday"));
-        fullAnnouncementList.add(new Announcement("Earthquake", "High", "Earthquake detected. Please follow safety protocols.", "2 days ago"));
-        fullAnnouncementList.add(new Announcement("Informational", "Low", "Community meeting scheduled for next week.", "3 days ago"));
-        fullAnnouncementList.add(new Announcement("Landslide", "High", "Landslide risk in mountainous areas. Avoid travel if possible.", "4 days ago"));
-        fullAnnouncementList.add(new Announcement("Missing Person", "High", "Search ongoing for missing elderly person. Contact authorities if seen.", "5 days ago"));
-        fullAnnouncementList.add(new Announcement("Evacuation Order", "High", "Immediate evacuation ordered for Zone A residents.", "1 week ago"));
+        long currentTime = System.currentTimeMillis();
+        
+        // Add sample announcements for testing with accurate timestamps
+        fullAnnouncementList.add(new Announcement("Weather Warning", "High", "Heavy rainfall expected in the next 24 hours. Please stay indoors.", formatDateString(currentTime), null, null, currentTime));
+        fullAnnouncementList.add(new Announcement("Flood", "High", "Flood warning issued for low-lying areas. Evacuation may be necessary.", formatDateString(currentTime), null, null, currentTime));
+        fullAnnouncementList.add(new Announcement("Road Closure", "Medium", "Main Street closed due to construction work. Use alternative routes.", formatDateString(currentTime - TimeUnit.DAYS.toMillis(1)), null, null, currentTime - TimeUnit.DAYS.toMillis(1)));
+        fullAnnouncementList.add(new Announcement("Earthquake", "High", "Earthquake detected. Please follow safety protocols.", formatDateString(currentTime - TimeUnit.DAYS.toMillis(2)), null, null, currentTime - TimeUnit.DAYS.toMillis(2)));
+        fullAnnouncementList.add(new Announcement("Informational", "Low", "Community meeting scheduled for next week.", formatDateString(currentTime - TimeUnit.DAYS.toMillis(3)), null, null, currentTime - TimeUnit.DAYS.toMillis(3)));
+        fullAnnouncementList.add(new Announcement("Landslide", "High", "Landslide risk in mountainous areas. Avoid travel if possible.", formatDateString(currentTime - TimeUnit.DAYS.toMillis(4)), null, null, currentTime - TimeUnit.DAYS.toMillis(4)));
+        fullAnnouncementList.add(new Announcement("Missing Person", "High", "Search ongoing for missing elderly person. Contact authorities if seen.", formatDateString(currentTime - TimeUnit.DAYS.toMillis(5)), null, null, currentTime - TimeUnit.DAYS.toMillis(5)));
+        fullAnnouncementList.add(new Announcement("Evacuation Order", "High", "Immediate evacuation ordered for Zone A residents.", formatDateString(currentTime - TimeUnit.DAYS.toMillis(7)), null, null, currentTime - TimeUnit.DAYS.toMillis(7)));
         
         android.util.Log.d("AlertsActivity", "Loaded " + fullAnnouncementList.size() + " sample announcements");
+    }
+    
+    /**
+     * Format timestamp to date string for sample data
+     */
+    private String formatDateString(long timestamp) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+            return sdf.format(new Date(timestamp));
+        } catch (Exception e) {
+            Log.e(TAG, "Error formatting date string: " + e.getMessage(), e);
+            return "Today";
+        }
     }
 
     // Announcement model
     public static class Announcement {
         public String type, priority, message, date, imageUrl, updatedAt;
+        public long timestamp; // Store exact timestamp in milliseconds for accurate date/time calculations
+        
         public Announcement(String type, String priority, String message, String date) {
             this.type = type != null ? type : "Announcement";
             this.priority = priority != null ? priority : "Medium";
@@ -1258,6 +1548,8 @@ public class AlertsActivity extends AppCompatActivity {
             this.date = date != null ? date : "";
             this.imageUrl = null;
             this.updatedAt = null;
+            // Calculate timestamp from date string (for sample data)
+            this.timestamp = parseDateStringToTimestamp(date);
         }
         
         public Announcement(String type, String priority, String message, String date, String imageUrl) {
@@ -1267,6 +1559,8 @@ public class AlertsActivity extends AppCompatActivity {
             this.date = date != null ? date : "";
             this.imageUrl = imageUrl;
             this.updatedAt = null;
+            // Calculate timestamp from date string
+            this.timestamp = parseDateStringToTimestamp(date);
         }
         
         public Announcement(String type, String priority, String message, String date, String imageUrl, String updatedAt) {
@@ -1276,6 +1570,78 @@ public class AlertsActivity extends AppCompatActivity {
             this.date = date != null ? date : "";
             this.imageUrl = imageUrl;
             this.updatedAt = updatedAt;
+            // Calculate timestamp from date string
+            this.timestamp = parseDateStringToTimestamp(date);
+        }
+        
+        /**
+         * Constructor with explicit timestamp for accurate date/time (preferred for Firestore data)
+         */
+        public Announcement(String type, String priority, String message, String date, String imageUrl, String updatedAt, long timestamp) {
+            this.type = type != null ? type : "Announcement";
+            this.priority = priority != null ? priority : "Medium";
+            this.message = message != null ? message : "";
+            this.date = date != null ? date : "";
+            this.imageUrl = imageUrl;
+            this.updatedAt = updatedAt;
+            this.timestamp = timestamp; // Use provided timestamp for accuracy
+        }
+        
+        /**
+         * Parse date string to timestamp (for backward compatibility with sample data)
+         */
+        private long parseDateStringToTimestamp(String dateStr) {
+            if (dateStr == null || dateStr.isEmpty()) {
+                return System.currentTimeMillis();
+            }
+            
+            try {
+                Date currentDate = new Date();
+                
+                // Handle relative time strings
+                if (dateStr.toLowerCase().contains("today")) {
+                    return currentDate.getTime();
+                } else if (dateStr.toLowerCase().contains("yesterday")) {
+                    return currentDate.getTime() - TimeUnit.DAYS.toMillis(1);
+                } else if (dateStr.toLowerCase().contains("days ago")) {
+                    String[] parts = dateStr.split(" ");
+                    if (parts.length > 0) {
+                        try {
+                            int days = Integer.parseInt(parts[0]);
+                            return currentDate.getTime() - TimeUnit.DAYS.toMillis(days);
+                        } catch (NumberFormatException e) {
+                            return System.currentTimeMillis();
+                        }
+                    }
+                } else if (dateStr.toLowerCase().contains("week ago")) {
+                    return currentDate.getTime() - TimeUnit.DAYS.toMillis(7);
+                }
+                
+                // Try to parse as date format
+                SimpleDateFormat[] formats = {
+                    new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
+                    new SimpleDateFormat("MMMM dd, yyyy 'at' h:mm:ssa z", Locale.ENGLISH),
+                    new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault()),
+                    new SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault()),
+                    new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+                };
+                
+                for (SimpleDateFormat format : formats) {
+                    try {
+                        Date parsedDate = format.parse(dateStr);
+                        if (parsedDate != null) {
+                            return parsedDate.getTime();
+                        }
+                    } catch (Exception e) {
+                        // Try next format
+                    }
+                }
+                
+                return System.currentTimeMillis();
+            } catch (Exception e) {
+                Log.e(TAG, "Error parsing date string: " + dateStr, e);
+                return System.currentTimeMillis();
+            }
         }
     }
 
@@ -1309,30 +1675,19 @@ public class AlertsActivity extends AppCompatActivity {
                 if (ann != null) {
                     // Set text safely with null checks
                     holder.tvType.setText(ann.type != null ? ann.type : "Unknown Type");
-                    holder.tvPriority.setText(ann.priority != null ? ann.priority : "Medium");
+                    
                     // Apply rich text formatting to message
                     CharSequence formattedMessage = formatRichText(ann.message != null ? ann.message : "No message");
                     holder.tvMessage.setText(formattedMessage);
                     holder.tvMessage.setMovementMethod(LinkMovementMethod.getInstance());
-                    holder.tvDate.setText(ann.date != null ? ann.date : "No date");
                     
-                    // Set background color and text color based on priority (matching report status badges)
-                    int bgRes = R.drawable.medium_priority_bg;
-                    int textColor = getResources().getColor(android.R.color.holo_orange_dark);
-                    if (ann.priority != null) {
-                        if ("High".equalsIgnoreCase(ann.priority)) {
-                            bgRes = R.drawable.high_priority_bg;
-                            textColor = getResources().getColor(android.R.color.holo_red_dark);
-                        } else if ("Low".equalsIgnoreCase(ann.priority)) {
-                            bgRes = R.drawable.low_priority_bg;
-                            textColor = getResources().getColor(android.R.color.holo_green_dark);
-                        } else {
-                            // Medium priority
-                            textColor = getResources().getColor(android.R.color.holo_orange_dark);
-                        }
-                    }
-                    holder.tvPriority.setBackgroundResource(bgRes);
-                    holder.tvPriority.setTextColor(textColor);
+                    // Format timestamp to relative time (like report log)
+                    String timestampString = formatAnnouncementTimestamp(ann);
+                    holder.tvDate.setText(timestampString);
+                    
+                    // Set priority badge based on priority (High/Medium/Low)
+                    String priority = ann.priority != null ? ann.priority : "Medium";
+                    setPriorityBadge(holder, priority);
                     
                     // Set click listener on item view
                     holder.itemView.setOnClickListener(new View.OnClickListener() {
@@ -1363,6 +1718,234 @@ public class AlertsActivity extends AppCompatActivity {
             }
         }
         
+        /**
+         * Format announcement timestamp to relative time (like report log)
+         * Uses the stored timestamp field for accurate calculations
+         */
+        private String formatAnnouncementTimestamp(Announcement ann) {
+            try {
+                long timestamp = 0;
+                
+                // PRIORITY 1: Use the stored timestamp field (most accurate - extracted directly from Firestore)
+                if (ann.timestamp > 0) {
+                    timestamp = ann.timestamp;
+                    Log.d("AnnouncementAdapter", "✅ Using stored timestamp field: " + timestamp);
+                }
+                // PRIORITY 2: Try to parse the 'date' field from Firestore (fallback)
+                else if (ann.date != null && !ann.date.isEmpty()) {
+                    timestamp = parseAnnouncementDateFromFirestore(ann.date);
+                    if (timestamp > 0) {
+                        Log.d("AnnouncementAdapter", "Using 'date' field for timestamp: " + ann.date);
+                    }
+                }
+                // PRIORITY 3: If date field parsing failed, try updatedAt field
+                else if (ann.updatedAt != null && !ann.updatedAt.isEmpty()) {
+                    timestamp = parseAnnouncementDateFromFirestore(ann.updatedAt);
+                    if (timestamp > 0) {
+                        Log.d("AnnouncementAdapter", "Using 'updatedAt' field for timestamp: " + ann.updatedAt);
+                    }
+                }
+                
+                // If still no timestamp, use current time as fallback
+                if (timestamp == 0) {
+                    Log.w("AnnouncementAdapter", "No valid date found, using current time");
+                    timestamp = System.currentTimeMillis();
+                }
+                
+                // Format to relative time
+                Date announcementDate = new Date(timestamp);
+                Date currentDate = new Date();
+                
+                long diffInMillis = currentDate.getTime() - announcementDate.getTime();
+                long diffInSeconds = diffInMillis / 1000;
+                long diffInMinutes = diffInSeconds / 60;
+                long diffInHours = diffInMinutes / 60;
+                long diffInDays = diffInHours / 24;
+                
+                // Show relative time for recent announcements
+                if (diffInDays == 0) {
+                    if (diffInHours == 0) {
+                        if (diffInMinutes == 0) {
+                            return "Just now";
+                        } else {
+                            return diffInMinutes + " minute" + (diffInMinutes > 1 ? "s" : "") + " ago";
+                        }
+                    } else {
+                        return diffInHours + " hour" + (diffInHours > 1 ? "s" : "") + " ago";
+                    }
+                } else if (diffInDays == 1) {
+                    return "1 day ago";
+                } else if (diffInDays < 7) {
+                    return diffInDays + " days ago";
+                } else if (diffInDays < 30) {
+                    long weeks = diffInDays / 7;
+                    return weeks + " week" + (weeks > 1 ? "s" : "") + " ago";
+                } else {
+                    // For older announcements, show date format like "Jul 15, 2023"
+                    SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
+                    return sdf.format(announcementDate);
+                }
+            } catch (Exception e) {
+                android.util.Log.e("AnnouncementAdapter", "Error formatting timestamp", e);
+                // Fallback to date field if available
+                return ann.date != null ? ann.date : "No date";
+            }
+        }
+        
+        /**
+         * Parse announcement date string from Firestore to timestamp
+         * Handles various date formats from Firestore (Timestamp string, ISO format, etc.)
+         */
+        private long parseAnnouncementDateFromFirestore(String dateStr) {
+            if (dateStr == null || dateStr.isEmpty()) {
+                return 0;
+            }
+            try {
+                Date currentDate = new Date();
+                
+                // Handle relative time strings (for sample data)
+                if (dateStr.toLowerCase().contains("today")) {
+                    return currentDate.getTime();
+                } else if (dateStr.toLowerCase().contains("yesterday")) {
+                    return currentDate.getTime() - TimeUnit.DAYS.toMillis(1);
+                } else if (dateStr.toLowerCase().contains("days ago")) {
+                    String[] parts = dateStr.split(" ");
+                    if (parts.length > 0) {
+                        try {
+                            int days = Integer.parseInt(parts[0]);
+                            return currentDate.getTime() - TimeUnit.DAYS.toMillis(days);
+                        } catch (NumberFormatException e) {
+                            return 0;
+                        }
+                    }
+                } else if (dateStr.toLowerCase().contains("week ago")) {
+                    return currentDate.getTime() - TimeUnit.DAYS.toMillis(7);
+                }
+                
+                // Try to parse as date format (handles Firestore date formats)
+                // Priority 1: ISO format with UTC timezone (Z) - common in Firestore exports
+                if (dateStr.contains("T") && dateStr.endsWith("Z")) {
+                    try {
+                        SimpleDateFormat isoFormatUTC = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault());
+                        isoFormatUTC.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                        
+                        Date parsedDate = null;
+                        try {
+                            parsedDate = isoFormatUTC.parse(dateStr);
+                        } catch (Exception e) {
+                            // Try with milliseconds
+                            if (dateStr.contains(".")) {
+                                SimpleDateFormat isoFormatUTCWithMs = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
+                                isoFormatUTCWithMs.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                                parsedDate = isoFormatUTCWithMs.parse(dateStr);
+                            }
+                        }
+                        
+                        if (parsedDate != null) {
+                            long timestamp = parsedDate.getTime();
+                            Log.d("AnnouncementAdapter", "✅ Successfully parsed ISO UTC date '" + dateStr + "' to timestamp: " + timestamp);
+                            return timestamp;
+                        }
+                    } catch (Exception e) {
+                        Log.d("AnnouncementAdapter", "ISO UTC parsing failed, trying other formats: " + e.getMessage());
+                    }
+                }
+                
+                // Priority 2: ISO format (yyyy-MM-dd HH:mm:ss) - standard format used by extractDateFromDocument (assumes local timezone)
+                SimpleDateFormat[] formats = {
+                    // ISO format used by extractDateFromDocument: "2025-11-19 03:18:23" (local timezone)
+                    new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
+                    // Firestore Timestamp string format: "November 19, 2025 at 3:18:23 AM UTC+8"
+                    new SimpleDateFormat("MMMM dd, yyyy 'at' h:mm:ssa z", Locale.ENGLISH),
+                    new SimpleDateFormat("MMMM dd, yyyy 'at' hh:mm:ssa z", Locale.ENGLISH),
+                    // ISO format with timezone offset: "2025-11-19T03:18:23+08:00"
+                    new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault()),
+                    // Standard formats
+                    new SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault()),
+                    new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()),
+                    new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()),
+                    // Additional formats
+                    new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()),
+                    new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()),
+                    new SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+                };
+                
+                for (SimpleDateFormat format : formats) {
+                    try {
+                        Date parsedDate = format.parse(dateStr);
+                        if (parsedDate != null) {
+                            long timestamp = parsedDate.getTime();
+                            Log.d("AnnouncementAdapter", "✅ Successfully parsed date '" + dateStr + "' to timestamp: " + timestamp);
+                            return timestamp;
+                        }
+                    } catch (Exception e) {
+                        // Try next format
+                    }
+                }
+                
+                Log.w("AnnouncementAdapter", "Could not parse date string: " + dateStr);
+                return 0;
+            } catch (Exception e) {
+                android.util.Log.e("AnnouncementAdapter", "Error parsing date: " + dateStr, e);
+                return 0;
+            }
+        }
+        
+        /**
+         * Set priority badge based on priority (High/Medium/Low)
+         */
+        private void setPriorityBadge(AnnouncementViewHolder holder, String priority) {
+            if (priority == null) {
+                priority = "Medium";
+            }
+
+            String priorityDisplayText;
+            String priorityTextColor;
+            int badgeBackgroundRes;
+            int dotBackgroundRes;
+
+            switch (priority.toLowerCase()) {
+                case "high":
+                    priorityDisplayText = "High";
+                    priorityTextColor = "#E53935";
+                    badgeBackgroundRes = R.drawable.high_priority_bg;
+                    dotBackgroundRes = R.drawable.priority_dot_high;
+                    break;
+                case "medium":
+                    priorityDisplayText = "Medium";
+                    priorityTextColor = "#FFB300";
+                    badgeBackgroundRes = R.drawable.medium_priority_bg;
+                    dotBackgroundRes = R.drawable.priority_dot_medium;
+                    break;
+                case "low":
+                    priorityDisplayText = "Low";
+                    priorityTextColor = "#689F38";
+                    badgeBackgroundRes = R.drawable.low_priority_bg;
+                    dotBackgroundRes = R.drawable.priority_dot_low;
+                    break;
+                default:
+                    priorityDisplayText = "Medium";
+                    priorityTextColor = "#FFB300";
+                    badgeBackgroundRes = R.drawable.medium_priority_bg;
+                    dotBackgroundRes = R.drawable.priority_dot_medium;
+                    break;
+            }
+
+            // Update priority text
+            holder.tvPriority.setText(priorityDisplayText);
+            holder.tvPriority.setTextColor(android.graphics.Color.parseColor(priorityTextColor));
+
+            // Update badge background
+            if (holder.priorityBadgeContainer != null) {
+                holder.priorityBadgeContainer.setBackgroundResource(badgeBackgroundRes);
+            }
+
+            // Update dot background
+            if (holder.priorityDot != null) {
+                holder.priorityDot.setBackgroundResource(dotBackgroundRes);
+            }
+        }
+        
         @Override
         public int getItemCount() { 
             return announcements != null ? announcements.size() : 0; 
@@ -1376,6 +1959,9 @@ public class AlertsActivity extends AppCompatActivity {
         
         class AnnouncementViewHolder extends RecyclerView.ViewHolder {
             TextView tvType, tvPriority, tvMessage, tvDate;
+            View priorityDot;
+            LinearLayout priorityBadgeContainer;
+            ImageView timeIcon;
             
             AnnouncementViewHolder(View itemView) {
                 super(itemView);
@@ -1383,6 +1969,9 @@ public class AlertsActivity extends AppCompatActivity {
                 tvPriority = itemView.findViewById(R.id.tvAnnouncementPriority);
                 tvMessage = itemView.findViewById(R.id.tvAnnouncementMessage);
                 tvDate = itemView.findViewById(R.id.tvAnnouncementDate);
+                priorityDot = itemView.findViewById(R.id.priorityDot);
+                priorityBadgeContainer = itemView.findViewById(R.id.priorityBadgeContainer);
+                timeIcon = itemView.findViewById(R.id.timeIcon);
             }
         }
     }

@@ -3,65 +3,65 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/report_item_background"
+    android:background="#FFFFFF"
     android:padding="16dp"
-    android:layout_marginBottom="12dp"
-    android:elevation="1dp"
     android:clickable="false"
     android:focusable="false">
 
-    <!-- Report Type and Status Row -->
+    <!-- Title and Severity Badge Row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="8dp">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
 
+        <!-- Title (Report Type) -->
         <TextView
             android:id="@+id/reportTypeText"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Report Type"
-            android:textSize="18sp"
+            android:text="Weather Warning"
+            android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="#333333" />
+            android:textColor="#333333"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
-        <TextView
-            android:id="@+id/statusText"
+        <!-- Status Badge (oval with dot) -->
+        <LinearLayout
+            android:id="@+id/statusBadgeContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Status"
-            android:textSize="12sp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
             android:background="@drawable/status_pending_bg"
-            android:padding="6dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp" />
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:layout_marginStart="8dp">
 
-    </LinearLayout>
+            <!-- Status Dot -->
+            <View
+                android:id="@+id/statusDot"
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:background="@drawable/status_dot_pending"
+                android:layout_marginEnd="6dp" />
 
-    <!-- Location Row -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="8dp">
+            <!-- Status Text -->
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Pending"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="#FFB300" />
 
-        <ImageView
-            android:id="@+id/locationIcon"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:src="@drawable/ic_location"
-            android:layout_marginEnd="8dp"
-            android:layout_gravity="center_vertical" />
-
-        <TextView
-            android:id="@+id/locationText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Location"
-            android:textSize="14sp"
-            android:textColor="#666666" />
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -70,66 +70,54 @@
         android:id="@+id/descriptionText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Description"
+        android:text="Description of the report goes here..."
         android:textSize="14sp"
         android:textColor="#666666"
-        android:layout_marginBottom="8dp" />
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="12dp"
+        android:maxLines="3"
+        android:ellipsize="end" />
 
-    <!-- Attachments Container -->
-    <LinearLayout
-        android:id="@+id/attachmentsContainer"
-        android:layout_width="match_parent"
+    <!-- View Attachments Button (only shown when images exist) -->
+    <TextView
+        android:id="@+id/viewAttachmentsText"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="8dp"
-        android:gravity="center_vertical">
-
-        <ImageView
-            android:id="@+id/attachmentIcon"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:src="@drawable/ic_attachment"
-            android:layout_marginEnd="8dp"
-            android:tint="#FF5722"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/viewAttachmentsText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="View Attachments"
-            android:textSize="14sp"
-            android:textColor="#FF5722"
-            android:textStyle="bold"
-            android:background="?android:attr/selectableItemBackground"
-            android:padding="4dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:visibility="gone" />
-
-    </LinearLayout>
+        android:text="View Attachments"
+        android:textSize="14sp"
+        android:textColor="#FF5722"
+        android:textStyle="bold"
+        android:background="?android:attr/selectableItemBackground"
+        android:padding="4dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone"
+        android:layout_marginBottom="8dp" />
 
     <!-- Timestamp Row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
+        <!-- Clock Icon -->
         <ImageView
             android:id="@+id/timeIcon"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
             android:src="@drawable/ic_time"
-            android:layout_marginEnd="8dp"
-            android:layout_gravity="center_vertical" />
+            android:tint="#999999"
+            android:layout_marginEnd="6dp" />
 
+        <!-- Timestamp -->
         <TextView
             android:id="@+id/timestampText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Timestamp"
-            android:textSize="14sp"
-            android:textColor="#666666" />
+            android:text="Jul 15, 2023"
+            android:textSize="12sp"
+            android:textColor="#999999" />
 
     </LinearLayout>
 

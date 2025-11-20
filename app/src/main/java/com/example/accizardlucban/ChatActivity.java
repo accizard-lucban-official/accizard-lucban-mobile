@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -65,7 +66,8 @@ public class ChatActivity extends AppCompatActivity {
     private RecyclerView messagesRecyclerView;
     private EditText messageInput;
     private ImageView sendButton, backButton, callButton;
-    private LinearLayout homeTab, chatTab, reportTab, mapTab, alertsTab;
+    private LinearLayout homeTab, chatTab, mapTab, alertsTab;
+    private FrameLayout reportTab; // Changed to FrameLayout for circular button design
     private TextView statusText;
     private ImageButton addActionButton;
     private LinearLayout inputContainer;
@@ -318,20 +320,8 @@ public class ChatActivity extends AppCompatActivity {
                 keyboardHandler.removeCallbacks(keyboardRunnable);
             }
             
-            // Ensure input container floats higher above keyboard
-            if (inputContainer != null) {
-                inputContainer.bringToFront();
-                // Add extra elevation for stronger floating effect
-                inputContainer.setElevation(20f);
-                
-                // Add programmatic margins for extra spacing
-                android.view.ViewGroup.MarginLayoutParams params = 
-                    (android.view.ViewGroup.MarginLayoutParams) inputContainer.getLayoutParams();
-                if (params != null) {
-                    params.bottomMargin = (int) (32 * getResources().getDisplayMetrics().density); // 32dp
-                    inputContainer.setLayoutParams(params);
-                }
-            }
+            // Input container stays fixed at bottom - keyboard will adjust window automatically
+            // Do NOT modify elevation, margins, or bringToFront - keep it fixed
             
             // Scroll to bottom with a slight delay to ensure layout is complete
             keyboardRunnable = new Runnable() {
@@ -349,18 +339,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private void onKeyboardHidden() {
         try {
-            // Reset elevation and margins when keyboard is hidden
-            if (inputContainer != null) {
-                inputContainer.setElevation(12f);
-                
-                // Reset margins to normal
-                android.view.ViewGroup.MarginLayoutParams params = 
-                    (android.view.ViewGroup.MarginLayoutParams) inputContainer.getLayoutParams();
-                if (params != null) {
-                    params.bottomMargin = (int) (20 * getResources().getDisplayMetrics().density); // 20dp
-                    inputContainer.setLayoutParams(params);
-                }
-            }
+            // Input container stays fixed - no modifications needed
             Log.d(TAG, "Keyboard hidden");
         } catch (Exception e) {
             Log.e(TAG, "Error handling keyboard hidden", e);

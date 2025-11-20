@@ -3,7 +3,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:background="#F5F5F5"
+    android:clipChildren="false"
+    android:clipToPadding="false">
 
     <!-- Header -->
     <LinearLayout
@@ -51,7 +53,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/header_layout"
-        android:layout_above="@id/bottom_navigation">
+        android:layout_above="@id/bottomNavigationContainer">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/announcementsRecyclerView"
@@ -61,185 +63,201 @@
             android:clipToPadding="false" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-    <!-- Bottom Navigation (Unified with activity_chat) -->
-    <LinearLayout
-        android:id="@+id/bottom_navigation"
+    <!-- Bottom Navigation Container (FrameLayout for floating button) -->
+    <FrameLayout
+        android:id="@+id/bottomNavigationContainer"
         android:layout_width="match_parent"
-        android:layout_height="70dp"
-        android:orientation="horizontal"
-        android:background="#FFFFFF"
-        android:elevation="8dp"
+        android:layout_height="wrap_content"
+        android:minHeight="70dp"
+        android:paddingBottom="0dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:layout_alignParentBottom="true">
 
-        <!-- Home -->
+        <!-- Bottom Navigation Bar -->
         <LinearLayout
-            android:id="@+id/nav_home"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?android:attr/selectableItemBackground">
+            android:id="@+id/bottom_navigation"
+            android:layout_width="match_parent"
+            android:layout_height="70dp"
+            android:orientation="horizontal"
+            android:background="#FFFFFF"
+            android:elevation="8dp"
+            android:clipChildren="false">
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/frame__10_" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Home"
-                android:textColor="#999999"
-                android:textSize="12sp"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <!-- Chat -->
-        <LinearLayout
-            android:id="@+id/nav_chat"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?android:attr/selectableItemBackground">
-
-            <!-- ✅ ADDED: FrameLayout to position badge over chat icon -->
-            <FrameLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp">
+            <!-- Home -->
+            <LinearLayout
+                android:id="@+id/nav_home"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="?android:attr/selectableItemBackground">
 
                 <ImageView
-                    android:id="@+id/chat_icon_alerts"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:layout_gravity="center"
-                    android:src="@drawable/frame__6_" />
+                    android:src="@drawable/frame__10_" />
 
-                <!-- ✅ ADDED: Chat notification badge -->
                 <TextView
-                    android:id="@+id/chat_badge_alerts"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="top|center_horizontal"
-                    android:layout_marginTop="-2dp"
-                    android:background="@drawable/notification_badge"
-                    android:gravity="center"
-                    android:text=""
-                    android:textColor="@android:color/white"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:visibility="gone"
-                    android:elevation="4dp"/>
-            </FrameLayout>
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Home"
+                    android:textColor="#999999"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Chat"
-                android:textColor="#999999"
-                android:textSize="12sp"
-                android:layout_marginTop="4dp"/>
+            <!-- Chat -->
+            <LinearLayout
+                android:id="@+id/nav_chat"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="?android:attr/selectableItemBackground">
+
+                <!-- ✅ ADDED: FrameLayout to position badge over chat icon -->
+                <FrameLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp">
+
+                    <ImageView
+                        android:id="@+id/chat_icon_alerts"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/frame__6_" />
+
+                    <!-- ✅ ADDED: Chat notification badge -->
+                    <TextView
+                        android:id="@+id/chat_badge_alerts"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="top|center_horizontal"
+                        android:layout_marginTop="-2dp"
+                        android:background="@drawable/notification_badge"
+                        android:gravity="center"
+                        android:text=""
+                        android:textColor="@android:color/white"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:visibility="gone"
+                        android:elevation="4dp"/>
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Chat"
+                    android:textColor="#999999"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- Empty space for Report button (same weight as other tabs) -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
+
+            <!-- Map -->
+            <LinearLayout
+                android:id="@+id/nav_map"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="?android:attr/selectableItemBackground">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/frame__8_" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Map"
+                    android:textColor="#999999"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- Alerts (Selected) -->
+            <LinearLayout
+                android:id="@+id/nav_alerts"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="?android:attr/selectableItemBackground">
+
+                <RelativeLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+
+                    <ImageView
+                        android:id="@+id/alerts_icon"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_megaphone" />
+
+                    <!-- Notification Badge -->
+                    <TextView
+                        android:id="@+id/alerts_badge"
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:layout_alignTop="@id/alerts_icon"
+                        android:layout_alignEnd="@id/alerts_icon"
+                        android:layout_marginTop="-4dp"
+                        android:layout_marginEnd="-4dp"
+                        android:background="@drawable/notification_badge"
+                        android:gravity="center"
+                        android:text=""
+                        android:textColor="@android:color/white"
+                        android:textSize="8sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
+
+                </RelativeLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Alerts"
+                    android:textColor="#FF5722"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
         </LinearLayout>
 
-        <!-- Report -->
-        <LinearLayout
+        <!-- Floating Circular Report Button (overlaps navigation bar) -->
+        <FrameLayout
             android:id="@+id/nav_report"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?android:attr/selectableItemBackground">
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_gravity="center_horizontal|top"
+            android:layout_marginTop="-20dp"
+            android:elevation="19dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="@drawable/report_tab_circular_selector"
+            android:foreground="?android:attr/selectableItemBackgroundBorderless"
+            android:clipToOutline="false"
+            android:outlineProvider="none">
 
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/iconoir__reports_solid" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Report"
-                android:textColor="#999999"
-                android:textSize="12sp"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <!-- Map -->
-        <LinearLayout
-            android:id="@+id/nav_map"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?android:attr/selectableItemBackground">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/frame__8_" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Map"
-                android:textColor="#999999"
-                android:textSize="12sp"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-        <!-- Alerts (Selected) -->
-        <LinearLayout
-            android:id="@+id/nav_alerts"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?android:attr/selectableItemBackground">
-
-            <RelativeLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content">
-
-                <ImageView
-                    android:id="@+id/alerts_icon"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_megaphone" />
-
-                <!-- Notification Badge -->
-                <TextView
-                    android:id="@+id/alerts_badge"
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_alignTop="@id/alerts_icon"
-                    android:layout_alignEnd="@id/alerts_icon"
-                    android:layout_marginTop="-4dp"
-                    android:layout_marginEnd="-4dp"
-                    android:background="@drawable/notification_badge"
-                    android:gravity="center"
-                    android:text=""
-                    android:textColor="@android:color/white"
-                    android:textSize="8sp"
-                    android:textStyle="bold"
-                    android:visibility="gone" />
-
-            </RelativeLayout>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Alerts"
-                android:textColor="#FF5722"
-                android:textSize="12sp"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-
-    </LinearLayout>
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_report_selected"
+                android:tint="#333333"/>
+        </FrameLayout>
+    </FrameLayout>
 
 </RelativeLayout>

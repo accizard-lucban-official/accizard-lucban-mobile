@@ -603,8 +603,34 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
             etSearchLocation.setText(selectedLocation);
             etSearchLocation.dismissDropDown();
             
+            // Hide keyboard
+            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.hideSoftInputFromWindow(etSearchLocation.getWindowToken(), 0);
+            }
+            
             // Automatically search for the selected location
             searchLocation(selectedLocation);
+        });
+        
+        // Handle Enter/Search key press (like MapViewActivity)
+        etSearchLocation.setOnEditorActionListener((v, actionId, event) -> {
+            String query = etSearchLocation.getText().toString().trim();
+            if (!query.isEmpty()) {
+                // Hide keyboard
+                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.hideSoftInputFromWindow(etSearchLocation.getWindowToken(), 0);
+                }
+                
+                // Dismiss dropdown
+                etSearchLocation.dismissDropDown();
+                
+                // Perform search
+                searchLocation(query);
+                return true;
+            }
+            return false;
         });
         
         // Handle text changes for real-time suggestions
@@ -629,68 +655,124 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
         });
     }
 
+    /**
+     * Search for location and navigate to it (runs geocoding in background thread like MapViewActivity)
+     */
     private void searchLocation(String locationName) {
         // Show loading message
         Toast.makeText(this, "Searching for: " + locationName, Toast.LENGTH_SHORT).show();
         
-        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-        try {
-            // Enhanced search query for better accuracy
-            String enhancedQuery = locationName;
-            if (!locationName.toLowerCase().contains("philippines") && 
-                !locationName.toLowerCase().contains("quezon")) {
-                enhancedQuery = locationName + ", Quezon Province, Philippines";
-            }
-            
-            List<Address> addresses = geocoder.getFromLocationName(enhancedQuery, 10); // Increased to 10 for better results
-            if (addresses != null && !addresses.isEmpty()) {
-                // Find the most accurate address (prefer addresses with more details)
-                Address bestAddress = findMostAccurateAddress(addresses);
+        // Run geocoding in background thread (like MapViewActivity does)
+        executorService.execute(() -> {
+            try {
+                Geocoder geocoder = new Geocoder(this, Locale.getDefault());
                 
-                // Use high precision coordinates
-                double longitude = bestAddress.getLongitude();
-                double latitude = bestAddress.getLatitude();
-                
-                // Validate coordinates are within reasonable bounds for Philippines
-                if (isValidPhilippinesCoordinates(longitude, latitude)) {
-                    Point point = Point.fromLngLat(longitude, latitude);
-
-                    // Clear existing marker
-                    clearMarker();
-
-                    // Set as selected point with high precision
-                    selectedPoint = point;
-
-                    // Add marker with precise positioning
-                    addMarkerAtLocation(point);
-
-                    // Move camera to location with higher zoom for accuracy
-                    moveCameraToLocation(point);
-
-                    // Show popup with precise coordinates
-                    showLocationPopup(point);
-
-                    // Get detailed location information
-                    getEnhancedLocationDetails(point);
-                    
-                    // Update the search field to show the found location
-                    etSearchLocation.setText(locationName);
-                    
-                    // Log coordinates for debugging
-                    Log.d("MapPicker", "Search result coordinates: " + latitude + ", " + longitude);
-                    Log.d("MapPicker", "Search result address: " + bestAddress.getAddressLine(0));
-                    
-                    Toast.makeText(this, "Location found and pinned!", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(this, "Invalid coordinates for Philippines", Toast.LENGTH_SHORT).show();
+                // Enhanced search query for better accuracy
+                String enhancedQuery = locationName;
+                if (!locationName.toLowerCase().contains("philippines") && 
+                    !locationName.toLowerCase().contains("quezon")) {
+                    enhancedQuery = locationName + ", Quezon Province, Philippines";
                 }
-            } else {
-                Toast.makeText(this, "Location '" + locationName + "' not found. Try a different search term.", Toast.LENGTH_LONG).show();
+                
+                List<Address> addresses = geocoder.getFromLocationName(enhancedQuery, 10);
+                
+                if (addresses != null && !addresses.isEmpty()) {
+                    // Find the most accurate address (prefer addresses with more details)
+                    Address bestAddress = findMostAccurateAddress(addresses);
+                    
+                    // Use high precision coordinates
+                    double longitude = bestAddress.getLongitude();
+                    double latitude = bestAddress.getLatitude();
+                    
+                    // Validate coordinates are within reasonable bounds for Philippines
+                    if (isValidPhilippinesCoordinates(longitude, latitude)) {
+                        Point point = Point.fromLngLat(longitude, latitude);
+                        
+                        // Run UI updates on main thread
+                        runOnUiThread(() -> {
+                            // Clear existing marker
+                            clearMarker();
+
+                            // Set as selected point with high precision
+                            selectedPoint = point;
+
+                            // Add marker with precise positioning
+                            addMarkerAtLocation(point);
+
+                            // Move camera to location with appropriate zoom level
+                            double zoomLevel = getZoomLevelForLocationName(locationName);
+                            moveCameraToLocationWithZoom(point, zoomLevel);
+
+                            // Show popup with precise coordinates
+                            showLocationPopup(point);
+
+                            // Get detailed location information
+                            getEnhancedLocationDetails(point);
+                            
+                            // Update the search field to show the found location
+                            if (etSearchLocation != null) {
+                                etSearchLocation.setText(locationName);
+                            }
+                            
+                            // Log coordinates for debugging
+                            Log.d("MapPicker", "Search result coordinates: " + latitude + ", " + longitude);
+                            Log.d("MapPicker", "Search result address: " + bestAddress.getAddressLine(0));
+                            
+                            Toast.makeText(this, "Location found and pinned!", Toast.LENGTH_SHORT).show();
+                        });
+                    } else {
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "Invalid coordinates for Philippines", Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                } else {
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Location '" + locationName + "' not found. Try a different search term.", Toast.LENGTH_LONG).show();
+                    });
+                }
+            } catch (IOException e) {
+                Log.e("MapPicker", "Error searching location: " + locationName, e);
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Error searching location. Please check your internet connection.", Toast.LENGTH_LONG).show();
+                });
+            } catch (Exception e) {
+                Log.e("MapPicker", "Error in search location", e);
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Error searching location", Toast.LENGTH_SHORT).show();
+                });
             }
-        } catch (IOException e) {
-            Log.e("MapPicker", "Error searching location: " + locationName, e);
-            Toast.makeText(this, "Error searching location. Please check your internet connection.", Toast.LENGTH_LONG).show();
+        });
+    }
+    
+    /**
+     * Get appropriate zoom level for location name (like MapViewActivity)
+     */
+    private double getZoomLevelForLocationName(String locationName) {
+        String name = locationName.toLowerCase();
+        
+        // Higher zoom for specific buildings and landmarks
+        if (name.contains("hospital") || name.contains("medical") ||
+            name.contains("police") || name.contains("fire") ||
+            name.contains("school") || name.contains("university") ||
+            name.contains("college") || name.contains("bank") ||
+            name.contains("church") || name.contains("hall") ||
+            name.contains("building") || name.contains("station")) {
+            return 18.0; // Very close view for buildings
         }
+        
+        // Medium zoom for general areas
+        if (name.contains("plaza") || name.contains("park") ||
+            name.contains("market") || name.contains("terminal")) {
+            return 16.0; // Medium view for public spaces
+        }
+        
+        // Lower zoom for barangays and general areas
+        if (name.contains("barangay") || name.contains("brgy") || name.contains("district")) {
+            return 15.0; // Wider view for areas
+        }
+        
+        // Default zoom for other places
+        return 17.0;
     }
     
     /**
@@ -1362,28 +1444,34 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
     }
 
     /**
-     * Move camera to location with high precision zoom
+     * Move camera to location with high precision zoom (default zoom)
      */
     private void moveCameraToLocation(Point point) {
+        moveCameraToLocationWithZoom(point, 18.0);
+    }
+    
+    /**
+     * Move camera to location with specified zoom level (like MapViewActivity)
+     */
+    private void moveCameraToLocationWithZoom(Point point, double zoomLevel) {
         if (mapboxMap != null) {
-            // Use higher zoom level for better accuracy (18.0 for street-level precision)
-                CameraOptions cameraOptions = new CameraOptions.Builder()
-                        .center(point)
-                    .zoom(18.0) // Increased from 17.0 for better accuracy
-                        .build();
+            CameraOptions cameraOptions = new CameraOptions.Builder()
+                    .center(point)
+                    .zoom(zoomLevel)
+                    .build();
 
-                mapboxMap.setCamera(cameraOptions);
+            mapboxMap.setCamera(cameraOptions);
 
-                if (cameraAnimationsPlugin != null) {
-                        MapAnimationOptions animationOptions = new MapAnimationOptions.Builder()
+            if (cameraAnimationsPlugin != null) {
+                MapAnimationOptions animationOptions = new MapAnimationOptions.Builder()
                         .duration(1500)
-                                .build();
-                        cameraAnimationsPlugin.flyTo(cameraOptions, animationOptions, null);
+                        .build();
+                cameraAnimationsPlugin.flyTo(cameraOptions, animationOptions, null);
             }
             
             // Log camera movement for debugging
             Log.d("MapPicker", String.format("Camera moved to: %.6f, %.6f at zoom %.1f", 
-                point.longitude(), point.latitude(), 18.0));
+                point.longitude(), point.latitude(), zoomLevel));
         }
     }
 

@@ -9,6 +9,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -131,7 +132,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     // Bottom Navigation
     private LinearLayout homeTab;
     private LinearLayout chatTab;
-    private LinearLayout reportTab;
+    private FrameLayout reportTab; // Changed to FrameLayout for circular button design
     private LinearLayout mapTab;
     private LinearLayout alertsTab;
 
@@ -283,22 +284,19 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         reportLogRecyclerView.setLayoutManager(new NonScrollableLinearLayoutManager(this));
         reportLogRecyclerView.setNestedScrollingEnabled(false);
 
+        // Add divider decoration between cards (like the image design)
+        reportLogRecyclerView.addItemDecoration(new ReportLogAdapter.ReportItemDivider());
+
         // Initialize adapter
         allReports = new ArrayList<>();
         filteredReports = new ArrayList<>();
         reportLogAdapter = new ReportLogAdapter(this, filteredReports);
         
-        // Set click listeners
+        // Set click listener (only for viewing attachments, not for report details)
         reportLogAdapter.setOnReportClickListener(new ReportLogAdapter.OnReportClickListener() {
             @Override
-            public void onReportClick(Report report) {
-                // Show full report details dialog
-                showReportDetailsDialog(report);
-            }
-
-            @Override
             public void onViewAttachmentsClick(Report report) {
-                // Show attachments dialog
+                // Show attachments dialog only if images exist
                 if (report.getImageUrls() != null && !report.getImageUrls().isEmpty()) {
                     showReportAttachmentsDialog(report);
                 } else {
