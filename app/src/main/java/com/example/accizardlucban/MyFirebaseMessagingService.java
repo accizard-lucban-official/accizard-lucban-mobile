@@ -103,6 +103,49 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 }
             }
             
+            // ✅ CUSTOMIZE: For announcements, format notification to show type and description
+            if ("announcement".equals(notificationType)) {
+                String announcementType = data.get("announcementType");
+                String description = data.get("description");
+                
+                // If description is not in data, try to get it from the body
+                if (description == null || description.isEmpty()) {
+                    description = body;
+                }
+                
+                // ✅ STRIP HTML TAGS: Remove HTML tags like <p>, </p>, <br>, etc. from description
+                if (description != null && !description.isEmpty()) {
+                    description = stripHtmlTags(description);
+                    Log.d(TAG, "✅ Stripped HTML tags from description");
+                }
+                
+                // Also strip HTML from announcementType if it exists
+                if (announcementType != null && !announcementType.isEmpty()) {
+                    announcementType = stripHtmlTags(announcementType);
+                }
+                
+                // Format notification body: "Type: Description"
+                if (announcementType != null && !announcementType.isEmpty()) {
+                    if (description != null && !description.isEmpty()) {
+                        body = announcementType + ": " + description;
+                        Log.d(TAG, "✅ Formatted announcement notification - Type: " + announcementType + ", Description: " + description);
+                    } else {
+                        body = announcementType;
+                        Log.d(TAG, "✅ Formatted announcement notification - Type: " + announcementType + " (no description)");
+                    }
+                } else if (description != null && !description.isEmpty()) {
+                    // If no type but has description, use description
+                    body = description;
+                    Log.d(TAG, "✅ Using description for announcement notification: " + description);
+                }
+                
+                // Truncate long descriptions (max 200 chars for notification)
+                if (body.length() > 200) {
+                    body = body.substring(0, 197) + "...";
+                    Log.d(TAG, "✅ Truncated announcement notification body to 200 chars");
+                }
+            }
+            
             AcciZardNotificationManager notificationManager = new AcciZardNotificationManager(this);
             notificationManager.showNotification(title, body, data);
         } catch (Exception e) {
@@ -194,6 +237,45 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         // - Update chat badge count
         // - Update local message cache
         // - Send broadcast to ChatActivity if it's open to auto-refresh
+    }
+    
+    /**
+     * Strip HTML tags from text
+     * Removes tags like <p>, </p>, <br>, <div>, etc. and converts HTML entities
+     */
+    private String stripHtmlTags(String html) {
+        if (html == null || html.isEmpty()) {
+            return html;
+        }
+        
+        try {
+            // Remove HTML tags using regex
+            // This pattern matches any HTML tag: <...>
+            String text = html.replaceAll("<[^>]+>", "");
+            
+            // Replace common HTML entities
+            text = text.replace("&nbsp;", " ");
+            text = text.replace("&amp;", "&");
+            text = text.replace("&lt;", "<");
+            text = text.replace("&gt;", ">");
+            text = text.replace("&quot;", "\"");
+            text = text.replace("&#39;", "'");
+            text = text.replace("&apos;", "'");
+            
+            // Clean up multiple spaces and newlines
+            text = text.replaceAll("\\s+", " ").trim();
+            
+            // Remove leading/trailing whitespace
+            text = text.trim();
+            
+            Log.d(TAG, "✅ Stripped HTML - Original: '" + html + "' → Cleaned: '" + text + "'");
+            
+            return text;
+        } catch (Exception e) {
+            Log.e(TAG, "Error stripping HTML tags: " + e.getMessage(), e);
+            // Return original text if stripping fails
+            return html;
+        }
     }
     
     /**

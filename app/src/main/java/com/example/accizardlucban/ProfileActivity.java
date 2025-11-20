@@ -37,6 +37,7 @@ public class ProfileActivity extends AppCompatActivity {
     private static final String TAG = "ProfileActivity";
     private static final String ALERTS_PREFS_NAME = "AlertsActivityPrefs";
     private static final String KEY_LAST_VISIT_TIME = "last_visit_time";
+    private static final String KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT = "last_viewed_announcement_count";
     
     private ImageView backButton;
     private TextView signOutButton;
@@ -132,6 +133,12 @@ public class ProfileActivity extends AppCompatActivity {
         navAlerts = findViewById(R.id.nav_alerts);
         navProfile = findViewById(R.id.nav_profile);
         alertsBadgeProfile = findViewById(R.id.alerts_badge_profile);
+        
+        // Register badge with AnnouncementNotificationManager so it gets updated when alerts are viewed
+        if (alertsBadgeProfile != null) {
+            AnnouncementNotificationManager.getInstance().registerBadge("ProfileActivity", alertsBadgeProfile);
+            Log.d(TAG, "✅ ProfileActivity badge registered with AnnouncementNotificationManager");
+        }
     }
 
     private void setupClickListeners() {
@@ -1482,43 +1489,24 @@ public class ProfileActivity extends AppCompatActivity {
         try {
             if (alertsBadgeProfile == null) return;
             
-            // Use the same logic as AlertsActivity to count new announcements
-            int newAnnouncementCount = countNewAnnouncementsFromProfile();
+            // Use the same logic as AlertsActivity - check viewed state
+            int lastViewedCount = alertsSharedPreferences.getInt(KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT, 0);
             
-            if (newAnnouncementCount > 0) {
-                alertsBadgeProfile.setText(String.valueOf(newAnnouncementCount));
-                alertsBadgeProfile.setVisibility(View.VISIBLE);
-                Log.d(TAG, "Showing badge on profile with count: " + newAnnouncementCount);
-            } else {
-                alertsBadgeProfile.setVisibility(View.GONE);
-                Log.d(TAG, "Hiding badge on profile - no new announcements");
-            }
+            // Fetch current announcement count and calculate unread count
+            fetchAndCountNewAnnouncementsFromProfile(lastViewedCount);
+            
         } catch (Exception e) {
             Log.e(TAG, "Error updating notification badge on profile: " + e.getMessage(), e);
-        }
-    }
-    
-    private int countNewAnnouncementsFromProfile() {
-        try {
-            // Use the same SharedPreferences as AlertsActivity
-            long lastVisitTime = alertsSharedPreferences.getLong(KEY_LAST_VISIT_TIME, 0);
-            
-            // If this is the first visit, don't show any badges
-            if (lastVisitTime == 0) {
-                return 0;
+            if (alertsBadgeProfile != null) {
+                alertsBadgeProfile.setVisibility(View.GONE);
             }
-            
-            // For profile, we'll fetch announcements and count new ones
-            fetchAndCountNewAnnouncementsFromProfile(lastVisitTime);
-            
-            return 0; // Will be updated by the async fetch
-        } catch (Exception e) {
-            Log.e(TAG, "Error counting new announcements from profile: " + e.getMessage(), e);
-            return 0;
         }
     }
     
-    private void fetchAndCountNewAnnouncementsFromProfile(long lastVisitTime) {
+    // This method is no longer needed - using fetchAndCountNewAnnouncementsFromProfile directly
+    // Keeping for backward compatibility but it's not used anymore
+    
+    private void fetchAndCountNewAnnouncementsFromProfile(int lastViewedCount) {
         try {
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             db.collection("announcements")
@@ -1526,36 +1514,46 @@ public class ProfileActivity extends AppCompatActivity {
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null) {
-                        int newCount = 0;
-                        Date currentDate = new Date();
+                        int currentTotalCount = task.getResult().size();
                         
-                        for (QueryDocumentSnapshot doc : task.getResult()) {
-                            String dateStr = doc.getString("date");
-                            if (dateStr != null && isAnnouncementNewFromProfile(dateStr, lastVisitTime)) {
-                                newCount++;
-                            }
+                        // Calculate unread count: current count - last viewed count
+                        int unreadCount = currentTotalCount - lastViewedCount;
+                        
+                        // Ensure unread count is never negative
+                        if (unreadCount < 0) {
+                            unreadCount = 0;
                         }
                         
-                        // Make newCount final for use in lambda
-                        final int finalNewCount = newCount;
+                        // Make unreadCount final for use in lambda
+                        final int finalUnreadCount = unreadCount;
                         
                         // Update badge on UI thread
                         runOnUiThread(() -> {
                             if (alertsBadgeProfile != null) {
-                                if (finalNewCount > 0) {
-                                    alertsBadgeProfile.setText(String.valueOf(finalNewCount));
+                                if (finalUnreadCount > 0) {
+                                    alertsBadgeProfile.setText(String.valueOf(finalUnreadCount));
                                     alertsBadgeProfile.setVisibility(View.VISIBLE);
+                                    Log.d(TAG, "✅ Profile badge showing: " + finalUnreadCount + " unread announcements");
                                 } else {
                                     alertsBadgeProfile.setVisibility(View.GONE);
+                                    alertsBadgeProfile.setText("0");
+                                    Log.d(TAG, "✅ Profile badge hidden - all announcements viewed (lastViewed: " + 
+                                          lastViewedCount + ", current: " + currentTotalCount + ")");
                                 }
                             }
                         });
                         
-                        Log.d(TAG, "Found " + newCount + " new announcements from profile");
+                        Log.d(TAG, "Profile badge update - unreadCount: " + unreadCount + 
+                                  " (current: " + currentTotalCount + ", lastViewed: " + lastViewedCount + ")");
                     }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error fetching announcements for badge from profile: " + e.getMessage(), e);
+                    if (alertsBadgeProfile != null) {
+                        runOnUiThread(() -> {
+                            alertsBadgeProfile.setVisibility(View.GONE);
+                        });
+                    }
                 });
         } catch (Exception e) {
             Log.e(TAG, "Error fetching and counting new announcements from profile: " + e.getMessage(), e);
@@ -1600,5 +1598,17 @@ public class ProfileActivity extends AppCompatActivity {
     public void onBackPressed() {
         // Handle hardware back button the same way as the back button click
         handleBackNavigation();
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        try {
+            // Unregister badge from notification manager
+            AnnouncementNotificationManager.getInstance().unregisterBadge("ProfileActivity");
+            Log.d(TAG, "ProfileActivity badge unregistered");
+        } catch (Exception e) {
+            Log.e(TAG, "Error unregistering badge in onDestroy: " + e.getMessage(), e);
+        }
     }
 }

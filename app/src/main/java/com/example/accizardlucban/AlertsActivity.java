@@ -2,6 +2,8 @@ package com.example.accizardlucban;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -56,6 +58,8 @@ public class AlertsActivity extends AppCompatActivity {
     private static final String KEY_LAST_VISIT_TIME = "last_visit_time";
     private static final String KEY_LAST_ANNOUNCEMENT_COUNT = "last_announcement_count";
     private static final String KEY_TOTAL_ANNOUNCEMENT_COUNT = "total_announcement_count";
+    private static final String KEY_LAST_VIEWED_ANNOUNCEMENT_TIME = "last_viewed_announcement_time";
+    private static final String KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT = "last_viewed_announcement_count";
     
     private Spinner filterSpinner;
     private ImageView profileIcon;
@@ -92,11 +96,12 @@ public class AlertsActivity extends AppCompatActivity {
         
         initViews();
         
-        // Register badge with notification manager and hide since user is viewing alerts
+        // Register badge with notification manager
         if (alertsBadge != null) {
             AnnouncementNotificationManager.getInstance().registerBadge("AlertsActivity", alertsBadge);
+            // Badge count will be updated after announcements are loaded
+            // For now, hide it until we have data
             alertsBadge.setVisibility(View.GONE);
-            AnnouncementNotificationManager.getInstance().clearBadgeForActivity("AlertsActivity");
         }
         
         setupSpinner();
@@ -363,9 +368,10 @@ public class AlertsActivity extends AppCompatActivity {
                         }
                     }
                     
-                    // If there were changes, refresh the filtered list
+                    // If there were changes, refresh the filtered list and update badge
                     if (hasChanges) {
                         filterAnnouncements(selectedFilter);
+                        updateBadgeCount(); // Update badge when announcements change
                         Log.d(TAG, "Real-time update: Refreshed announcement list after changes");
                     }
                 }
@@ -380,12 +386,10 @@ public class AlertsActivity extends AppCompatActivity {
                 // Update notification badge count for other activities
                 updateNotificationCountForOtherActivities();
                 
-                // Update global notification manager
-                AnnouncementNotificationManager.getInstance().updateAnnouncementCount(
-                    AlertsActivity.this, fullAnnouncementList.size());
-                
-                // Hide badge since user is viewing alerts
-                clearNotificationBadge();
+                // Update badge count based on unread announcements
+                // This will only show badge if there are NEW announcements that user hasn't viewed
+                // If user has already viewed all announcements (onResume was called), badge will stay hidden
+                updateBadgeCount();
                 
                 isRealtimeListenerActive = true;
                 Log.d(TAG, "Real-time listener is now active");
@@ -436,9 +440,10 @@ public class AlertsActivity extends AppCompatActivity {
                 Log.d(TAG, "Skipping toast notification during initial load for: " + newAnnouncement.type);
             }
             
-            // Update global notification manager
-            AnnouncementNotificationManager.getInstance().updateAnnouncementCount(
-                AlertsActivity.this, fullAnnouncementList.size());
+            // Update badge count for new announcement
+            // This will only show badge if the new announcement makes unreadCount > 0
+            // If user has already viewed all announcements, badge will stay hidden
+            updateBadgeCount();
             
             Log.d(TAG, "New announcement processed: " + newAnnouncement.type);
             
@@ -489,6 +494,9 @@ public class AlertsActivity extends AppCompatActivity {
                 Log.d(TAG, "Announcement updated: " + modifiedAnnouncement.type);
             }
             
+            // Update badge count after modification
+            updateBadgeCount();
+            
         } catch (Exception e) {
             Log.e(TAG, "Error handling modified announcement: " + e.getMessage(), e);
         }
@@ -505,6 +513,9 @@ public class AlertsActivity extends AppCompatActivity {
             
             fullAnnouncementList.removeIf(ann -> 
                 ann.type.equals(removedType) && ann.message.equals(removedMessage));
+            
+            // Update badge count after removal
+            updateBadgeCount();
             
             Log.d(TAG, "Announcement removed from list");
             
@@ -1553,11 +1564,17 @@ public class AlertsActivity extends AppCompatActivity {
             // Refresh profile picture when returning to this activity
             loadUserProfilePicture();
             
-            // Hide alerts badge since user is actively viewing alerts
-            clearNotificationBadge();
+            // ✅ CRITICAL: Mark all announcements as viewed when user opens/views the alerts screen
+            // This immediately hides the badge and marks all current announcements as viewed
+            markAllAnnouncementsAsViewed();
+            
+            // Don't call updateBadgeCount() here - markAllAnnouncementsAsViewed() already handles it
+            // The badge should be hidden when user views the screen
             
             // ✅ NEW: Update chat badge (show unread chat messages)
             updateChatBadge();
+            
+            Log.d(TAG, "✅ onResume complete - badge should be hidden (user has viewed alerts)");
         } catch (Exception e) {
             Log.e(TAG, "Error in onResume: " + e.getMessage(), e);
         }
@@ -1570,9 +1587,13 @@ public class AlertsActivity extends AppCompatActivity {
             // Save last visit time when leaving the activity
             saveLastVisitTime();
             
+            // Mark all announcements as viewed when user leaves (navigates to other tabs)
+            // This ensures badge is reset to zero on other tabs
+            markAllAnnouncementsAsViewed();
+            
             // Don't remove the listener here - keep it active for real-time updates
             // The listener will continue to work in the background
-            Log.d(TAG, "Activity paused - real-time listener remains active");
+            Log.d(TAG, "Activity paused - all announcements marked as viewed, badge reset to zero");
             
         } catch (Exception e) {
             Log.e(TAG, "Error in onPause: " + e.getMessage(), e);
@@ -1618,23 +1639,217 @@ public class AlertsActivity extends AppCompatActivity {
         }
     }
     
-    private void updateNotificationBadge() {
+    /**
+     * Update badge count based on unread announcements
+     * Only shows count for announcements the user hasn't viewed yet
+     * Updates both local badge and global notification manager
+     * 
+     * IMPORTANT: This respects the "viewed" state - if user has viewed alerts,
+     * the badge will remain hidden even if this method is called
+     */
+    private void updateBadgeCount() {
         try {
-            if (alertsBadge == null) return;
+            if (alertsBadge == null) {
+                Log.w(TAG, "Alerts badge is null, cannot update");
+                return;
+            }
             
-            int newAnnouncementCount = countNewAnnouncements();
+            // Count unread announcements using simple count-based logic
+            int unreadCount = countUnreadAnnouncements();
             
-            if (newAnnouncementCount > 0) {
-                alertsBadge.setText(String.valueOf(newAnnouncementCount));
+            Log.d(TAG, "Updating badge - unreadCount: " + unreadCount);
+            
+            // Check if user has already viewed all announcements
+            // If lastViewedCount == currentCount, user has viewed everything, so hide badge
+            int lastViewedCount = sharedPreferences.getInt(KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT, 0);
+            int currentTotalCount = fullAnnouncementList.size();
+            
+            // If user has viewed all announcements (lastViewedCount == currentCount), 
+            // keep badge hidden even if unreadCount > 0 (this shouldn't happen, but safety check)
+            if (lastViewedCount == currentTotalCount && currentTotalCount > 0) {
+                // User has viewed all announcements - keep badge hidden
+                alertsBadge.setVisibility(View.GONE);
+                alertsBadge.setText("0");
+                Log.d(TAG, "✅ Badge hidden - user has viewed all announcements (lastViewed: " + 
+                          lastViewedCount + ", current: " + currentTotalCount + ")");
+                
+                // Update global notification manager to hide badges on other tabs too
+                AnnouncementNotificationManager.getInstance().updateBadgesWithUnreadCount(
+                    AlertsActivity.this, 0);
+                return;
+            }
+            
+            // Update local badge based on unread count
+            if (unreadCount > 0) {
+                alertsBadge.setText(String.valueOf(unreadCount));
                 alertsBadge.setVisibility(View.VISIBLE);
-                Log.d(TAG, "Showing badge with count: " + newAnnouncementCount);
+                Log.d(TAG, "✅ Showing badge with unread count: " + unreadCount);
             } else {
                 alertsBadge.setVisibility(View.GONE);
-                Log.d(TAG, "Hiding badge - no new announcements");
+                alertsBadge.setText("0");
+                Log.d(TAG, "✅ Hiding badge - no unread announcements (count: 0)");
             }
+            
+            // Update global notification manager with unread count
+            // This ensures badges on all tabs show the correct unread count
+            AnnouncementNotificationManager.getInstance().updateBadgesWithUnreadCount(
+                AlertsActivity.this, unreadCount);
+            
+            // Also update total count in notification manager for tracking
+            SharedPreferences notificationPrefs = AnnouncementNotificationManager.getInstance()
+                .getSharedPreferences(AlertsActivity.this);
+            if (notificationPrefs != null) {
+                notificationPrefs.edit()
+                    .putInt("total_announcement_count", currentTotalCount)
+                    .apply();
+            }
+            
         } catch (Exception e) {
-            Log.e(TAG, "Error updating notification badge: " + e.getMessage(), e);
+            Log.e(TAG, "Error updating badge count: " + e.getMessage(), e);
+            if (alertsBadge != null) {
+                alertsBadge.setVisibility(View.GONE);
+                alertsBadge.setText("0");
+            }
         }
+    }
+    
+    /**
+     * Count unread announcements based on count difference
+     * Simple and reliable: if currentCount > lastViewedCount, there are new announcements
+     */
+    private int countUnreadAnnouncements() {
+        try {
+            // Read the last viewed count from SharedPreferences
+            int lastViewedCount = sharedPreferences.getInt(KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT, 0);
+            int currentTotalCount = fullAnnouncementList.size();
+            
+            // If user has never viewed announcements (first time), return 0
+            // Don't mark as viewed here to avoid infinite loops
+            if (lastViewedCount == 0 && currentTotalCount > 0) {
+                Log.d(TAG, "First time user - no badge shown (lastViewedCount=0)");
+                return 0;
+            }
+            
+            // Calculate unread count: current count - last viewed count
+            int unreadCount = currentTotalCount - lastViewedCount;
+            
+            // Ensure unread count is never negative
+            if (unreadCount < 0) {
+                unreadCount = 0;
+                Log.w(TAG, "Unread count was negative, reset to 0. lastViewedCount: " + 
+                          lastViewedCount + ", currentCount: " + currentTotalCount);
+            }
+            
+            Log.d(TAG, "Unread count calculation: " + unreadCount + 
+                      " = " + currentTotalCount + " (current) - " + lastViewedCount + " (last viewed)");
+            
+            return unreadCount;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error counting unread announcements: " + e.getMessage(), e);
+            return 0;
+        }
+    }
+    
+    /**
+     * Get timestamp from announcement (from updatedAt, date, or current time)
+     */
+    private long getAnnouncementTimestamp(Announcement announcement) {
+        try {
+            // Try to parse updatedAt field first
+            if (announcement.updatedAt != null && !announcement.updatedAt.isEmpty()) {
+                try {
+                    // Try parsing various date formats
+                    SimpleDateFormat[] formats = {
+                        new SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault()),
+                        new SimpleDateFormat("MMMM dd, yyyy 'at' h:mm:ssa z", Locale.ENGLISH),
+                        new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
+                        new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+                    };
+                    
+                    for (SimpleDateFormat format : formats) {
+                        try {
+                            Date date = format.parse(announcement.updatedAt);
+                            if (date != null) {
+                                return date.getTime();
+                            }
+                        } catch (Exception e) {
+                            // Try next format
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not parse updatedAt: " + announcement.updatedAt);
+                }
+            }
+            
+            // Try to parse date field
+            if (announcement.date != null && !announcement.date.isEmpty()) {
+                long parsedTime = parseAnnouncementDate(announcement.date);
+                if (parsedTime > 0) {
+                    return parsedTime;
+                }
+            }
+            
+            // If we can't parse, assume it's a new announcement (use current time)
+            // This ensures new announcements are counted
+            return System.currentTimeMillis();
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting announcement timestamp: " + e.getMessage(), e);
+            return System.currentTimeMillis();
+        }
+    }
+    
+    /**
+     * Mark all current announcements as viewed
+     * This resets the badge count to zero across all tabs
+     * Called when user views/opens the alerts screen
+     */
+    private void markAllAnnouncementsAsViewed() {
+        try {
+            long currentTime = System.currentTimeMillis();
+            int currentCount = fullAnnouncementList.size();
+            
+            // Save the current count as the last viewed count
+            // This is the key - when currentCount == lastViewedCount, unreadCount = 0
+            sharedPreferences.edit()
+                .putLong(KEY_LAST_VIEWED_ANNOUNCEMENT_TIME, currentTime)
+                .putInt(KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT, currentCount)
+                .commit(); // Use commit() instead of apply() to ensure immediate write
+            
+            Log.d(TAG, "✅ User viewed alerts - Marked all announcements as viewed. Count: " + currentCount);
+            
+            // IMMEDIATELY hide the badge - user has viewed the alerts
+            if (alertsBadge != null) {
+                alertsBadge.setVisibility(View.GONE);
+                alertsBadge.setText("0");
+                Log.d(TAG, "✅ Badge hidden immediately - user has viewed alerts");
+            }
+            
+            // Use the notification manager's method to mark as viewed
+            // This properly updates the notification state and clears all badges on other tabs
+            AnnouncementNotificationManager.getInstance().markAnnouncementsAsViewed(
+                AlertsActivity.this, currentCount);
+            
+            // Force update all badges to 0 immediately (no delay needed since we already hid it)
+            AnnouncementNotificationManager.getInstance().updateBadgesWithUnreadCount(
+                AlertsActivity.this, 0);
+            
+            Log.d(TAG, "✅ All badges cleared - user has viewed all announcements");
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error marking announcements as viewed: " + e.getMessage(), e);
+            // On error, still try to hide the badge
+            if (alertsBadge != null) {
+                alertsBadge.setVisibility(View.GONE);
+                alertsBadge.setText("0");
+            }
+        }
+    }
+    
+    private void updateNotificationBadge() {
+        // Legacy method - redirect to new method
+        updateBadgeCount();
     }
     
     // Method to update badge from other activities
@@ -1657,10 +1872,9 @@ public class AlertsActivity extends AppCompatActivity {
     
     private void clearNotificationBadge() {
         try {
-            if (alertsBadge != null) {
-                alertsBadge.setVisibility(View.GONE);
-                Log.d(TAG, "Badge cleared - user visited alerts screen");
-            }
+            // Mark all announcements as viewed and update badge
+            markAllAnnouncementsAsViewed();
+            Log.d(TAG, "Badge cleared - all announcements marked as viewed");
         } catch (Exception e) {
             Log.e(TAG, "Error clearing notification badge: " + e.getMessage(), e);
         }

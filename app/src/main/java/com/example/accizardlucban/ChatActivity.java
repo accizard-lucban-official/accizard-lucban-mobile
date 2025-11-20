@@ -58,6 +58,7 @@ public class ChatActivity extends AppCompatActivity {
     private static final String TAG = "ChatActivity";
     private static final String PREFS_NAME = "AlertsActivityPrefs";
     private static final String KEY_LAST_VISIT_TIME = "last_visit_time";
+    private static final String KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT = "last_viewed_announcement_count";
     private static final String KEY_ADMIN_DELETION_DETECTED = "admin_deletion_detected";
     private static final String KEY_ADMIN_DELETION_TIMESTAMP = "admin_deletion_timestamp";
 
@@ -205,6 +206,12 @@ public class ChatActivity extends AppCompatActivity {
             mapTab = findViewById(R.id.mapTab);
             alertsTab = findViewById(R.id.alertsTab);
             alertsBadgeChat = findViewById(R.id.alerts_badge_chat);
+            
+            // Register badge with AnnouncementNotificationManager so it gets updated when alerts are viewed
+            if (alertsBadgeChat != null) {
+                AnnouncementNotificationManager.getInstance().registerBadge("ChatActivity", alertsBadgeChat);
+                Log.d(TAG, "✅ ChatActivity badge registered with AnnouncementNotificationManager");
+            }
 
             Log.d(TAG, "Views initialized successfully");
         } catch (Exception e) {
@@ -1133,6 +1140,14 @@ public class ChatActivity extends AppCompatActivity {
         super.onDestroy();
         Log.d(TAG, "ChatActivity onDestroy");
         
+        try {
+            // Unregister badge from notification manager
+            AnnouncementNotificationManager.getInstance().unregisterBadge("ChatActivity");
+            Log.d(TAG, "ChatActivity badge unregistered");
+        } catch (Exception e) {
+            Log.e(TAG, "Error unregistering badge in onDestroy: " + e.getMessage(), e);
+        }
+        
         // Remove Firestore listener to prevent memory leaks
         if (messageListener != null) {
             messageListener.remove();
@@ -1803,43 +1818,24 @@ public class ChatActivity extends AppCompatActivity {
         try {
             if (alertsBadgeChat == null) return;
             
-            // Use the same logic as AlertsActivity to count new announcements
-            int newAnnouncementCount = countNewAnnouncementsFromChat();
+            // Use the same logic as AlertsActivity - check viewed state
+            int lastViewedCount = sharedPreferences.getInt(KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT, 0);
             
-            if (newAnnouncementCount > 0) {
-                alertsBadgeChat.setText(String.valueOf(newAnnouncementCount));
-                alertsBadgeChat.setVisibility(View.VISIBLE);
-                Log.d(TAG, "Showing badge on chat with count: " + newAnnouncementCount);
-            } else {
-                alertsBadgeChat.setVisibility(View.GONE);
-                Log.d(TAG, "Hiding badge on chat - no new announcements");
-            }
+            // Fetch current announcement count and calculate unread count
+            fetchAndCountNewAnnouncementsFromChat(lastViewedCount);
+            
         } catch (Exception e) {
             Log.e(TAG, "Error updating notification badge on chat: " + e.getMessage(), e);
-        }
-    }
-    
-    private int countNewAnnouncementsFromChat() {
-        try {
-            // Use the same SharedPreferences as AlertsActivity
-            long lastVisitTime = sharedPreferences.getLong(KEY_LAST_VISIT_TIME, 0);
-            
-            // If this is the first visit, don't show any badges
-            if (lastVisitTime == 0) {
-                return 0;
+            if (alertsBadgeChat != null) {
+                alertsBadgeChat.setVisibility(View.GONE);
             }
-            
-            // For chat, we'll fetch announcements and count new ones
-            fetchAndCountNewAnnouncementsFromChat(lastVisitTime);
-            
-            return 0; // Will be updated by the async fetch
-        } catch (Exception e) {
-            Log.e(TAG, "Error counting new announcements from chat: " + e.getMessage(), e);
-            return 0;
         }
     }
     
-    private void fetchAndCountNewAnnouncementsFromChat(long lastVisitTime) {
+    // This method is no longer needed - using fetchAndCountNewAnnouncementsFromChat directly
+    // Keeping for backward compatibility but it's not used anymore
+    
+    private void fetchAndCountNewAnnouncementsFromChat(int lastViewedCount) {
         try {
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             db.collection("announcements")
@@ -1847,36 +1843,46 @@ public class ChatActivity extends AppCompatActivity {
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null) {
-                        int newCount = 0;
-                        Date currentDate = new Date();
+                        int currentTotalCount = task.getResult().size();
                         
-                        for (QueryDocumentSnapshot doc : task.getResult()) {
-                            String dateStr = doc.getString("date");
-                            if (dateStr != null && isAnnouncementNewFromChat(dateStr, lastVisitTime)) {
-                                newCount++;
-                            }
+                        // Calculate unread count: current count - last viewed count
+                        int unreadCount = currentTotalCount - lastViewedCount;
+                        
+                        // Ensure unread count is never negative
+                        if (unreadCount < 0) {
+                            unreadCount = 0;
                         }
                         
-                        // Make newCount final for use in lambda
-                        final int finalNewCount = newCount;
+                        // Make unreadCount final for use in lambda
+                        final int finalUnreadCount = unreadCount;
                         
                         // Update badge on UI thread
                         runOnUiThread(() -> {
                             if (alertsBadgeChat != null) {
-                                if (finalNewCount > 0) {
-                                    alertsBadgeChat.setText(String.valueOf(finalNewCount));
+                                if (finalUnreadCount > 0) {
+                                    alertsBadgeChat.setText(String.valueOf(finalUnreadCount));
                                     alertsBadgeChat.setVisibility(View.VISIBLE);
+                                    Log.d(TAG, "✅ Chat badge showing: " + finalUnreadCount + " unread announcements");
                                 } else {
                                     alertsBadgeChat.setVisibility(View.GONE);
+                                    alertsBadgeChat.setText("0");
+                                    Log.d(TAG, "✅ Chat badge hidden - all announcements viewed (lastViewed: " + 
+                                          lastViewedCount + ", current: " + currentTotalCount + ")");
                                 }
                             }
                         });
                         
-                        Log.d(TAG, "Found " + newCount + " new announcements from chat");
+                        Log.d(TAG, "Chat badge update - unreadCount: " + unreadCount + 
+                                  " (current: " + currentTotalCount + ", lastViewed: " + lastViewedCount + ")");
                     }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error fetching announcements for badge from chat: " + e.getMessage(), e);
+                    if (alertsBadgeChat != null) {
+                        runOnUiThread(() -> {
+                            alertsBadgeChat.setVisibility(View.GONE);
+                        });
+                    }
                 });
         } catch (Exception e) {
             Log.e(TAG, "Error fetching and counting new announcements from chat: " + e.getMessage(), e);

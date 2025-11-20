@@ -108,6 +108,7 @@ public class MapViewActivity extends AppCompatActivity {
     );
     private static final String PREFS_NAME = "AlertsActivityPrefs";
     private static final String KEY_LAST_VISIT_TIME = "last_visit_time";
+    private static final String KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT = "last_viewed_announcement_count";
     
     private EditText searchLocationEditText;
     private ImageView clearSearchButton;
@@ -565,6 +566,12 @@ public class MapViewActivity extends AppCompatActivity {
         mapTab = findViewById(R.id.mapTab);
         alertsTab = findViewById(R.id.alertsTab);
         alertsBadgeMap = findViewById(R.id.alerts_badge_map);
+        
+        // Register badge with AnnouncementNotificationManager so it gets updated when alerts are viewed
+        if (alertsBadgeMap != null) {
+            AnnouncementNotificationManager.getInstance().registerBadge("MapViewActivity", alertsBadgeMap);
+            Log.d(TAG, "✅ MapViewActivity badge registered with AnnouncementNotificationManager");
+        }
         
         // Initialize filter indicator
         filterIndicator = findViewById(R.id.filterIndicator);
@@ -1967,6 +1974,13 @@ public class MapViewActivity extends AppCompatActivity {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        try {
+            // Unregister badge from notification manager
+            AnnouncementNotificationManager.getInstance().unregisterBadge("MapViewActivity");
+            Log.d(TAG, "MapViewActivity badge unregistered");
+        } catch (Exception e) {
+            Log.e(TAG, "Error unregistering badge in onDestroy: " + e.getMessage(), e);
+        }
         // Remove any pending search callbacks
         if (searchRunnable != null) {
             searchHandler.removeCallbacks(searchRunnable);
@@ -2573,43 +2587,24 @@ public class MapViewActivity extends AppCompatActivity {
         try {
             if (alertsBadgeMap == null) return;
             
-            // Use the same logic as AlertsActivity to count new announcements
-            int newAnnouncementCount = countNewAnnouncementsFromMap();
+            // Use the same logic as AlertsActivity - check viewed state
+            int lastViewedCount = sharedPreferences.getInt(KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT, 0);
             
-            if (newAnnouncementCount > 0) {
-                alertsBadgeMap.setText(String.valueOf(newAnnouncementCount));
-                alertsBadgeMap.setVisibility(View.VISIBLE);
-                Log.d(TAG, "Showing badge on map with count: " + newAnnouncementCount);
-            } else {
-                alertsBadgeMap.setVisibility(View.GONE);
-                Log.d(TAG, "Hiding badge on map - no new announcements");
-            }
+            // Fetch current announcement count and calculate unread count
+            fetchAndCountNewAnnouncementsFromMap(lastViewedCount);
+            
         } catch (Exception e) {
             Log.e(TAG, "Error updating notification badge on map: " + e.getMessage(), e);
-        }
-    }
-    
-    private int countNewAnnouncementsFromMap() {
-        try {
-            // Use the same SharedPreferences as AlertsActivity
-            long lastVisitTime = sharedPreferences.getLong(KEY_LAST_VISIT_TIME, 0);
-            
-            // If this is the first visit, don't show any badges
-            if (lastVisitTime == 0) {
-                return 0;
+            if (alertsBadgeMap != null) {
+                alertsBadgeMap.setVisibility(View.GONE);
             }
-            
-            // For map, we'll fetch announcements and count new ones
-            fetchAndCountNewAnnouncementsFromMap(lastVisitTime);
-            
-            return 0; // Will be updated by the async fetch
-        } catch (Exception e) {
-            Log.e(TAG, "Error counting new announcements from map: " + e.getMessage(), e);
-            return 0;
         }
     }
     
-    private void fetchAndCountNewAnnouncementsFromMap(long lastVisitTime) {
+    // This method is no longer needed - using fetchAndCountNewAnnouncementsFromMap directly
+    // Keeping for backward compatibility but it's not used anymore
+    
+    private void fetchAndCountNewAnnouncementsFromMap(int lastViewedCount) {
         try {
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             db.collection("announcements")
@@ -2617,39 +2612,54 @@ public class MapViewActivity extends AppCompatActivity {
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null) {
-                        int newCount = 0;
-                        Date currentDate = new Date();
+                        int currentTotalCount = task.getResult().size();
                         
-                        for (QueryDocumentSnapshot doc : task.getResult()) {
-                            String dateStr = doc.getString("date");
-                            if (dateStr != null && isAnnouncementNewFromMap(dateStr, lastVisitTime)) {
-                                newCount++;
-                            }
+                        // Calculate unread count: current count - last viewed count
+                        int unreadCount = currentTotalCount - lastViewedCount;
+                        
+                        // Ensure unread count is never negative
+                        if (unreadCount < 0) {
+                            unreadCount = 0;
                         }
                         
-                        // Make newCount final for use in lambda
-                        final int finalNewCount = newCount;
+                        // Make unreadCount final for use in lambda
+                        final int finalUnreadCount = unreadCount;
                         
                         // Update badge on UI thread
                         runOnUiThread(() -> {
                             if (alertsBadgeMap != null) {
-                                if (finalNewCount > 0) {
-                                    alertsBadgeMap.setText(String.valueOf(finalNewCount));
+                                if (finalUnreadCount > 0) {
+                                    alertsBadgeMap.setText(String.valueOf(finalUnreadCount));
                                     alertsBadgeMap.setVisibility(View.VISIBLE);
+                                    Log.d(TAG, "✅ Map badge showing: " + finalUnreadCount + " unread announcements");
                                 } else {
                                     alertsBadgeMap.setVisibility(View.GONE);
+                                    alertsBadgeMap.setText("0");
+                                    Log.d(TAG, "✅ Map badge hidden - all announcements viewed (lastViewed: " + 
+                                          lastViewedCount + ", current: " + currentTotalCount + ")");
                                 }
                             }
                         });
                         
-                        Log.d(TAG, "Found " + newCount + " new announcements from map");
+                        Log.d(TAG, "Map badge update - unreadCount: " + unreadCount + 
+                                  " (current: " + currentTotalCount + ", lastViewed: " + lastViewedCount + ")");
                     }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error fetching announcements for badge from map: " + e.getMessage(), e);
+                    if (alertsBadgeMap != null) {
+                        runOnUiThread(() -> {
+                            alertsBadgeMap.setVisibility(View.GONE);
+                        });
+                    }
                 });
         } catch (Exception e) {
             Log.e(TAG, "Error fetching and counting new announcements from map: " + e.getMessage(), e);
+            if (alertsBadgeMap != null) {
+                runOnUiThread(() -> {
+                    alertsBadgeMap.setVisibility(View.GONE);
+                });
+            }
         }
     }
     
@@ -3456,13 +3466,14 @@ public class MapViewActivity extends AppCompatActivity {
     
     /**
      * Check if any map layers are currently active/visible
+     * Note: evacuationCentersVisible is excluded because evacuation centers come from Firestore pins, not Mapbox layers
      */
     private boolean hasAnyLayerActive() {
         return barangayBoundariesVisible || 
                roadNetworkVisible || 
                waterwaysVisible || 
-               healthFacilitiesVisible || 
-               evacuationCentersVisible;
+               healthFacilitiesVisible;
+               // evacuationCentersVisible excluded - evacuation centers come from Firestore pins only
     }
     
     /**
@@ -3525,7 +3536,8 @@ public class MapViewActivity extends AppCompatActivity {
             applyRoadNetworkVisibility();
             applyWaterwaysVisibility();
             setLayerVisibility(style, "health-facilities", healthFacilitiesVisible);
-            setLayerVisibility(style, "evacuation-centers", evacuationCentersVisible);
+            // Always hide evacuation-centers layer - evacuation centers come from Firestore pins only
+            setLayerVisibility(style, "evacuation-centers", false);
             
             // Ensure lucban-boundary is always visible
             setLayerVisibility(style, "lucban-boundary", true);
@@ -4255,22 +4267,24 @@ public class MapViewActivity extends AppCompatActivity {
     }
     
     /**
-     * Toggle Evacuation Centers layer visibility
-     * Controls: evacuation-centers
+     * Toggle Evacuation Centers visibility
+     * Evacuation Centers are now fetched ONLY from Firestore "pins" collection, not from Mapbox layers
      */
     private void toggleEvacuationCenters(boolean visible) {
         try {
             evacuationCentersVisible = visible;
+            
+            // Hide Mapbox layer if it exists (we don't want to use it)
             Style style = mapboxMap.getStyle();
             if (style != null) {
-                setLayerVisibility(style, "evacuation-centers", visible);
-                Log.d(TAG, "Evacuation centers layer toggled: " + visible);
-            } else {
-                // Style not ready yet, will be applied when style loads
-                Log.d(TAG, "Style not ready, layer state saved for later: " + visible);
+                setLayerVisibility(style, "evacuation-centers", false);
+                Log.d(TAG, "Evacuation centers Mapbox layer hidden (using Firestore pins only)");
             }
-            // Update pins visibility based on all layers
-            updatePinsVisibilityBasedOnLayers();
+            
+            // Apply filters to Firestore pins to show/hide evacuation centers from Firestore
+            Log.d(TAG, "Evacuation centers filter toggled: " + visible + " (Firestore pins only)");
+            applyFiltersToFirestorePins(true);
+            
         } catch (Exception e) {
             Log.e(TAG, "Error toggling evacuation centers: " + e.getMessage(), e);
         }

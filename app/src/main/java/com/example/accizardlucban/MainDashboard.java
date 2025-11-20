@@ -109,6 +109,7 @@ public class MainDashboard extends AppCompatActivity {
     private static final String TAG = "MainDashboard";
     private static final String PREFS_NAME = "AlertsActivityPrefs";
     private static final String KEY_LAST_VISIT_TIME = "last_visit_time";
+    private static final String KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT = "last_viewed_announcement_count";
     private static final String PERMISSION_PREFS = "permission_requests";
     private static final String KEY_LOCATION_PERMISSION_REQUESTED = "location_permission_requested";
     private static final String KEY_NOTIFICATION_PERMISSION_REQUESTED = "notification_permission_requested";
@@ -484,6 +485,12 @@ public class MainDashboard extends AppCompatActivity {
             mapTab = findViewById(R.id.mapTab);
             alertsTab = findViewById(R.id.alertsTab);
             alertsBadgeDashboard = findViewById(R.id.alerts_badge_dashboard);
+            
+            // Register badge with AnnouncementNotificationManager so it gets updated when alerts are viewed
+            if (alertsBadgeDashboard != null) {
+                AnnouncementNotificationManager.getInstance().registerBadge("MainDashboard", alertsBadgeDashboard);
+                Log.d(TAG, "✅ MainDashboard badge registered with AnnouncementNotificationManager");
+            }
         } catch (Exception e) {
             Log.e(TAG, "Error initializing views: " + e.getMessage(), e);
         }
@@ -4579,6 +4586,10 @@ public class MainDashboard extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         try {
+            // Unregister badge from notification manager
+            AnnouncementNotificationManager.getInstance().unregisterBadge("MainDashboard");
+            Log.d(TAG, "MainDashboard badge unregistered");
+            
             if (timeUpdateTimer != null) {
                 timeUpdateTimer.cancel();
                 timeUpdateTimer = null;
@@ -4973,43 +4984,24 @@ public class MainDashboard extends AppCompatActivity {
         try {
             if (alertsBadgeDashboard == null) return;
             
-            // Use the same logic as AlertsActivity to count new announcements
-            int newAnnouncementCount = countNewAnnouncementsFromDashboard();
+            // Use the same logic as AlertsActivity - check viewed state
+            int lastViewedCount = sharedPreferences.getInt(KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT, 0);
             
-            if (newAnnouncementCount > 0) {
-                alertsBadgeDashboard.setText(String.valueOf(newAnnouncementCount));
-                alertsBadgeDashboard.setVisibility(View.VISIBLE);
-                Log.d(TAG, "Showing badge on dashboard with count: " + newAnnouncementCount);
-            } else {
-                alertsBadgeDashboard.setVisibility(View.GONE);
-                Log.d(TAG, "Hiding badge on dashboard - no new announcements");
-            }
+            // Fetch current announcement count and calculate unread count
+            fetchAndCountNewAnnouncementsFromDashboard(lastViewedCount);
+            
         } catch (Exception e) {
             Log.e(TAG, "Error updating notification badge on dashboard: " + e.getMessage(), e);
-        }
-    }
-    
-    private int countNewAnnouncementsFromDashboard() {
-        try {
-            // Use the same SharedPreferences as AlertsActivity
-            long lastVisitTime = sharedPreferences.getLong(KEY_LAST_VISIT_TIME, 0);
-            
-            // If this is the first visit, don't show any badges
-            if (lastVisitTime == 0) {
-                return 0;
+            if (alertsBadgeDashboard != null) {
+                alertsBadgeDashboard.setVisibility(View.GONE);
             }
-            
-            // For dashboard, we'll fetch announcements and count new ones
-            fetchAndCountNewAnnouncementsFromDashboard(lastVisitTime);
-            
-            return 0; // Will be updated by the async fetch
-        } catch (Exception e) {
-            Log.e(TAG, "Error counting new announcements from dashboard: " + e.getMessage(), e);
-            return 0;
         }
     }
     
-    private void fetchAndCountNewAnnouncementsFromDashboard(long lastVisitTime) {
+    // This method is no longer needed - using fetchAndCountNewAnnouncementsFromDashboard directly
+    // Keeping for backward compatibility but it's not used anymore
+    
+    private void fetchAndCountNewAnnouncementsFromDashboard(int lastViewedCount) {
         try {
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             db.collection("announcements")
@@ -5017,39 +5009,54 @@ public class MainDashboard extends AppCompatActivity {
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null) {
-                        int newCount = 0;
-                        Date currentDate = new Date();
+                        int currentTotalCount = task.getResult().size();
                         
-                        for (QueryDocumentSnapshot doc : task.getResult()) {
-                            String dateStr = doc.getString("date");
-                            if (dateStr != null && isAnnouncementNewFromDashboard(dateStr, lastVisitTime)) {
-                                newCount++;
-                            }
+                        // Calculate unread count: current count - last viewed count
+                        int unreadCount = currentTotalCount - lastViewedCount;
+                        
+                        // Ensure unread count is never negative
+                        if (unreadCount < 0) {
+                            unreadCount = 0;
                         }
                         
-                        // Make newCount final for use in lambda
-                        final int finalNewCount = newCount;
+                        // Make unreadCount final for use in lambda
+                        final int finalUnreadCount = unreadCount;
                         
                         // Update badge on UI thread
                         runOnUiThread(() -> {
                             if (alertsBadgeDashboard != null) {
-                                if (finalNewCount > 0) {
-                                    alertsBadgeDashboard.setText(String.valueOf(finalNewCount));
+                                if (finalUnreadCount > 0) {
+                                    alertsBadgeDashboard.setText(String.valueOf(finalUnreadCount));
                                     alertsBadgeDashboard.setVisibility(View.VISIBLE);
+                                    Log.d(TAG, "✅ Dashboard badge showing: " + finalUnreadCount + " unread announcements");
                                 } else {
                                     alertsBadgeDashboard.setVisibility(View.GONE);
+                                    alertsBadgeDashboard.setText("0");
+                                    Log.d(TAG, "✅ Dashboard badge hidden - all announcements viewed (lastViewed: " + 
+                                          lastViewedCount + ", current: " + currentTotalCount + ")");
                                 }
                             }
                         });
                         
-                        Log.d(TAG, "Found " + newCount + " new announcements from dashboard");
+                        Log.d(TAG, "Dashboard badge update - unreadCount: " + unreadCount + 
+                                  " (current: " + currentTotalCount + ", lastViewed: " + lastViewedCount + ")");
                     }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error fetching announcements for badge from dashboard: " + e.getMessage(), e);
+                    if (alertsBadgeDashboard != null) {
+                        runOnUiThread(() -> {
+                            alertsBadgeDashboard.setVisibility(View.GONE);
+                        });
+                    }
                 });
         } catch (Exception e) {
             Log.e(TAG, "Error fetching and counting new announcements from dashboard: " + e.getMessage(), e);
+            if (alertsBadgeDashboard != null) {
+                runOnUiThread(() -> {
+                    alertsBadgeDashboard.setVisibility(View.GONE);
+                });
+            }
         }
     }
     

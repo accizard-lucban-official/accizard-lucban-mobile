@@ -7,7 +7,6 @@ import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.Button;
 import android.widget.RadioButton;
-import androidx.appcompat.widget.AppCompatRadioButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Switch;
@@ -38,14 +37,14 @@ public class Facilities extends AppCompatActivity {
 
     // Switches and radio buttons
     private Switch heatmapSwitch;
-    private AppCompatRadioButton roadAccidentCheck, fireCheck, medicalEmergencyCheck, floodingCheck;
-    private AppCompatRadioButton volcanicActivityCheck, landslideCheck, earthquakeCheck, civilDisturbanceCheck;
-    private AppCompatRadioButton armedConflictCheck, infectiousDiseaseCheck;
-    private AppCompatRadioButton poorInfrastructureCheck, obstructionsCheck, electricalHazardCheck, environmentalHazardCheck;
-    private final List<AppCompatRadioButton> incidentCheckboxes = new ArrayList<>();
+    private RadioButton roadAccidentCheck, fireCheck, medicalEmergencyCheck, floodingCheck;
+    private RadioButton volcanicActivityCheck, landslideCheck, earthquakeCheck, civilDisturbanceCheck;
+    private RadioButton armedConflictCheck, infectiousDiseaseCheck;
+    private RadioButton poorInfrastructureCheck, obstructionsCheck, electricalHazardCheck, environmentalHazardCheck;
+    private final List<RadioButton> incidentCheckboxes = new ArrayList<>();
     private boolean isUpdatingIncidentChecks = false;
-    private AppCompatRadioButton evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck;
-    private AppCompatRadioButton fireStationsCheck, governmentOfficesCheck;
+    private RadioButton evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck;
+    private RadioButton fireStationsCheck, governmentOfficesCheck;
 
     // Timeline options
     private TextView todayOption, thisWeekOption, thisMonthOption, thisYearOption;
@@ -174,9 +173,41 @@ public class Facilities extends AppCompatActivity {
         if (emergencySupportContent != null) {
             emergencySupportContent.setVisibility(View.GONE);
         }
+        
+        // Initialize RadioButton styling
+        initializeRadioButtonStyling();
+    }
+    
+    /**
+     * Initialize all RadioButtons with proper RadioButton styling
+     */
+    private void initializeRadioButtonStyling() {
+        // Apply RadioButton color state list to all incident RadioButtons
+        for (RadioButton radioButton : incidentCheckboxes) {
+            if (radioButton != null) {
+                radioButton.setButtonTintList(ContextCompat.getColorStateList(this, R.color.radio_button_color_selector));
+            }
+        }
+        
+        // Apply RadioButton color state list to all facility RadioButtons
+        if (evacuationCentersCheck != null) {
+            evacuationCentersCheck.setButtonTintList(ContextCompat.getColorStateList(this, R.color.radio_button_color_selector));
+        }
+        if (healthFacilitiesCheck != null) {
+            healthFacilitiesCheck.setButtonTintList(ContextCompat.getColorStateList(this, R.color.radio_button_color_selector));
+        }
+        if (policeStationsCheck != null) {
+            policeStationsCheck.setButtonTintList(ContextCompat.getColorStateList(this, R.color.radio_button_color_selector));
+        }
+        if (fireStationsCheck != null) {
+            fireStationsCheck.setButtonTintList(ContextCompat.getColorStateList(this, R.color.radio_button_color_selector));
+        }
+        if (governmentOfficesCheck != null) {
+            governmentOfficesCheck.setButtonTintList(ContextCompat.getColorStateList(this, R.color.radio_button_color_selector));
+        }
     }
 
-    private void registerIncidentCheckbox(AppCompatRadioButton checkBox) {
+    private void registerIncidentCheckbox(RadioButton checkBox) {
         if (checkBox != null && !incidentCheckboxes.contains(checkBox)) {
             incidentCheckboxes.add(checkBox);
         }
@@ -356,7 +387,7 @@ public class Facilities extends AppCompatActivity {
         }
     }
 
-    private void setupExclusiveIncidentCheckbox(AppCompatRadioButton checkBox) {
+    private void setupExclusiveIncidentCheckbox(RadioButton checkBox) {
         if (checkBox == null) {
             return;
         }
@@ -364,7 +395,7 @@ public class Facilities extends AppCompatActivity {
         checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> handleIncidentCheckboxChange(checkBox, isChecked));
     }
 
-    private void handleIncidentCheckboxChange(AppCompatRadioButton changedCheckBox, boolean isChecked) {
+    private void handleIncidentCheckboxChange(RadioButton changedCheckBox, boolean isChecked) {
         if (isUpdatingIncidentChecks) {
             return;
         }
@@ -372,7 +403,7 @@ public class Facilities extends AppCompatActivity {
         isUpdatingIncidentChecks = true;
         try {
             if (isChecked) {
-                for (AppCompatRadioButton other : incidentCheckboxes) {
+                for (RadioButton other : incidentCheckboxes) {
                     if (other != null && other != changedCheckBox && other.isChecked()) {
                         other.setChecked(false);
                         updateCheckboxVisualState(other, false);
@@ -395,7 +426,7 @@ public class Facilities extends AppCompatActivity {
         boolean foundChecked = false;
         isUpdatingIncidentChecks = true;
         try {
-            for (AppCompatRadioButton checkBox : incidentCheckboxes) {
+            for (RadioButton checkBox : incidentCheckboxes) {
                 if (checkBox == null) {
                     continue;
                 }
@@ -580,7 +611,7 @@ public class Facilities extends AppCompatActivity {
         isUpdatingIncidentChecks = true;
         if (select) {
             boolean selectionMade = false;
-            for (AppCompatRadioButton checkBox : incidentCheckboxes) {
+            for (RadioButton checkBox : incidentCheckboxes) {
                 if (checkBox == null) continue;
                 if (!selectionMade) {
                     checkBox.setChecked(true);
@@ -593,7 +624,7 @@ public class Facilities extends AppCompatActivity {
             }
             Toast.makeText(this, "Only one incident type can be selected at a time.", Toast.LENGTH_SHORT).show();
         } else {
-            for (AppCompatRadioButton checkBox : incidentCheckboxes) {
+            for (RadioButton checkBox : incidentCheckboxes) {
                 if (checkBox == null) continue;
                 checkBox.setChecked(false);
                 updateCheckboxVisualState(checkBox, false);
@@ -658,17 +689,17 @@ public class Facilities extends AppCompatActivity {
     }
     
     /**
-     * Update checkbox visual state with animation and feedback
+     * Update RadioButton visual state with animation and feedback
      */
-    private void updateCheckboxVisualState(android.widget.CompoundButton checkbox, boolean isChecked) {
+    private void updateCheckboxVisualState(android.widget.CompoundButton radioButton, boolean isChecked) {
         try {
             // Add visual feedback animation
-            checkbox.animate()
+            radioButton.animate()
                 .scaleX(isChecked ? 1.1f : 1.0f)
                 .scaleY(isChecked ? 1.1f : 1.0f)
                 .setDuration(150)
                 .withEndAction(() -> {
-                    checkbox.animate()
+                    radioButton.animate()
                         .scaleX(1.0f)
                         .scaleY(1.0f)
                         .setDuration(150)
@@ -676,11 +707,9 @@ public class Facilities extends AppCompatActivity {
                 })
                 .start();
                 
-            // Update checkbox color based on state
-            if (isChecked) {
-                checkbox.setButtonTintList(ContextCompat.getColorStateList(this, android.R.color.holo_orange_light));
-            } else {
-                checkbox.setButtonTintList(ContextCompat.getColorStateList(this, android.R.color.darker_gray));
+            // Update RadioButton color using proper color state list
+            if (radioButton instanceof RadioButton) {
+                radioButton.setButtonTintList(ContextCompat.getColorStateList(this, R.color.radio_button_color_selector));
             }
             
         } catch (Exception e) {
@@ -697,7 +726,7 @@ public class Facilities extends AppCompatActivity {
             int selectedIncidents = 0;
             int totalIncidents = incidentCheckboxes.size();
 
-            for (AppCompatRadioButton checkBox : incidentCheckboxes) {
+            for (RadioButton checkBox : incidentCheckboxes) {
                 if (checkBox != null && checkBox.isChecked()) {
                     selectedIncidents++;
                 }
@@ -746,7 +775,7 @@ public class Facilities extends AppCompatActivity {
             
             // Count disabled incident types
         int disabledIncidents = 0;
-        for (AppCompatRadioButton checkBox : incidentCheckboxes) {
+        for (RadioButton checkBox : incidentCheckboxes) {
             if (checkBox != null && !checkBox.isChecked()) {
                 disabledIncidents++;
             }

@@ -79,6 +79,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private static final String TAG = "ReportSubmissionActivity";
     private static final String PREFS_NAME = "AlertsActivityPrefs";
     private static final String KEY_LAST_VISIT_TIME = "last_visit_time";
+    private static final String KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT = "last_viewed_announcement_count";
     private static final String USER_PREFS_NAME = "user_profile_prefs";
     
     // Location permission request code
@@ -237,6 +238,12 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         alertsTab = findViewById(R.id.alertsTab);
         alertsBadgeReport = findViewById(R.id.alerts_badge_report);
         chatBadgeReport = findViewById(R.id.chat_badge_report);
+        
+        // Register badge with AnnouncementNotificationManager so it gets updated when alerts are viewed
+        if (alertsBadgeReport != null) {
+            AnnouncementNotificationManager.getInstance().registerBadge("ReportSubmissionActivity", alertsBadgeReport);
+            Log.d(TAG, "✅ ReportSubmissionActivity badge registered with AnnouncementNotificationManager");
+        }
     }
 
     private void setupReportTypeSpinner() {
@@ -2512,43 +2519,24 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         try {
             if (alertsBadgeReport == null) return;
             
-            // Use the same logic as AlertsActivity to count new announcements
-            int newAnnouncementCount = countNewAnnouncementsFromReport();
+            // Use the same logic as AlertsActivity - check viewed state
+            int lastViewedCount = sharedPreferences.getInt(KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT, 0);
             
-            if (newAnnouncementCount > 0) {
-                alertsBadgeReport.setText(String.valueOf(newAnnouncementCount));
-                alertsBadgeReport.setVisibility(View.VISIBLE);
-                Log.d(TAG, "Showing badge on report with count: " + newAnnouncementCount);
-            } else {
-                alertsBadgeReport.setVisibility(View.GONE);
-                Log.d(TAG, "Hiding badge on report - no new announcements");
-            }
+            // Fetch current announcement count and calculate unread count
+            fetchAndCountNewAnnouncementsFromReport(lastViewedCount);
+            
         } catch (Exception e) {
             Log.e(TAG, "Error updating notification badge on report: " + e.getMessage(), e);
-        }
-    }
-    
-    private int countNewAnnouncementsFromReport() {
-        try {
-            // Use the same SharedPreferences as AlertsActivity
-            long lastVisitTime = sharedPreferences.getLong(KEY_LAST_VISIT_TIME, 0);
-            
-            // If this is the first visit, don't show any badges
-            if (lastVisitTime == 0) {
-                return 0;
+            if (alertsBadgeReport != null) {
+                alertsBadgeReport.setVisibility(View.GONE);
             }
-            
-            // For report, we'll fetch announcements and count new ones
-            fetchAndCountNewAnnouncementsFromReport(lastVisitTime);
-            
-            return 0; // Will be updated by the async fetch
-        } catch (Exception e) {
-            Log.e(TAG, "Error counting new announcements from report: " + e.getMessage(), e);
-            return 0;
         }
     }
     
-    private void fetchAndCountNewAnnouncementsFromReport(long lastVisitTime) {
+    // This method is no longer needed - using fetchAndCountNewAnnouncementsFromReport directly
+    // Keeping for backward compatibility but it's not used anymore
+    
+    private void fetchAndCountNewAnnouncementsFromReport(int lastViewedCount) {
         try {
             FirebaseFirestore db = FirebaseFirestore.getInstance();
             db.collection("announcements")
@@ -2556,36 +2544,46 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null) {
-                        int newCount = 0;
-                        Date currentDate = new Date();
+                        int currentTotalCount = task.getResult().size();
                         
-                        for (QueryDocumentSnapshot doc : task.getResult()) {
-                            String dateStr = doc.getString("date");
-                            if (dateStr != null && isAnnouncementNewFromReport(dateStr, lastVisitTime)) {
-                                newCount++;
-                            }
+                        // Calculate unread count: current count - last viewed count
+                        int unreadCount = currentTotalCount - lastViewedCount;
+                        
+                        // Ensure unread count is never negative
+                        if (unreadCount < 0) {
+                            unreadCount = 0;
                         }
                         
-                        // Make newCount final for use in lambda
-                        final int finalNewCount = newCount;
+                        // Make unreadCount final for use in lambda
+                        final int finalUnreadCount = unreadCount;
                         
                         // Update badge on UI thread
                         runOnUiThread(() -> {
                             if (alertsBadgeReport != null) {
-                                if (finalNewCount > 0) {
-                                    alertsBadgeReport.setText(String.valueOf(finalNewCount));
+                                if (finalUnreadCount > 0) {
+                                    alertsBadgeReport.setText(String.valueOf(finalUnreadCount));
                                     alertsBadgeReport.setVisibility(View.VISIBLE);
+                                    Log.d(TAG, "✅ Report badge showing: " + finalUnreadCount + " unread announcements");
                                 } else {
                                     alertsBadgeReport.setVisibility(View.GONE);
+                                    alertsBadgeReport.setText("0");
+                                    Log.d(TAG, "✅ Report badge hidden - all announcements viewed (lastViewed: " + 
+                                          lastViewedCount + ", current: " + currentTotalCount + ")");
                                 }
                             }
                         });
                         
-                        Log.d(TAG, "Found " + newCount + " new announcements from report");
+                        Log.d(TAG, "Report badge update - unreadCount: " + unreadCount + 
+                                  " (current: " + currentTotalCount + ", lastViewed: " + lastViewedCount + ")");
                     }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error fetching announcements for badge from report: " + e.getMessage(), e);
+                    if (alertsBadgeReport != null) {
+                        runOnUiThread(() -> {
+                            alertsBadgeReport.setVisibility(View.GONE);
+                        });
+                    }
                 });
         } catch (Exception e) {
             Log.e(TAG, "Error fetching and counting new announcements from report: " + e.getMessage(), e);
@@ -2665,6 +2663,14 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        
+        try {
+            // Unregister badge from notification manager
+            AnnouncementNotificationManager.getInstance().unregisterBadge("ReportSubmissionActivity");
+            Log.d(TAG, "ReportSubmissionActivity badge unregistered");
+        } catch (Exception e) {
+            Log.e(TAG, "Error unregistering badge in onDestroy: " + e.getMessage(), e);
+        }
         
         // Stop location updates to prevent memory leaks
         stopLocationUpdates();
