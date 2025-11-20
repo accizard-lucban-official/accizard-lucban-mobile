@@ -1196,58 +1196,134 @@ public class MainDashboard extends AppCompatActivity {
                 return;
             }
             
-            Log.d(TAG, "Processing " + dailyForecasts.length + " forecast days");
+            Log.d(TAG, "🔄 Processing " + dailyForecasts.length + " forecast days from API");
+            
+            // Log all available forecast days with their icons
+            for (int idx = 0; idx < dailyForecasts.length && idx < 6; idx++) {
+                WeatherManager.DailyForecast daily = dailyForecasts[idx];
+                Log.d(TAG, "  Day " + idx + ": icon=" + daily.icon + ", temp=" + daily.maxTemp + "°C/" + daily.minTemp + "°C");
+            }
             
             // Update each forecast day (limit to 6 days: today + 5 days)
+            // Ensure we have at least 6 days - if API returns fewer, we'll use available data
             int maxDays = Math.min(dailyForecasts.length, 6);
+            Log.d(TAG, "Max days to update: " + maxDays + " (available: " + dailyForecasts.length + ")");
+            
             TextView[] dayNames = {forecastDay0Name, forecastDay1Name, forecastDay2Name, forecastDay3Name, forecastDay4Name, forecastDay5Name};
             ImageView[] dayIcons = {forecastDay0Icon, forecastDay1Icon, forecastDay2Icon, forecastDay3Icon, forecastDay4Icon, forecastDay5Icon};
             TextView[] dayTemps = {forecastDay0Temp, forecastDay1Temp, forecastDay2Temp, forecastDay3Temp, forecastDay4Temp, forecastDay5Temp};
             TextView[] dayDescriptions = {forecastDay0Description, forecastDay1Description, forecastDay2Description, forecastDay3Description, forecastDay4Description, forecastDay5Description};
             
-            // Generate real-time dates for the forecast
-            java.util.Calendar calendar = java.util.Calendar.getInstance();
+            // Generate real-time dates for the forecast (fixed calendar reset logic)
             String[] realTimeDayNames = new String[6];
+            java.text.SimpleDateFormat dayFormat = new java.text.SimpleDateFormat("EEE d", java.util.Locale.getDefault());
             
             for (int i = 0; i < 6; i++) {
-                calendar.add(java.util.Calendar.DAY_OF_MONTH, i);
-                java.text.SimpleDateFormat dayFormat = new java.text.SimpleDateFormat("EEE d", java.util.Locale.getDefault());
-                realTimeDayNames[i] = i == 0 ? "Today" : dayFormat.format(calendar.getTime());
-                calendar.add(java.util.Calendar.DAY_OF_MONTH, -i); // Reset calendar
+                java.util.Calendar calendar = java.util.Calendar.getInstance();
+                if (i == 0) {
+                    realTimeDayNames[i] = "Today";
+                } else {
+                    calendar.add(java.util.Calendar.DAY_OF_MONTH, i);
+                    realTimeDayNames[i] = dayFormat.format(calendar.getTime());
+                }
             }
             
-            for (int i = 0; i < maxDays; i++) {
-                WeatherManager.DailyForecast daily = dailyForecasts[i];
-                
-                Log.d(TAG, "Updating day " + i + ": " + daily.timestamp + " - " + daily.maxTemp + "°C/" + daily.minTemp + "°C");
-                
-                // Update day name with real-time date
-                if (dayNames[i] != null) {
-                    String dayName = realTimeDayNames[i];
-                    dayNames[i].setText(dayName);
-                    Log.d(TAG, "Day " + i + " name set to: " + dayName);
-                }
-                
-                // Update weather icon using official OpenWeatherMap icons
-                if (dayIcons[i] != null) {
-                    // Load official OpenWeatherMap icon from URL
-                    loadWeatherIconFromUrl(dayIcons[i], daily.icon);
-                    Log.d(TAG, "Day " + i + " loading OpenWeatherMap icon: " + daily.icon);
-                }
-                
-                // Update temperature range
-                if (dayTemps[i] != null) {
-                    String tempRange = WeatherManager.formatTemperatureRange(daily.maxTemp, daily.minTemp);
-                    dayTemps[i].setText(tempRange);
-                    Log.d(TAG, "Day " + i + " temperature set to: " + tempRange);
-                }
-                
-                // Update weather description
-                if (dayDescriptions[i] != null) {
-                    // Get weather description from icon code
-                    String description = getDescriptionFromIconCode(daily.icon);
-                    dayDescriptions[i].setText(description);
-                    Log.d(TAG, "Day " + i + " description set to: " + description);
+            // Update all 6 days - use forecast data when available, otherwise keep existing or use fallback
+            for (int i = 0; i < 6; i++) {
+                // Check if we have forecast data for this day
+                if (i < maxDays && dailyForecasts[i] != null) {
+                    WeatherManager.DailyForecast daily = dailyForecasts[i];
+                    
+                    Log.d(TAG, "✅ Updating day " + i + " (index " + i + "): timestamp=" + daily.timestamp + 
+                             ", temp=" + daily.maxTemp + "°C/" + daily.minTemp + "°C, icon=" + daily.icon);
+                    
+                    // Update day name with real-time date
+                    if (dayNames[i] != null) {
+                        String dayName = realTimeDayNames[i];
+                        dayNames[i].setText(dayName);
+                        Log.d(TAG, "  Day " + i + " name set to: " + dayName);
+                    }
+                    
+                    // Update weather icon using official OpenWeatherMap icons
+                    if (dayIcons[i] != null) {
+                        if (daily.icon != null && !daily.icon.isEmpty()) {
+                            // Load official OpenWeatherMap icon from URL
+                            Log.d(TAG, "  🌤️ Day " + i + " loading icon: " + daily.icon + " into ImageView: " + (dayIcons[i] != null ? "exists" : "null"));
+                            loadWeatherIconFromUrl(dayIcons[i], daily.icon);
+                        } else {
+                            Log.w(TAG, "  ⚠️ Day " + i + " icon code is null or empty: '" + daily.icon + "'");
+                            // Fallback to default clear sky icon
+                            dayIcons[i].setImageResource(R.drawable.owm_01d);
+                        }
+                    } else {
+                        Log.e(TAG, "  ❌ Day " + i + " ImageView is null!");
+                    }
+                    
+                    // Update temperature range
+                    if (dayTemps[i] != null) {
+                        String tempRange = WeatherManager.formatTemperatureRange(daily.maxTemp, daily.minTemp);
+                        dayTemps[i].setText(tempRange);
+                        Log.d(TAG, "  Day " + i + " temperature set to: " + tempRange);
+                    }
+                    
+                    // Update weather description
+                    if (dayDescriptions[i] != null) {
+                        // Get weather description from icon code
+                        String description = getDescriptionFromIconCode(daily.icon);
+                        dayDescriptions[i].setText(description);
+                        Log.d(TAG, "  Day " + i + " description set to: " + description);
+                    }
+                } else {
+                    // If no forecast data for this day (e.g., day 5 might not be in API response)
+                    Log.w(TAG, "⚠️ No forecast data for day " + i + " (maxDays: " + maxDays + ", dailyForecasts[" + i + "]: " + 
+                          (i < dailyForecasts.length && dailyForecasts[i] != null ? "exists" : "null") + ")");
+                    
+                    // Still update the day name to keep UI consistent
+                    if (dayNames[i] != null) {
+                        dayNames[i].setText(realTimeDayNames[i]);
+                    }
+                    
+                    // Special handling for day 5: if API only returns 5 days, use the last day's data
+                    if (i == 5 && dailyForecasts.length > 0) {
+                        int lastDayIndex = dailyForecasts.length - 1;
+                        if (lastDayIndex >= 0 && lastDayIndex < dailyForecasts.length && dailyForecasts[lastDayIndex] != null) {
+                            WeatherManager.DailyForecast lastDay = dailyForecasts[lastDayIndex];
+                            Log.w(TAG, "⚠️ Day 5 has no data, using last available day (index " + lastDayIndex + 
+                                      ") data as fallback: icon=" + lastDay.icon);
+                            
+                            // Use last day's icon as fallback for day 5
+                            if (dayIcons[5] != null && lastDay.icon != null && !lastDay.icon.isEmpty()) {
+                                Log.d(TAG, "  🌤️ Day 5 loading fallback icon: " + lastDay.icon);
+                                loadWeatherIconFromUrl(dayIcons[5], lastDay.icon);
+                            } else if (dayIcons[5] != null) {
+                                dayIcons[5].setImageResource(R.drawable.owm_01d);
+                            }
+                            
+                            // Use last day's temperature as fallback
+                            if (dayTemps[5] != null) {
+                                String tempRange = WeatherManager.formatTemperatureRange(lastDay.maxTemp, lastDay.minTemp);
+                                dayTemps[5].setText(tempRange);
+                            }
+                            
+                            // Use last day's description as fallback
+                            if (dayDescriptions[5] != null && lastDay.icon != null) {
+                                String description = getDescriptionFromIconCode(lastDay.icon);
+                                dayDescriptions[5].setText(description);
+                            }
+                        } else {
+                            Log.e(TAG, "❌ Day 5 (5th day outlook) has no forecast data and no fallback available! Available days: " + dailyForecasts.length);
+                            // Use default icon
+                            if (dayIcons[5] != null) {
+                                dayIcons[5].setImageResource(R.drawable.owm_01d);
+                            }
+                        }
+                    } else if (i == 5) {
+                        Log.e(TAG, "❌ Day 5 (5th day outlook) has no forecast data! Available days: " + dailyForecasts.length);
+                        // Use default icon
+                        if (dayIcons[5] != null) {
+                            dayIcons[5].setImageResource(R.drawable.owm_01d);
+                        }
+                    }
                 }
             }
             
@@ -4539,45 +4615,74 @@ public class MainDashboard extends AppCompatActivity {
      * @param iconCode OpenWeatherMap icon code (e.g., "01d", "02n")
      */
     private void loadWeatherIconFromUrl(ImageView imageView, String iconCode) {
-        if (imageView == null || iconCode == null) {
-            Log.w(TAG, "ImageView or iconCode is null, using fallback icon");
-            imageView.setImageResource(R.drawable.owm_01d);
+        if (imageView == null || iconCode == null || iconCode.isEmpty()) {
+            Log.w(TAG, "ImageView or iconCode is null/empty, using fallback icon");
+            if (imageView != null) {
+                imageView.setImageResource(R.drawable.owm_01d);
+            }
             return;
         }
         
         String iconUrl = WeatherManager.getWeatherIconUrl(iconCode);
-        Log.d(TAG, "🌤️ Loading OpenWeatherMap icon from URL: " + iconUrl);
+        Log.d(TAG, "🌤️ Loading OpenWeatherMap icon from URL: " + iconUrl + " (code: " + iconCode + ")");
+        Log.d(TAG, "  ImageView ID: " + imageView.getId() + ", Resource Name: " + getResources().getResourceEntryName(imageView.getId()));
+        
+        // Clear any previous image to ensure update
+        imageView.setImageDrawable(null);
         
         imageExecutor.execute(() -> {
             try {
                 URL url = new URL(iconUrl);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setDoInput(true);
+                connection.setUseCaches(false); // Disable caching to ensure fresh icons
+                connection.setRequestProperty("Cache-Control", "no-cache");
+                connection.setRequestProperty("Pragma", "no-cache");
+                connection.setConnectTimeout(10000); // 10 second timeout
+                connection.setReadTimeout(10000);
                 connection.connect();
                 
-                InputStream input = connection.getInputStream();
-                Bitmap bitmap = BitmapFactory.decodeStream(input);
+                int responseCode = connection.getResponseCode();
+                Log.d(TAG, "  HTTP Response Code: " + responseCode + " for icon: " + iconCode);
                 
-                if (bitmap != null) {
-                    // Update UI on main thread
-                    mainHandler.post(() -> {
-                        imageView.setImageBitmap(bitmap);
-                        Log.d(TAG, "✅ OpenWeatherMap icon loaded successfully: " + iconCode);
-                    });
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    InputStream input = connection.getInputStream();
+                    Bitmap bitmap = BitmapFactory.decodeStream(input);
+                    
+                    if (bitmap != null) {
+                        // Update UI on main thread
+                        mainHandler.post(() -> {
+                            imageView.setImageBitmap(bitmap);
+                            String viewId = getResources().getResourceEntryName(imageView.getId());
+                            Log.d(TAG, "✅ OpenWeatherMap icon loaded successfully: " + iconCode + 
+                                  " (size: " + bitmap.getWidth() + "x" + bitmap.getHeight() + 
+                                  ", view: " + viewId + ")");
+                        });
+                    } else {
+                        Log.e(TAG, "❌ Failed to decode bitmap from URL: " + iconUrl);
+                        mainHandler.post(() -> {
+                            imageView.setImageResource(R.drawable.owm_01d);
+                            Log.w(TAG, "  Using fallback icon for: " + iconCode);
+                        });
+                    }
+                    
+                    input.close();
                 } else {
-                    Log.w(TAG, "Failed to decode bitmap from URL: " + iconUrl);
+                    Log.e(TAG, "❌ HTTP error loading icon: " + responseCode + " for " + iconCode);
                     mainHandler.post(() -> {
                         imageView.setImageResource(R.drawable.owm_01d);
+                        Log.w(TAG, "  Using fallback icon due to HTTP error");
                     });
                 }
                 
-                input.close();
                 connection.disconnect();
                 
             } catch (Exception e) {
-                Log.e(TAG, "Error loading OpenWeatherMap icon: " + e.getMessage());
+                Log.e(TAG, "❌ Exception loading OpenWeatherMap icon from " + iconUrl + ": " + e.getMessage(), e);
+                e.printStackTrace();
                 mainHandler.post(() -> {
                     imageView.setImageResource(R.drawable.owm_01d);
+                    Log.w(TAG, "  Using fallback icon due to exception: " + e.getMessage());
                 });
             }
         });

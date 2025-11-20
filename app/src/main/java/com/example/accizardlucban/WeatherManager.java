@@ -643,8 +643,9 @@ public class WeatherManager {
         
         java.util.List<ForecastData.ForecastItem> items = forecastData.getList();
         java.util.Map<String, DailyForecast> dailyData = new java.util.HashMap<>();
+        java.util.Map<String, java.util.List<ForecastData.ForecastItem>> dailyItems = new java.util.HashMap<>();
         
-        // Group forecast items by day
+        // First pass: Group all forecast items by day and collect temperature data
         for (ForecastData.ForecastItem item : items) {
             java.util.Calendar calendar = java.util.Calendar.getInstance();
             calendar.setTimeInMillis(item.getDt() * 1000);
@@ -655,24 +656,192 @@ public class WeatherManager {
                 calendar.get(java.util.Calendar.DAY_OF_MONTH)
             );
             
+            // Store item for later icon selection
+            if (!dailyItems.containsKey(dayKey)) {
+                dailyItems.put(dayKey, new java.util.ArrayList<>());
+            }
+            dailyItems.get(dayKey).add(item);
+            
+            // Aggregate temperature data
             DailyForecast daily = dailyData.get(dayKey);
             if (daily == null) {
                 daily = new DailyForecast();
                 daily.timestamp = item.getDt();
                 daily.maxTemp = item.getMain().getTempMax();
                 daily.minTemp = item.getMain().getTempMin();
-                daily.icon = item.getWeather()[0].getIcon();
+                daily.icon = item.getWeather()[0].getIcon(); // Temporary, will be replaced
                 dailyData.put(dayKey, daily);
             } else {
-                // Update max/min temperatures
                 daily.maxTemp = Math.max(daily.maxTemp, item.getMain().getTempMax());
                 daily.minTemp = Math.min(daily.minTemp, item.getMain().getTempMin());
+            }
+        }
+        
+        // Second pass: Select the best representative icon for each day
+        // Use the most common weather condition throughout the day, with preference for daytime
+        for (String dayKey : dailyData.keySet()) {
+            DailyForecast daily = dailyData.get(dayKey);
+            java.util.List<ForecastData.ForecastItem> dayItems = dailyItems.get(dayKey);
+            
+            if (dayItems == null || dayItems.isEmpty()) {
+                continue;
+            }
+            
+            // Count weather conditions throughout the day
+            java.util.Map<String, Integer> iconCounts = new java.util.HashMap<>();
+            java.util.Map<String, ForecastData.ForecastItem> iconToItem = new java.util.HashMap<>();
+            java.util.Map<String, Integer> daytimeIconCounts = new java.util.HashMap<>();
+            
+            for (ForecastData.ForecastItem item : dayItems) {
+                java.util.Calendar calendar = java.util.Calendar.getInstance();
+                calendar.setTimeInMillis(item.getDt() * 1000);
+                int hour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+                boolean isDaytime = hour >= 6 && hour < 18;
+                
+                String iconCode = item.getWeather()[0].getIcon();
+                
+                // Get base icon code (without day/night suffix) for better grouping
+                String baseIconCode = iconCode.length() >= 2 ? iconCode.substring(0, 2) : iconCode;
+                
+                // Count all icons
+                iconCounts.put(iconCode, iconCounts.getOrDefault(iconCode, 0) + 1);
+                iconToItem.put(iconCode, item);
+                
+                // Count daytime icons separately (prefer these)
+                if (isDaytime) {
+                    daytimeIconCounts.put(iconCode, daytimeIconCounts.getOrDefault(iconCode, 0) + 1);
+                }
+            }
+            
+            // Find the most common weather condition
+            String mostCommonIcon = null;
+            int maxCount = 0;
+            
+            // First, try to find the most common daytime icon
+            for (java.util.Map.Entry<String, Integer> entry : daytimeIconCounts.entrySet()) {
+                if (entry.getValue() > maxCount) {
+                    mostCommonIcon = entry.getKey();
+                    maxCount = entry.getValue();
+                }
+            }
+            
+            // If no daytime icons, use the most common overall icon
+            if (mostCommonIcon == null || maxCount == 0) {
+                maxCount = 0;
+                for (java.util.Map.Entry<String, Integer> entry : iconCounts.entrySet()) {
+                    if (entry.getValue() > maxCount) {
+                        mostCommonIcon = entry.getKey();
+                        maxCount = entry.getValue();
+                    }
+                }
+            }
+            
+            // If there's a tie, prefer daytime icon closest to noon
+            if (mostCommonIcon != null) {
+                // Find all icons with the same count (check both daytime and overall)
+                java.util.List<String> tiedIcons = new java.util.ArrayList<>();
+                int targetCount = maxCount;
+                
+                // Check daytime icons first if we're using them
+                java.util.Map<String, Integer> sourceMap = daytimeIconCounts.containsKey(mostCommonIcon) ? 
+                                                           daytimeIconCounts : iconCounts;
+                
+                for (java.util.Map.Entry<String, Integer> entry : sourceMap.entrySet()) {
+                    if (entry.getValue() == targetCount) {
+                        tiedIcons.add(entry.getKey());
+                    }
+                }
+                
+                // If there's a tie, prefer the one closest to noon, with preference for daytime
+                if (tiedIcons.size() > 1) {
+                    ForecastData.ForecastItem bestItem = null;
+                    int closestToNoon = Integer.MAX_VALUE;
+                    ForecastData.ForecastItem bestDaytimeItem = null;
+                    int closestDaytimeToNoon = Integer.MAX_VALUE;
+                    
+                    for (String iconCode : tiedIcons) {
+                        ForecastData.ForecastItem item = iconToItem.get(iconCode);
+                        if (item != null) {
+                            java.util.Calendar calendar = java.util.Calendar.getInstance();
+                            calendar.setTimeInMillis(item.getDt() * 1000);
+                            int hour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+                            int distanceFromNoon = Math.abs(hour - 12);
+                            boolean isDaytime = hour >= 6 && hour < 18;
+                            
+                            // Track best daytime item
+                            if (isDaytime) {
+                                if (bestDaytimeItem == null || distanceFromNoon < closestDaytimeToNoon) {
+                                    bestDaytimeItem = item;
+                                    closestDaytimeToNoon = distanceFromNoon;
+                                }
+                            }
+                            
+                            // Track best overall item
+                            if (bestItem == null || distanceFromNoon < closestToNoon) {
+                                bestItem = item;
+                                closestToNoon = distanceFromNoon;
+                            }
+                        }
+                    }
+                    
+                    // Prefer daytime item if available
+                    if (bestDaytimeItem != null) {
+                        bestItem = bestDaytimeItem;
+                        closestToNoon = closestDaytimeToNoon;
+                        // Find the icon code for the best daytime item
+                        for (String iconCode : tiedIcons) {
+                            if (iconToItem.get(iconCode) == bestItem) {
+                                mostCommonIcon = iconCode;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Set the selected icon
+                ForecastData.ForecastItem selectedItem = iconToItem.get(mostCommonIcon);
+                if (selectedItem != null) {
+                    daily.icon = mostCommonIcon;
+                    daily.timestamp = selectedItem.getDt();
+                    
+                    java.util.Calendar cal = java.util.Calendar.getInstance();
+                    cal.setTimeInMillis(daily.timestamp * 1000);
+                    android.util.Log.d(TAG, "✅ Selected icon '" + daily.icon + "' for day " + dayKey + 
+                                       " (most common: " + maxCount + " occurrences, " +
+                                       cal.get(java.util.Calendar.DAY_OF_MONTH) + "/" + 
+                                       (cal.get(java.util.Calendar.MONTH) + 1) + ")");
+                } else {
+                    android.util.Log.e(TAG, "❌ ERROR: Could not find selected item for icon: " + mostCommonIcon);
+                }
+            } else {
+                android.util.Log.e(TAG, "❌ ERROR: No most common icon found for day: " + dayKey);
             }
         }
         
         // Convert to array and sort by timestamp
         DailyForecast[] result = dailyData.values().toArray(new DailyForecast[0]);
         java.util.Arrays.sort(result, (a, b) -> Long.compare(a.timestamp, b.timestamp));
+        
+        // Log how many days we have with their icons
+        android.util.Log.d(TAG, "✅ Processed " + result.length + " forecast days from API");
+        for (int i = 0; i < result.length && i < 6; i++) {
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.setTimeInMillis(result[i].timestamp * 1000);
+            android.util.Log.d(TAG, "  Day " + i + ": " + cal.get(java.util.Calendar.DAY_OF_MONTH) + 
+                               "/" + (cal.get(java.util.Calendar.MONTH) + 1) + 
+                               " - Icon: '" + result[i].icon + 
+                               "' - Temp: " + result[i].maxTemp + "°C/" + result[i].minTemp + "°C");
+            
+            // Specifically log day 5 (index 5) for debugging
+            if (i == 5) {
+                android.util.Log.d(TAG, "  🎯 Day 5 (5th day outlook) icon: '" + result[i].icon + "'");
+            }
+        }
+        
+        // If we have fewer than 6 days, log a warning
+        if (result.length < 6) {
+            android.util.Log.w(TAG, "⚠️ WARNING: Only " + result.length + " days available, but need 6 for full forecast");
+        }
         
         return result;
     }

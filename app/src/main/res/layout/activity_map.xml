@@ -1073,7 +1073,7 @@
         android:id="@+id/bottomNavigationContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="70dp"
+        android:minHeight="@dimen/dashboard_bottom_nav_height"
         android:paddingBottom="0dp"
         android:clipChildren="false"
         android:clipToPadding="false"
@@ -1083,7 +1083,7 @@
         <LinearLayout
             android:id="@+id/bottomNavigationView"
             android:layout_width="match_parent"
-            android:layout_height="70dp"
+            android:layout_height="@dimen/dashboard_bottom_nav_height"
             android:orientation="horizontal"
             android:background="#FFFFFF"
             android:elevation="8dp"

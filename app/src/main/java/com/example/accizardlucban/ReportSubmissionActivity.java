@@ -14,7 +14,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -244,6 +248,71 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         if (alertsBadgeReport != null) {
             AnnouncementNotificationManager.getInstance().registerBadge("ReportSubmissionActivity", alertsBadgeReport);
             Log.d(TAG, "✅ ReportSubmissionActivity badge registered with AnnouncementNotificationManager");
+        }
+        
+        // Setup required field labels with red asterisks
+        setupRequiredFieldLabels();
+    }
+    
+    /**
+     * Setup required field labels with red asterisks
+     * Only Report Type and Location Information are required fields
+     */
+    private void setupRequiredFieldLabels() {
+        try {
+            // Report Type label (required)
+            TextView reportTypeLabel = findViewById(R.id.reportTypeLabel);
+            if (reportTypeLabel != null) {
+                setRequiredLabelText(reportTypeLabel, "Report Type");
+            }
+            
+            // Description label (optional - no asterisk)
+            TextView descriptionLabel = findViewById(R.id.descriptionLabel);
+            if (descriptionLabel != null) {
+                descriptionLabel.setText("Description");
+            }
+            
+            // Location Information label (required)
+            TextView locationInformationLabel = findViewById(R.id.locationInformationLabel);
+            if (locationInformationLabel != null) {
+                setRequiredLabelText(locationInformationLabel, "Location Information");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up required field labels: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Set TextView text with a red asterisk at the end
+     * @param textView The TextView to update
+     * @param baseText The base text without asterisk
+     */
+    private void setRequiredLabelText(TextView textView, String baseText) {
+        try {
+            String fullText = baseText + " *";
+            SpannableString spannableString = new SpannableString(fullText);
+            
+            // Get red color
+            int redColor = getResources().getColor(android.R.color.holo_red_dark, getTheme());
+            
+            // Find the asterisk position and color it red
+            int asteriskStart = fullText.indexOf("*");
+            int asteriskEnd = asteriskStart + 1;
+            
+            if (asteriskStart >= 0) {
+                spannableString.setSpan(
+                    new ForegroundColorSpan(redColor),
+                    asteriskStart,
+                    asteriskEnd,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                );
+            }
+            
+            textView.setText(spannableString);
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting required label text: " + e.getMessage(), e);
+            // Fallback to plain text with asterisk
+            textView.setText(baseText + " *");
         }
     }
 
@@ -1544,14 +1613,8 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         // Reporter fields removed - user identified by Firebase Auth
         // No validation needed for reporter name and mobile
         
-        // Check if description is provided
-        String description = descriptionEditText.getText().toString().trim();
-        if (description.isEmpty()) {
-            descriptionEditText.setError("Description is required");
-            descriptionEditText.requestFocus();
-            return false;
-        }
-
+        // Description is optional - no validation required
+        
         // Check if location is selected from map (coordinates must be pinned)
         if (!isLocationSelected || selectedLongitude == 0.0 || selectedLatitude == 0.0) {
             Toast.makeText(this, "Please select a location on the map using the pin button", Toast.LENGTH_LONG).show();

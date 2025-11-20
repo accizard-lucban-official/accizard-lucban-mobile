@@ -943,32 +943,69 @@ public class AlertsActivity extends AppCompatActivity {
      * Extract exact timestamp from Firestore date field (for accurate date/time calculations)
      * Returns timestamp in milliseconds since epoch
      * Handles Firestore Timestamp, Long, Integer, String, and Date formats
+     * Prioritizes createdTime since that's what the query uses for ordering
      */
     private long extractTimestampFromDateField(com.google.firebase.firestore.DocumentSnapshot doc) {
         try {
-            Object dateObj = doc.get("date");
+            // Log all available fields for debugging
+            if (doc.getData() != null) {
+                Log.d(TAG, "Document fields available: " + doc.getData().keySet());
+                for (String key : doc.getData().keySet()) {
+                    Object value = doc.getData().get(key);
+                    Log.d(TAG, "  Field '" + key + "' = " + value + " (type: " + 
+                          (value != null ? value.getClass().getSimpleName() : "null") + ")");
+                }
+            }
             
+            Object dateObj = null;
+            
+            // PRIORITY 1: Check createdTime first (since query orders by this)
+            dateObj = doc.get("createdTime");
+            if (dateObj != null) {
+                Log.d(TAG, "✅ Found 'createdTime' field: " + dateObj + " (type: " + 
+                      dateObj.getClass().getSimpleName() + ")");
+            }
+            
+            // PRIORITY 2: Check date field
             if (dateObj == null) {
-                Log.d(TAG, "No 'date' field found, trying alternative fields");
-                // Try alternative field names as fallback
+                dateObj = doc.get("date");
+                if (dateObj != null) {
+                    Log.d(TAG, "✅ Found 'date' field: " + dateObj + " (type: " + 
+                          dateObj.getClass().getSimpleName() + ")");
+                }
+            }
+            
+            // PRIORITY 3: Try alternative field names as fallback
+            if (dateObj == null) {
                 dateObj = doc.get("createdAt");
-                if (dateObj == null) {
-                    dateObj = doc.get("created_at");
+                if (dateObj != null) {
+                    Log.d(TAG, "✅ Found 'createdAt' field: " + dateObj);
                 }
-                if (dateObj == null) {
-                    dateObj = doc.get("createdTime");
+            }
+            if (dateObj == null) {
+                dateObj = doc.get("created_at");
+                if (dateObj != null) {
+                    Log.d(TAG, "✅ Found 'created_at' field: " + dateObj);
                 }
-                if (dateObj == null) {
-                    dateObj = doc.get("timestamp");
+            }
+            if (dateObj == null) {
+                dateObj = doc.get("timestamp");
+                if (dateObj != null) {
+                    Log.d(TAG, "✅ Found 'timestamp' field: " + dateObj);
                 }
-                if (dateObj == null) {
-                    dateObj = doc.get("updatedAt");
+            }
+            if (dateObj == null) {
+                dateObj = doc.get("updatedAt");
+                if (dateObj != null) {
+                    Log.d(TAG, "✅ Found 'updatedAt' field: " + dateObj);
                 }
             }
             
             if (dateObj == null) {
-                Log.w(TAG, "No date field found in document, using current time");
-                return System.currentTimeMillis();
+                Log.e(TAG, "❌ ERROR: No date/timestamp field found in document! Tried: createdTime, date, createdAt, created_at, timestamp, updatedAt");
+                Log.e(TAG, "Document ID: " + doc.getId());
+                Log.e(TAG, "Available fields: " + (doc.getData() != null ? doc.getData().keySet() : "null"));
+                return System.currentTimeMillis(); // Fallback to current time
             }
             
             // Handle Firestore Timestamp (PRIMARY FORMAT - most accurate)
@@ -1079,12 +1116,18 @@ public class AlertsActivity extends AppCompatActivity {
                 return timestampMillis;
             }
             
-            // If we can't handle the type, use current time
-            Log.w(TAG, "Unknown date field type: " + (dateObj != null ? dateObj.getClass().getSimpleName() : "null") + ", using current time");
+            // If we can't handle the type, log error and use current time as last resort
+            Log.e(TAG, "❌ ERROR: Unknown date field type: " + 
+                  (dateObj != null ? dateObj.getClass().getSimpleName() : "null") + 
+                  " - Value: " + dateObj + " - Using current time as fallback");
+            Log.e(TAG, "Document ID: " + doc.getId());
             return System.currentTimeMillis();
             
         } catch (Exception e) {
-            Log.e(TAG, "Error extracting timestamp from date field: " + e.getMessage(), e);
+            Log.e(TAG, "❌ EXCEPTION: Error extracting timestamp from date field: " + e.getMessage(), e);
+            Log.e(TAG, "Document ID: " + doc.getId());
+            Log.e(TAG, "Document data: " + (doc.getData() != null ? doc.getData().toString() : "null"));
+            e.printStackTrace();
             return System.currentTimeMillis(); // Fallback to current time
         }
     }
@@ -1729,27 +1772,59 @@ public class AlertsActivity extends AppCompatActivity {
                 // PRIORITY 1: Use the stored timestamp field (most accurate - extracted directly from Firestore)
                 if (ann.timestamp > 0) {
                     timestamp = ann.timestamp;
-                    Log.d("AnnouncementAdapter", "✅ Using stored timestamp field: " + timestamp);
+                    Date announcementDate = new Date(timestamp);
+                    Log.d("AnnouncementAdapter", "✅ Using stored timestamp field: " + timestamp + 
+                          " (" + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(announcementDate) + ")");
                 }
                 // PRIORITY 2: Try to parse the 'date' field from Firestore (fallback)
                 else if (ann.date != null && !ann.date.isEmpty()) {
                     timestamp = parseAnnouncementDateFromFirestore(ann.date);
                     if (timestamp > 0) {
-                        Log.d("AnnouncementAdapter", "Using 'date' field for timestamp: " + ann.date);
+                        Date announcementDate = new Date(timestamp);
+                        Log.d("AnnouncementAdapter", "✅ Using 'date' field for timestamp: " + ann.date + 
+                              " -> " + timestamp + " (" + 
+                              new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(announcementDate) + ")");
+                    } else {
+                        Log.w("AnnouncementAdapter", "⚠️ Failed to parse 'date' field: " + ann.date);
                     }
                 }
                 // PRIORITY 3: If date field parsing failed, try updatedAt field
                 else if (ann.updatedAt != null && !ann.updatedAt.isEmpty()) {
                     timestamp = parseAnnouncementDateFromFirestore(ann.updatedAt);
                     if (timestamp > 0) {
-                        Log.d("AnnouncementAdapter", "Using 'updatedAt' field for timestamp: " + ann.updatedAt);
+                        Date announcementDate = new Date(timestamp);
+                        Log.d("AnnouncementAdapter", "✅ Using 'updatedAt' field for timestamp: " + ann.updatedAt + 
+                              " -> " + timestamp + " (" + 
+                              new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(announcementDate) + ")");
+                    } else {
+                        Log.w("AnnouncementAdapter", "⚠️ Failed to parse 'updatedAt' field: " + ann.updatedAt);
                     }
+                } else {
+                    Log.w("AnnouncementAdapter", "⚠️ No date/timestamp fields available. timestamp: " + ann.timestamp + 
+                          ", date: " + ann.date + ", updatedAt: " + ann.updatedAt);
                 }
                 
-                // If still no timestamp, use current time as fallback
+                // If still no timestamp, this is an error - log it thoroughly
                 if (timestamp == 0) {
-                    Log.w("AnnouncementAdapter", "No valid date found, using current time");
-                    timestamp = System.currentTimeMillis();
+                    Log.e("AnnouncementAdapter", "❌ ERROR: No valid timestamp found for announcement: " + ann.type);
+                    Log.e("AnnouncementAdapter", "   timestamp field: " + ann.timestamp);
+                    Log.e("AnnouncementAdapter", "   date field: " + ann.date);
+                    Log.e("AnnouncementAdapter", "   updatedAt field: " + ann.updatedAt);
+                    // This should not happen if extractTimestampFromDateField is working correctly
+                    // Use a timestamp that's clearly in the past to show it's missing data
+                    timestamp = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(24);
+                    Log.e("AnnouncementAdapter", "   Using fallback timestamp (24 hours ago): " + timestamp);
+                }
+                
+                // Log if timestamp seems to be current time (which would cause "Just now" for all)
+                long currentTime = System.currentTimeMillis();
+                long diffFromNow = Math.abs(currentTime - timestamp);
+                if (diffFromNow < TimeUnit.MINUTES.toMillis(1)) {
+                    Log.w("AnnouncementAdapter", "⚠️ WARNING: Timestamp is very close to current time (" + 
+                          (diffFromNow / 1000) + " seconds difference). This may indicate timestamp extraction failed.");
+                    Log.w("AnnouncementAdapter", "   announcement: " + ann.type);
+                    Log.w("AnnouncementAdapter", "   timestamp: " + timestamp);
+                    Log.w("AnnouncementAdapter", "   currentTime: " + currentTime);
                 }
                 
                 // Format to relative time

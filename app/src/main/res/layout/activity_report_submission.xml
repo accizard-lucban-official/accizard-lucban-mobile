@@ -144,6 +144,7 @@
                     android:layout_marginBottom="8dp">
 
                     <TextView
+                        android:id="@+id/reportTypeLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Report Type"
@@ -174,6 +175,7 @@
 
                 <!-- Description Section -->
                 <TextView
+                    android:id="@+id/descriptionLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Description"
@@ -205,6 +207,7 @@
                     android:layout_marginBottom="8dp">
                     
                     <TextView
+                        android:id="@+id/locationInformationLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Location Information"

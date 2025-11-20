@@ -29,6 +29,8 @@
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:padding="@dimen/padding_tiny"
             android:layout_marginEnd="@dimen/margin_large"
+            android:tint="#333333"
+            android:tintMode="src_in"
             android:clickable="true"
             android:focusable="true"/>
 
@@ -74,6 +76,8 @@
             android:layout_height="@dimen/icon_size_xlarge"
             android:src="@drawable/phone_call"
             android:padding="@dimen/padding_small"
+            android:tint="#FF5722"
+            android:tintMode="src_in"
             android:clickable="true"
             android:focusable="true"/>
     </LinearLayout>
@@ -182,7 +186,8 @@
             android:contentDescription="Add Action"
             android:focusable="true"
             android:src="@drawable/ic_add"
-            android:tint="@android:color/white" />
+            android:tint="@android:color/white"
+            android:tintMode="src_in" />
 
         <EditText
             android:id="@+id/messageInput"
@@ -209,7 +214,9 @@
             android:clickable="true"
             android:focusable="true"
             android:padding="@dimen/padding_medium"
-            android:src="@drawable/vector__5_" />
+            android:src="@drawable/vector__5_"
+            android:tint="@android:color/white"
+            android:tintMode="src_in" />
     </LinearLayout>
 
     <!-- Bottom Navigation Container (FrameLayout for floating button) -->
@@ -217,7 +224,7 @@
         android:id="@+id/bottomNavigationContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="70dp"
+        android:minHeight="@dimen/dashboard_bottom_nav_height"
         android:paddingBottom="0dp"
         android:background="#FFFFFF"
         android:clipChildren="false"
@@ -228,7 +235,7 @@
         <LinearLayout
             android:id="@+id/bottomNavigation"
             android:layout_width="match_parent"
-            android:layout_height="70dp"
+            android:layout_height="@dimen/dashboard_bottom_nav_height"
             android:orientation="horizontal"
             android:background="#FFFFFF"
             android:elevation="8dp"
@@ -246,7 +253,9 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/frame__10_"/>
+                    android:src="@drawable/frame__10_"
+                    android:tint="#999999"
+                    android:tintMode="src_in"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -269,7 +278,9 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_chat_selected"/>
+                    android:src="@drawable/ic_chat_selected"
+                    android:tint="#FF5722"
+                    android:tintMode="src_in"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -298,7 +309,9 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/frame__8_"/>
+                    android:src="@drawable/frame__8_"
+                    android:tint="#999999"
+                    android:tintMode="src_in"/>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -328,7 +341,9 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:layout_gravity="center"
-                        android:src="@drawable/frame__9_"/>
+                        android:src="@drawable/frame__9_"
+                        android:tint="#999999"
+                        android:tintMode="src_in"/>
 
                     <!-- Notification Badge - Positioned above the icon -->
                     <TextView
@@ -379,7 +394,8 @@
                 android:layout_height="28dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_report_selected"
-                android:tint="#333333"/>
+                android:tint="#333333"
+                android:tintMode="src_in"/>
         </FrameLayout>
     </FrameLayout>
 
