@@ -750,10 +750,11 @@ public class MapViewActivity extends AppCompatActivity {
                 updateCheckboxVisualState(entry.checkBox, shouldCheck);
             }
             
-            // ✅ CRITICAL: Ensure facility checkboxes are disabled when incident is active
+            // ✅ CRITICAL: Keep facility checkboxes ENABLED even when incident is active
+            // Users should be able to click them - they will automatically deselect the incident
             if (activeIncidentType != null) {
-                setFacilityCheckboxesEnabled(false);
-                Log.d(TAG, "✅ Incident '" + activeIncidentType + "' is active - facility checkboxes disabled");
+                setFacilityCheckboxesEnabled(true); // Keep them enabled!
+                Log.d(TAG, "✅ Incident '" + activeIncidentType + "' is active - facility checkboxes kept enabled");
             } else {
                 setFacilityCheckboxesEnabled(true);
                 Log.d(TAG, "No incident active - facility checkboxes enabled");
@@ -859,10 +860,11 @@ public class MapViewActivity extends AppCompatActivity {
                 applyFacilityLayerVisibility(entry.facilityType, shouldCheck);
             }
             
-            // ✅ CRITICAL: Ensure incident checkboxes are disabled when facility is active
+            // ✅ CRITICAL: Keep incident checkboxes ENABLED even when facility is active
+            // Users should be able to click them - they will automatically deselect the facility
             if (activeFacilityType != null) {
-                setIncidentCheckboxesEnabled(false);
-                Log.d(TAG, "✅ Facility '" + activeFacilityType + "' is active - incident checkboxes disabled");
+                setIncidentCheckboxesEnabled(true); // Keep them enabled!
+                Log.d(TAG, "✅ Facility '" + activeFacilityType + "' is active - incident checkboxes kept enabled");
             } else {
                 setIncidentCheckboxesEnabled(true);
                 Log.d(TAG, "No facility active - incident checkboxes enabled");
@@ -888,25 +890,27 @@ public class MapViewActivity extends AppCompatActivity {
             }
             activeFacilityFilter = null;
             
-            // Uncheck and disable all facility checkboxes
+            // Uncheck all facility checkboxes but KEEP THEM ENABLED and clickable
             for (FacilityCheckboxEntry entry : facilityCheckboxes) {
                 if (entry.checkBox != null) {
                     entry.checkBox.setChecked(false);
-                    entry.checkBox.setEnabled(false);
-                    entry.checkBox.setAlpha(0.5f); // Visual indication that it's disabled
+                    // KEEP ENABLED - don't disable them so users can click them
+                    entry.checkBox.setEnabled(true);
+                    entry.checkBox.setClickable(true);
+                    entry.checkBox.setAlpha(1.0f); // Keep full opacity
                     updateCheckboxVisualState(entry.checkBox, false);
                     applyFacilityLayerVisibility(entry.facilityType, false);
                 }
             }
             
-            Log.d(TAG, "Cleared and disabled all facility checkboxes");
+            Log.d(TAG, "Cleared all facility checkboxes (kept enabled)");
         } finally {
             isUpdatingFacilityCheckboxes = false;
         }
     }
 
     /**
-     * Clear all incident checkboxes and disable them
+     * Clear all incident checkboxes but KEEP THEM ENABLED
      * Called when a facility checkbox is selected
      */
     private void clearAndDisableIncidentCheckboxes() {
@@ -917,20 +921,22 @@ public class MapViewActivity extends AppCompatActivity {
                 incidentFilters.put(incidentType, false);
             }
             
-            // Uncheck and disable all incident checkboxes
+            // Uncheck all incident checkboxes but KEEP THEM ENABLED and clickable
             for (IncidentCheckboxEntry entry : incidentCheckboxes) {
                 if (entry.checkBox != null) {
                     entry.checkBox.setChecked(false);
-                    entry.checkBox.setEnabled(false);
-                    entry.checkBox.setAlpha(0.5f); // Visual indication that it's disabled
+                    // KEEP ENABLED - don't disable them so users can click them
+                    entry.checkBox.setEnabled(true);
+                    entry.checkBox.setClickable(true);
+                    entry.checkBox.setAlpha(1.0f); // Keep full opacity
                     updateCheckboxVisualState(entry.checkBox, false);
                 }
             }
             
-            // Disable heatmap switch when incidents are disabled
+            // Keep heatmap switch enabled
             if (heatmapSwitch != null) {
-                heatmapSwitch.setEnabled(false);
-                heatmapSwitch.setAlpha(0.5f);
+                heatmapSwitch.setEnabled(true);
+                heatmapSwitch.setAlpha(1.0f);
             }
             
             // Hide heatmap if it was visible
@@ -939,7 +945,7 @@ public class MapViewActivity extends AppCompatActivity {
                 hideHeatmapView();
             }
             
-            Log.d(TAG, "Cleared and disabled all incident checkboxes");
+            Log.d(TAG, "Cleared all incident checkboxes (kept enabled)");
         } finally {
             isUpdatingIncidentCheckboxes = false;
         }

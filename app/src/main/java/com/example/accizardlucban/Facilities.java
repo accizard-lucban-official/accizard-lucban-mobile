@@ -70,6 +70,7 @@ public class Facilities extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        android.util.Log.d("FacilitiesClickDebug", "=== onCreate: START ===");
         setContentView(R.layout.activity_facilities);
 
         initializeViews();
@@ -79,6 +80,47 @@ public class Facilities extends AppCompatActivity {
         setupTimelineOptions();
         setupSelectAllButtons();
         updateFilterSummary(); // Initialize filter summary display
+        
+        // Log final state of all checkboxes
+        logAllCheckboxStates("onCreate: FINAL STATE");
+        android.util.Log.d("FacilitiesClickDebug", "=== onCreate: END ===");
+    }
+    
+    /**
+     * Log the state of all checkboxes for debugging
+     */
+    private void logAllCheckboxStates(String context) {
+        android.util.Log.d("FacilitiesClickDebug", "=== logAllCheckboxStates: " + context + " ===");
+        android.util.Log.d("FacilitiesClickDebug", "isUpdatingIncidentChecks=" + isUpdatingIncidentChecks + ", isUpdatingFacilityChecks=" + isUpdatingFacilityChecks);
+        
+        android.util.Log.d("FacilitiesClickDebug", "--- INCIDENT CHECKBOXES ---");
+        for (RadioButton checkBox : incidentCheckboxes) {
+            if (checkBox != null) {
+                android.util.Log.d("FacilitiesClickDebug", "Incident: " + checkBox.getText() + 
+                    " | enabled=" + checkBox.isEnabled() + 
+                    " | clickable=" + checkBox.isClickable() + 
+                    " | checked=" + checkBox.isChecked() +
+                    " | focusable=" + checkBox.isFocusable() +
+                    " | focusableInTouchMode=" + checkBox.isFocusableInTouchMode());
+            }
+        }
+        
+        android.util.Log.d("FacilitiesClickDebug", "--- FACILITY CHECKBOXES ---");
+        RadioButton[] facilityCheckboxes = {
+            evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck,
+            fireStationsCheck, governmentOfficesCheck
+        };
+        for (RadioButton checkBox : facilityCheckboxes) {
+            if (checkBox != null) {
+                android.util.Log.d("FacilitiesClickDebug", "Facility: " + checkBox.getText() + 
+                    " | enabled=" + checkBox.isEnabled() + 
+                    " | clickable=" + checkBox.isClickable() + 
+                    " | checked=" + checkBox.isChecked() +
+                    " | focusable=" + checkBox.isFocusable() +
+                    " | focusableInTouchMode=" + checkBox.isFocusableInTouchMode());
+            }
+        }
+        android.util.Log.d("FacilitiesClickDebug", "=== logAllCheckboxStates: END ===");
     }
 
     private void initializeViews() {
@@ -177,6 +219,9 @@ public class Facilities extends AppCompatActivity {
         
         // Initialize RadioButton styling
         initializeRadioButtonStyling();
+        
+        // Ensure all checkboxes are enabled and clickable from the start
+        ensureAllCheckboxesEnabled();
     }
     
     /**
@@ -327,22 +372,34 @@ public class Facilities extends AppCompatActivity {
 
         // Update timeline selection UI
         updateTimelineSelection();
+        
+        // Ensure all checkboxes are enabled and clickable after loading states
+        ensureAllCheckboxesEnabled();
     }
 
     private void setupClickListeners() {
         // Timeline section click listener
         if (timelineHeader != null) {
-            timelineHeader.setOnClickListener(v -> toggleSection("timeline"));
+            timelineHeader.setOnClickListener(v -> {
+                ensureAllCheckboxesEnabled();
+                toggleSection("timeline");
+            });
         }
 
         // Incident Types section click listener
         if (incidentTypesHeader != null) {
-            incidentTypesHeader.setOnClickListener(v -> toggleSection("incidents"));
+            incidentTypesHeader.setOnClickListener(v -> {
+                ensureAllCheckboxesEnabled();
+                toggleSection("incidents");
+            });
         }
 
         // Emergency Support section click listener
         if (emergencySupportHeader != null) {
-            emergencySupportHeader.setOnClickListener(v -> toggleSection("facilities"));
+            emergencySupportHeader.setOnClickListener(v -> {
+                ensureAllCheckboxesEnabled();
+                toggleSection("facilities");
+            });
         }
         
         // Setup checkbox change listeners for visual feedback
@@ -367,54 +424,54 @@ public class Facilities extends AppCompatActivity {
         setupExclusiveIncidentCheckbox(environmentalHazardCheck);
         
         // Facility checkboxes
-        if (evacuationCentersCheck != null) {
-            evacuationCentersCheck.setEnabled(true);
-            evacuationCentersCheck.setClickable(true);
-            android.util.Log.d("Facilities", "setupCheckboxListeners: evacuationCentersCheck enabled=" + evacuationCentersCheck.isEnabled() + ", clickable=" + evacuationCentersCheck.isClickable());
-            evacuationCentersCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                android.util.Log.d("Facilities", "Facility checkbox clicked: evacuationCentersCheck, isChecked=" + isChecked + ", enabled=" + evacuationCentersCheck.isEnabled());
-                handleFacilityCheckboxChange(evacuationCentersCheck, isChecked);
-            });
-        }
+        RadioButton[] facilityCheckboxes = {
+            evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck,
+            fireStationsCheck, governmentOfficesCheck
+        };
         
-        if (healthFacilitiesCheck != null) {
-            healthFacilitiesCheck.setEnabled(true);
-            healthFacilitiesCheck.setClickable(true);
-            android.util.Log.d("Facilities", "setupCheckboxListeners: healthFacilitiesCheck enabled=" + healthFacilitiesCheck.isEnabled() + ", clickable=" + healthFacilitiesCheck.isClickable());
-            healthFacilitiesCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                android.util.Log.d("Facilities", "Facility checkbox clicked: healthFacilitiesCheck, isChecked=" + isChecked + ", enabled=" + healthFacilitiesCheck.isEnabled());
-                handleFacilityCheckboxChange(healthFacilitiesCheck, isChecked);
-            });
-        }
-        
-        if (policeStationsCheck != null) {
-            policeStationsCheck.setEnabled(true);
-            policeStationsCheck.setClickable(true);
-            android.util.Log.d("Facilities", "setupCheckboxListeners: policeStationsCheck enabled=" + policeStationsCheck.isEnabled() + ", clickable=" + policeStationsCheck.isClickable());
-            policeStationsCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                android.util.Log.d("Facilities", "Facility checkbox clicked: policeStationsCheck, isChecked=" + isChecked + ", enabled=" + policeStationsCheck.isEnabled());
-                handleFacilityCheckboxChange(policeStationsCheck, isChecked);
-            });
-        }
-        
-        if (fireStationsCheck != null) {
-            fireStationsCheck.setEnabled(true);
-            fireStationsCheck.setClickable(true);
-            android.util.Log.d("Facilities", "setupCheckboxListeners: fireStationsCheck enabled=" + fireStationsCheck.isEnabled() + ", clickable=" + fireStationsCheck.isClickable());
-            fireStationsCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                android.util.Log.d("Facilities", "Facility checkbox clicked: fireStationsCheck, isChecked=" + isChecked + ", enabled=" + fireStationsCheck.isEnabled());
-                handleFacilityCheckboxChange(fireStationsCheck, isChecked);
-            });
-        }
-        
-        if (governmentOfficesCheck != null) {
-            governmentOfficesCheck.setEnabled(true);
-            governmentOfficesCheck.setClickable(true);
-            android.util.Log.d("Facilities", "setupCheckboxListeners: governmentOfficesCheck enabled=" + governmentOfficesCheck.isEnabled() + ", clickable=" + governmentOfficesCheck.isClickable());
-            governmentOfficesCheck.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                android.util.Log.d("Facilities", "Facility checkbox clicked: governmentOfficesCheck, isChecked=" + isChecked + ", enabled=" + governmentOfficesCheck.isEnabled());
-                handleFacilityCheckboxChange(governmentOfficesCheck, isChecked);
-            });
+        for (RadioButton checkBox : facilityCheckboxes) {
+            if (checkBox != null) {
+                checkBox.setEnabled(true);
+                checkBox.setClickable(true);
+                checkBox.setFocusable(true);
+                checkBox.setFocusableInTouchMode(true);
+                android.util.Log.d("Facilities", "setupCheckboxListeners: " + checkBox.getText() + " enabled=" + checkBox.isEnabled() + ", clickable=" + checkBox.isClickable());
+                
+                // Add onClick listener to ensure all checkboxes are enabled BEFORE the click is processed
+                checkBox.setOnClickListener(v -> {
+                    android.util.Log.d("FacilitiesClickDebug", "*** onClick FIRED: Facility=" + checkBox.getText() + 
+                        " | enabled=" + checkBox.isEnabled() + 
+                        " | clickable=" + checkBox.isClickable() + 
+                        " | checked=" + checkBox.isChecked() +
+                        " | isUpdatingFacilityChecks=" + isUpdatingFacilityChecks);
+                    // CRITICAL: Immediately enable ALL checkboxes in BOTH sections before processing click
+                    // This ensures users can click checkboxes in the other section without manually deselecting
+                    ensureAllCheckboxesEnabled();
+                    // Force enable incident checkboxes specifically
+                    for (RadioButton incidentCheck : incidentCheckboxes) {
+                        if (incidentCheck != null) {
+                            boolean wasEnabled = incidentCheck.isEnabled();
+                            boolean wasClickable = incidentCheck.isClickable();
+                            incidentCheck.setEnabled(true);
+                            incidentCheck.setClickable(true);
+                            incidentCheck.setFocusable(true);
+                            incidentCheck.setFocusableInTouchMode(true);
+                            android.util.Log.d("FacilitiesClickDebug", "onClick: Force enabled incident=" + incidentCheck.getText() + 
+                                " | wasEnabled=" + wasEnabled + " -> enabled=" + incidentCheck.isEnabled() +
+                                " | wasClickable=" + wasClickable + " -> clickable=" + incidentCheck.isClickable());
+                        }
+                    }
+                });
+                
+                checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    android.util.Log.d("FacilitiesClickDebug", "*** onCheckedChange FIRED: Facility=" + checkBox.getText() + 
+                        ", isChecked=" + isChecked + 
+                        " | enabled=" + checkBox.isEnabled() + 
+                        " | clickable=" + checkBox.isClickable() +
+                        " | isUpdatingFacilityChecks=" + isUpdatingFacilityChecks);
+                    handleFacilityCheckboxChange(checkBox, isChecked);
+                });
+            }
         }
         
         // Heatmap switch
@@ -430,84 +487,215 @@ public class Facilities extends AppCompatActivity {
             return;
         }
 
-        // Ensure checkbox is enabled and clickable
+        // Ensure checkbox is enabled, clickable, and focusable
         checkBox.setEnabled(true);
         checkBox.setClickable(true);
+        checkBox.setFocusable(true);
+        checkBox.setFocusableInTouchMode(true);
         android.util.Log.d("Facilities", "setupExclusiveIncidentCheckbox: " + checkBox.getText() + " enabled=" + checkBox.isEnabled() + ", clickable=" + checkBox.isClickable());
 
+        // Add onClick listener to ensure all checkboxes are enabled BEFORE the click is processed
+        checkBox.setOnClickListener(v -> {
+            android.util.Log.d("FacilitiesClickDebug", "*** onClick FIRED: Incident=" + checkBox.getText() + 
+                " | enabled=" + checkBox.isEnabled() + 
+                " | clickable=" + checkBox.isClickable() + 
+                " | checked=" + checkBox.isChecked() +
+                " | isUpdatingIncidentChecks=" + isUpdatingIncidentChecks);
+            // CRITICAL: Immediately enable ALL checkboxes in BOTH sections before processing click
+            // This ensures users can click checkboxes in the other section without manually deselecting
+            ensureAllCheckboxesEnabled();
+            // Force enable facility checkboxes specifically
+            RadioButton[] facilityCheckboxes = {
+                evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck,
+                fireStationsCheck, governmentOfficesCheck
+            };
+            for (RadioButton facilityCheck : facilityCheckboxes) {
+                if (facilityCheck != null) {
+                    boolean wasEnabled = facilityCheck.isEnabled();
+                    boolean wasClickable = facilityCheck.isClickable();
+                    facilityCheck.setEnabled(true);
+                    facilityCheck.setClickable(true);
+                    facilityCheck.setFocusable(true);
+                    facilityCheck.setFocusableInTouchMode(true);
+                    android.util.Log.d("FacilitiesClickDebug", "onClick: Force enabled facility=" + facilityCheck.getText() + 
+                        " | wasEnabled=" + wasEnabled + " -> enabled=" + facilityCheck.isEnabled() +
+                        " | wasClickable=" + wasClickable + " -> clickable=" + facilityCheck.isClickable());
+                }
+            }
+        });
+
         checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            android.util.Log.d("Facilities", "Incident checkbox clicked: " + checkBox.getText() + ", isChecked=" + isChecked + ", enabled=" + checkBox.isEnabled());
+            android.util.Log.d("FacilitiesClickDebug", "*** onCheckedChange FIRED: Incident=" + checkBox.getText() + 
+                ", isChecked=" + isChecked + 
+                " | enabled=" + checkBox.isEnabled() + 
+                " | clickable=" + checkBox.isClickable() +
+                " | isUpdatingIncidentChecks=" + isUpdatingIncidentChecks);
             handleIncidentCheckboxChange(checkBox, isChecked);
         });
     }
 
     private void handleIncidentCheckboxChange(RadioButton changedCheckBox, boolean isChecked) {
-        android.util.Log.d("Facilities", "handleIncidentCheckboxChange: isChecked=" + isChecked + ", isUpdatingIncidentChecks=" + isUpdatingIncidentChecks);
+        android.util.Log.d("FacilitiesClickDebug", ">>> handleIncidentCheckboxChange: START | checkbox=" + changedCheckBox.getText() + 
+            " | isChecked=" + isChecked + 
+            " | isUpdatingIncidentChecks=" + isUpdatingIncidentChecks +
+            " | checkbox.enabled=" + changedCheckBox.isEnabled() +
+            " | checkbox.clickable=" + changedCheckBox.isClickable());
         
+        // CRITICAL: Ensure ALL checkboxes are enabled and clickable BEFORE processing the change
+        // This allows users to click checkboxes in the other section without manually deselecting first
+        ensureAllCheckboxesEnabled();
+        
+        // Prevent recursive calls, but don't block the click - just skip if already processing
         if (isUpdatingIncidentChecks) {
-            android.util.Log.d("Facilities", "handleIncidentCheckboxChange: Already updating, returning early");
+            android.util.Log.w("FacilitiesClickDebug", ">>> handleIncidentCheckboxChange: Already updating, but ensuring checkboxes are enabled");
+            ensureAllCheckboxesEnabled();
+            android.util.Log.d("FacilitiesClickDebug", "<<< handleIncidentCheckboxChange: EARLY RETURN (already updating)");
             return;
         }
 
         isUpdatingIncidentChecks = true;
+        android.util.Log.d("FacilitiesClickDebug", ">>> handleIncidentCheckboxChange: Set isUpdatingIncidentChecks=true");
         try {
             if (isChecked) {
-                android.util.Log.d("Facilities", "handleIncidentCheckboxChange: Incident checked, deselecting all facilities");
+                android.util.Log.d("FacilitiesClickDebug", ">>> handleIncidentCheckboxChange: Incident checked, deselecting all facilities");
                 // IMMEDIATELY deselect ALL facility checkboxes when ANY incident type is selected
                 // This ensures mutual exclusivity - facilities must be empty when incidents are selected
                 deselectAllFacilities();
                 
-                // Ensure all facility checkboxes remain enabled and clickable
-                ensureFacilitiesEnabled();
-                
                 // Then deselect all other incident types (only one incident can be selected at a time)
                 for (RadioButton other : incidentCheckboxes) {
                     if (other != null && other != changedCheckBox && other.isChecked()) {
+                        android.util.Log.d("FacilitiesClickDebug", ">>> handleIncidentCheckboxChange: Deselecting other incident=" + other.getText());
                         other.setChecked(false);
                         updateCheckboxVisualState(other, false);
                     }
                 }
             } else {
-                android.util.Log.d("Facilities", "handleIncidentCheckboxChange: Incident unchecked");
+                android.util.Log.d("FacilitiesClickDebug", ">>> handleIncidentCheckboxChange: Incident unchecked");
                 // When an incident is unchecked, we don't need to do anything special
                 // Facilities can remain as they are
             }
+            
+            // ALWAYS ensure all checkboxes remain enabled and clickable after any change
+            android.util.Log.d("FacilitiesClickDebug", ">>> handleIncidentCheckboxChange: Ensuring all checkboxes enabled before finish");
+            ensureAllCheckboxesEnabled();
 
             updateCheckboxVisualState(changedCheckBox, isChecked);
             updateFilterSummary();
         } finally {
             isUpdatingIncidentChecks = false;
-            android.util.Log.d("Facilities", "handleIncidentCheckboxChange: Finished, isUpdatingIncidentChecks set to false");
+            android.util.Log.d("FacilitiesClickDebug", "<<< handleIncidentCheckboxChange: Set isUpdatingIncidentChecks=false");
+            // Use post to ensure checkboxes are enabled after UI updates
+            changedCheckBox.post(() -> {
+                android.util.Log.d("FacilitiesClickDebug", ">>> handleIncidentCheckboxChange: POST handler - ensuring all enabled");
+                ensureAllCheckboxesEnabled();
+                // Force enable again to ensure they're clickable
+                for (RadioButton checkBox : incidentCheckboxes) {
+                    if (checkBox != null) {
+                        boolean wasEnabled = checkBox.isEnabled();
+                        boolean wasClickable = checkBox.isClickable();
+                        checkBox.setEnabled(true);
+                        checkBox.setClickable(true);
+                        android.util.Log.d("FacilitiesClickDebug", "POST: Force enabled incident=" + checkBox.getText() + 
+                            " | wasEnabled=" + wasEnabled + " -> enabled=" + checkBox.isEnabled() +
+                            " | wasClickable=" + wasClickable + " -> clickable=" + checkBox.isClickable());
+                    }
+                }
+                RadioButton[] facilityCheckboxes = {
+                    evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck,
+                    fireStationsCheck, governmentOfficesCheck
+                };
+                for (RadioButton checkBox : facilityCheckboxes) {
+                    if (checkBox != null) {
+                        boolean wasEnabled = checkBox.isEnabled();
+                        boolean wasClickable = checkBox.isClickable();
+                        checkBox.setEnabled(true);
+                        checkBox.setClickable(true);
+                        android.util.Log.d("FacilitiesClickDebug", "POST: Force enabled facility=" + checkBox.getText() + 
+                            " | wasEnabled=" + wasEnabled + " -> enabled=" + checkBox.isEnabled() +
+                            " | wasClickable=" + wasClickable + " -> clickable=" + checkBox.isClickable());
+                    }
+                }
+                android.util.Log.d("FacilitiesClickDebug", "<<< handleIncidentCheckboxChange: POST handler complete");
+            });
+            android.util.Log.d("FacilitiesClickDebug", "<<< handleIncidentCheckboxChange: END");
         }
     }
 
     private void handleFacilityCheckboxChange(RadioButton changedCheckBox, boolean isChecked) {
-        android.util.Log.d("Facilities", "handleFacilityCheckboxChange: isChecked=" + isChecked + ", isUpdatingFacilityChecks=" + isUpdatingFacilityChecks);
+        android.util.Log.d("FacilitiesClickDebug", ">>> handleFacilityCheckboxChange: START | checkbox=" + changedCheckBox.getText() + 
+            " | isChecked=" + isChecked + 
+            " | isUpdatingFacilityChecks=" + isUpdatingFacilityChecks +
+            " | checkbox.enabled=" + changedCheckBox.isEnabled() +
+            " | checkbox.clickable=" + changedCheckBox.isClickable());
         
+        // CRITICAL: Ensure ALL checkboxes are enabled and clickable BEFORE processing the change
+        // This allows users to click checkboxes in the other section without manually deselecting first
+        ensureAllCheckboxesEnabled();
+        
+        // Prevent recursive calls, but don't block the click - just skip if already processing
         if (isUpdatingFacilityChecks) {
-            android.util.Log.d("Facilities", "handleFacilityCheckboxChange: Already updating, returning early");
+            android.util.Log.w("FacilitiesClickDebug", ">>> handleFacilityCheckboxChange: Already updating, but ensuring checkboxes are enabled");
+            ensureAllCheckboxesEnabled();
+            android.util.Log.d("FacilitiesClickDebug", "<<< handleFacilityCheckboxChange: EARLY RETURN (already updating)");
             return;
         }
 
         isUpdatingFacilityChecks = true;
+        android.util.Log.d("FacilitiesClickDebug", ">>> handleFacilityCheckboxChange: Set isUpdatingFacilityChecks=true");
         try {
             if (isChecked) {
-                android.util.Log.d("Facilities", "handleFacilityCheckboxChange: Facility checked, deselecting all incidents");
+                android.util.Log.d("FacilitiesClickDebug", ">>> handleFacilityCheckboxChange: Facility checked, deselecting all incidents");
                 // IMMEDIATELY deselect ALL incident type checkboxes when ANY facility is selected
                 // This ensures mutual exclusivity - incidents must be empty when facilities are selected
                 deselectAllIncidents();
-                
-                // Ensure all incident checkboxes remain enabled and clickable
-                ensureIncidentsEnabled();
             } else {
-                android.util.Log.d("Facilities", "handleFacilityCheckboxChange: Facility unchecked");
+                android.util.Log.d("FacilitiesClickDebug", ">>> handleFacilityCheckboxChange: Facility unchecked");
             }
+            
+            // ALWAYS ensure all checkboxes remain enabled and clickable after any change
+            android.util.Log.d("FacilitiesClickDebug", ">>> handleFacilityCheckboxChange: Ensuring all checkboxes enabled before finish");
+            ensureAllCheckboxesEnabled();
 
             updateCheckboxVisualState(changedCheckBox, isChecked);
             updateFilterSummary();
         } finally {
             isUpdatingFacilityChecks = false;
-            android.util.Log.d("Facilities", "handleFacilityCheckboxChange: Finished, isUpdatingFacilityChecks set to false");
+            android.util.Log.d("FacilitiesClickDebug", "<<< handleFacilityCheckboxChange: Set isUpdatingFacilityChecks=false");
+            // Use post to ensure checkboxes are enabled after UI updates
+            changedCheckBox.post(() -> {
+                android.util.Log.d("FacilitiesClickDebug", ">>> handleFacilityCheckboxChange: POST handler - ensuring all enabled");
+                ensureAllCheckboxesEnabled();
+                // Force enable again to ensure they're clickable
+                for (RadioButton checkBox : incidentCheckboxes) {
+                    if (checkBox != null) {
+                        boolean wasEnabled = checkBox.isEnabled();
+                        boolean wasClickable = checkBox.isClickable();
+                        checkBox.setEnabled(true);
+                        checkBox.setClickable(true);
+                        android.util.Log.d("FacilitiesClickDebug", "POST: Force enabled incident=" + checkBox.getText() + 
+                            " | wasEnabled=" + wasEnabled + " -> enabled=" + checkBox.isEnabled() +
+                            " | wasClickable=" + wasClickable + " -> clickable=" + checkBox.isClickable());
+                    }
+                }
+                RadioButton[] facilityCheckboxes = {
+                    evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck,
+                    fireStationsCheck, governmentOfficesCheck
+                };
+                for (RadioButton checkBox : facilityCheckboxes) {
+                    if (checkBox != null) {
+                        boolean wasEnabled = checkBox.isEnabled();
+                        boolean wasClickable = checkBox.isClickable();
+                        checkBox.setEnabled(true);
+                        checkBox.setClickable(true);
+                        android.util.Log.d("FacilitiesClickDebug", "POST: Force enabled facility=" + checkBox.getText() + 
+                            " | wasEnabled=" + wasEnabled + " -> enabled=" + checkBox.isEnabled() +
+                            " | wasClickable=" + wasClickable + " -> clickable=" + checkBox.isClickable());
+                    }
+                }
+                android.util.Log.d("FacilitiesClickDebug", "<<< handleFacilityCheckboxChange: POST handler complete");
+            });
+            android.util.Log.d("FacilitiesClickDebug", "<<< handleFacilityCheckboxChange: END");
         }
     }
 
@@ -544,41 +732,56 @@ public class Facilities extends AppCompatActivity {
      * Deselect all facility checkboxes
      */
     private void deselectAllFacilities() {
-        android.util.Log.d("Facilities", "deselectAllFacilities: Starting deselection");
+        android.util.Log.d("FacilitiesClickDebug", ">>> deselectAllFacilities: START | isUpdatingFacilityChecks=" + isUpdatingFacilityChecks);
         // Set flag first to prevent listener from processing
         boolean wasUpdating = isUpdatingFacilityChecks;
         if (!wasUpdating) {
             isUpdatingFacilityChecks = true;
+            android.util.Log.d("FacilitiesClickDebug", ">>> deselectAllFacilities: Set isUpdatingFacilityChecks=true");
         }
         try {
+            // Ensure all facilities are enabled and clickable BEFORE deselecting
+            ensureFacilitiesEnabled();
+            
             // Deselect all facilities - call setChecked(false) on all regardless of current state
             // This ensures they are all unchecked when an incident is selected
-            if (evacuationCentersCheck != null) {
-                android.util.Log.d("Facilities", "deselectAllFacilities: Deselecting evacuationCentersCheck, enabled=" + evacuationCentersCheck.isEnabled());
-                evacuationCentersCheck.setChecked(false);
+            RadioButton[] facilityCheckboxes = {
+                evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck,
+                fireStationsCheck, governmentOfficesCheck
+            };
+            
+            for (RadioButton checkBox : facilityCheckboxes) {
+                if (checkBox != null) {
+                    boolean beforeEnabled = checkBox.isEnabled();
+                    boolean beforeClickable = checkBox.isClickable();
+                    boolean beforeChecked = checkBox.isChecked();
+                    android.util.Log.d("FacilitiesClickDebug", ">>> deselectAllFacilities: BEFORE | " + checkBox.getText() + 
+                        " | enabled=" + beforeEnabled + 
+                        " | clickable=" + beforeClickable + 
+                        " | checked=" + beforeChecked);
+                    checkBox.setChecked(false);
+                    // Ensure it remains enabled and clickable after deselection
+                    checkBox.setEnabled(true);
+                    checkBox.setClickable(true);
+                    checkBox.setFocusable(true);
+                    checkBox.setFocusableInTouchMode(true);
+                    android.util.Log.d("FacilitiesClickDebug", ">>> deselectAllFacilities: AFTER | " + checkBox.getText() + 
+                        " | enabled=" + checkBox.isEnabled() + 
+                        " | clickable=" + checkBox.isClickable() + 
+                        " | checked=" + checkBox.isChecked() +
+                        " | focusable=" + checkBox.isFocusable());
+                }
             }
-            if (healthFacilitiesCheck != null) {
-                android.util.Log.d("Facilities", "deselectAllFacilities: Deselecting healthFacilitiesCheck, enabled=" + healthFacilitiesCheck.isEnabled());
-                healthFacilitiesCheck.setChecked(false);
-            }
-            if (policeStationsCheck != null) {
-                android.util.Log.d("Facilities", "deselectAllFacilities: Deselecting policeStationsCheck, enabled=" + policeStationsCheck.isEnabled());
-                policeStationsCheck.setChecked(false);
-            }
-            if (fireStationsCheck != null) {
-                android.util.Log.d("Facilities", "deselectAllFacilities: Deselecting fireStationsCheck, enabled=" + fireStationsCheck.isEnabled());
-                fireStationsCheck.setChecked(false);
-            }
-            if (governmentOfficesCheck != null) {
-                android.util.Log.d("Facilities", "deselectAllFacilities: Deselecting governmentOfficesCheck, enabled=" + governmentOfficesCheck.isEnabled());
-                governmentOfficesCheck.setChecked(false);
-            }
-            android.util.Log.d("Facilities", "deselectAllFacilities: Finished deselection");
+            android.util.Log.d("FacilitiesClickDebug", ">>> deselectAllFacilities: Finished deselection");
         } finally {
             // Only reset flag if we weren't already updating
             if (!wasUpdating) {
                 isUpdatingFacilityChecks = false;
+                android.util.Log.d("FacilitiesClickDebug", ">>> deselectAllFacilities: Set isUpdatingFacilityChecks=false");
             }
+            // Ensure all facilities remain enabled and clickable after deselection
+            ensureFacilitiesEnabled();
+            android.util.Log.d("FacilitiesClickDebug", "<<< deselectAllFacilities: END");
         }
     }
 
@@ -586,27 +789,51 @@ public class Facilities extends AppCompatActivity {
      * Deselect all incident type checkboxes
      */
     private void deselectAllIncidents() {
-        android.util.Log.d("Facilities", "deselectAllIncidents: Starting deselection");
+        android.util.Log.d("FacilitiesClickDebug", ">>> deselectAllIncidents: START | isUpdatingIncidentChecks=" + isUpdatingIncidentChecks);
         // Set flag first to prevent listener from processing
         boolean wasUpdating = isUpdatingIncidentChecks;
         if (!wasUpdating) {
             isUpdatingIncidentChecks = true;
+            android.util.Log.d("FacilitiesClickDebug", ">>> deselectAllIncidents: Set isUpdatingIncidentChecks=true");
         }
         try {
+            // Ensure all incidents are enabled and clickable BEFORE deselecting
+            ensureIncidentsEnabled();
+            
             // Deselect all incidents - call setChecked(false) on all regardless of current state
             // This ensures they are all unchecked when a facility is selected
             for (RadioButton checkBox : incidentCheckboxes) {
                 if (checkBox != null) {
-                    android.util.Log.d("Facilities", "deselectAllIncidents: Deselecting " + checkBox.getText() + ", enabled=" + checkBox.isEnabled());
+                    boolean beforeEnabled = checkBox.isEnabled();
+                    boolean beforeClickable = checkBox.isClickable();
+                    boolean beforeChecked = checkBox.isChecked();
+                    android.util.Log.d("FacilitiesClickDebug", ">>> deselectAllIncidents: BEFORE | " + checkBox.getText() + 
+                        " | enabled=" + beforeEnabled + 
+                        " | clickable=" + beforeClickable + 
+                        " | checked=" + beforeChecked);
                     checkBox.setChecked(false);
+                    // Ensure it remains enabled and clickable after deselection
+                    checkBox.setEnabled(true);
+                    checkBox.setClickable(true);
+                    checkBox.setFocusable(true);
+                    checkBox.setFocusableInTouchMode(true);
+                    android.util.Log.d("FacilitiesClickDebug", ">>> deselectAllIncidents: AFTER | " + checkBox.getText() + 
+                        " | enabled=" + checkBox.isEnabled() + 
+                        " | clickable=" + checkBox.isClickable() + 
+                        " | checked=" + checkBox.isChecked() +
+                        " | focusable=" + checkBox.isFocusable());
                 }
             }
-            android.util.Log.d("Facilities", "deselectAllIncidents: Finished deselection");
+            android.util.Log.d("FacilitiesClickDebug", ">>> deselectAllIncidents: Finished deselection");
         } finally {
             // Only reset flag if we weren't already updating
             if (!wasUpdating) {
                 isUpdatingIncidentChecks = false;
+                android.util.Log.d("FacilitiesClickDebug", ">>> deselectAllIncidents: Set isUpdatingIncidentChecks=false");
             }
+            // Ensure all incidents remain enabled and clickable after deselection
+            ensureIncidentsEnabled();
+            android.util.Log.d("FacilitiesClickDebug", "<<< deselectAllIncidents: END");
         }
     }
 
@@ -614,46 +841,68 @@ public class Facilities extends AppCompatActivity {
      * Ensure all facility checkboxes are enabled and clickable
      */
     private void ensureFacilitiesEnabled() {
-        android.util.Log.d("Facilities", "ensureFacilitiesEnabled: Ensuring all facilities are enabled");
-        if (evacuationCentersCheck != null) {
-            evacuationCentersCheck.setEnabled(true);
-            evacuationCentersCheck.setClickable(true);
-            android.util.Log.d("Facilities", "ensureFacilitiesEnabled: evacuationCentersCheck enabled=" + evacuationCentersCheck.isEnabled() + ", clickable=" + evacuationCentersCheck.isClickable());
+        android.util.Log.d("FacilitiesClickDebug", "=== ensureFacilitiesEnabled: START ===");
+        RadioButton[] facilityCheckboxes = {
+            evacuationCentersCheck, healthFacilitiesCheck, policeStationsCheck,
+            fireStationsCheck, governmentOfficesCheck
+        };
+        
+        for (RadioButton checkBox : facilityCheckboxes) {
+            if (checkBox != null) {
+                boolean wasEnabled = checkBox.isEnabled();
+                boolean wasClickable = checkBox.isClickable();
+                checkBox.setEnabled(true);
+                checkBox.setClickable(true);
+                checkBox.setFocusable(true);
+                checkBox.setFocusableInTouchMode(true);
+                android.util.Log.d("FacilitiesClickDebug", "ensureFacilitiesEnabled: " + checkBox.getText() + 
+                    " | wasEnabled=" + wasEnabled + " -> enabled=" + checkBox.isEnabled() + 
+                    " | wasClickable=" + wasClickable + " -> clickable=" + checkBox.isClickable() +
+                    " | checked=" + checkBox.isChecked() +
+                    " | focusable=" + checkBox.isFocusable() +
+                    " | focusableInTouchMode=" + checkBox.isFocusableInTouchMode());
+            } else {
+                android.util.Log.w("FacilitiesClickDebug", "ensureFacilitiesEnabled: Found NULL checkbox!");
+            }
         }
-        if (healthFacilitiesCheck != null) {
-            healthFacilitiesCheck.setEnabled(true);
-            healthFacilitiesCheck.setClickable(true);
-            android.util.Log.d("Facilities", "ensureFacilitiesEnabled: healthFacilitiesCheck enabled=" + healthFacilitiesCheck.isEnabled() + ", clickable=" + healthFacilitiesCheck.isClickable());
-        }
-        if (policeStationsCheck != null) {
-            policeStationsCheck.setEnabled(true);
-            policeStationsCheck.setClickable(true);
-            android.util.Log.d("Facilities", "ensureFacilitiesEnabled: policeStationsCheck enabled=" + policeStationsCheck.isEnabled() + ", clickable=" + policeStationsCheck.isClickable());
-        }
-        if (fireStationsCheck != null) {
-            fireStationsCheck.setEnabled(true);
-            fireStationsCheck.setClickable(true);
-            android.util.Log.d("Facilities", "ensureFacilitiesEnabled: fireStationsCheck enabled=" + fireStationsCheck.isEnabled() + ", clickable=" + fireStationsCheck.isClickable());
-        }
-        if (governmentOfficesCheck != null) {
-            governmentOfficesCheck.setEnabled(true);
-            governmentOfficesCheck.setClickable(true);
-            android.util.Log.d("Facilities", "ensureFacilitiesEnabled: governmentOfficesCheck enabled=" + governmentOfficesCheck.isEnabled() + ", clickable=" + governmentOfficesCheck.isClickable());
-        }
+        android.util.Log.d("FacilitiesClickDebug", "=== ensureFacilitiesEnabled: END ===");
     }
 
     /**
      * Ensure all incident checkboxes are enabled and clickable
      */
     private void ensureIncidentsEnabled() {
-        android.util.Log.d("Facilities", "ensureIncidentsEnabled: Ensuring all incidents are enabled");
+        android.util.Log.d("FacilitiesClickDebug", "=== ensureIncidentsEnabled: START ===");
         for (RadioButton checkBox : incidentCheckboxes) {
             if (checkBox != null) {
+                boolean wasEnabled = checkBox.isEnabled();
+                boolean wasClickable = checkBox.isClickable();
                 checkBox.setEnabled(true);
                 checkBox.setClickable(true);
-                android.util.Log.d("Facilities", "ensureIncidentsEnabled: " + checkBox.getText() + " enabled=" + checkBox.isEnabled() + ", clickable=" + checkBox.isClickable());
+                checkBox.setFocusable(true);
+                checkBox.setFocusableInTouchMode(true);
+                android.util.Log.d("FacilitiesClickDebug", "ensureIncidentsEnabled: " + checkBox.getText() + 
+                    " | wasEnabled=" + wasEnabled + " -> enabled=" + checkBox.isEnabled() + 
+                    " | wasClickable=" + wasClickable + " -> clickable=" + checkBox.isClickable() +
+                    " | checked=" + checkBox.isChecked() +
+                    " | focusable=" + checkBox.isFocusable() +
+                    " | focusableInTouchMode=" + checkBox.isFocusableInTouchMode());
+            } else {
+                android.util.Log.w("FacilitiesClickDebug", "ensureIncidentsEnabled: Found NULL checkbox!");
             }
         }
+        android.util.Log.d("FacilitiesClickDebug", "=== ensureIncidentsEnabled: END ===");
+    }
+    
+    /**
+     * Ensure all checkboxes (both incidents and facilities) are enabled and clickable
+     */
+    private void ensureAllCheckboxesEnabled() {
+        android.util.Log.d("FacilitiesClickDebug", "=== ensureAllCheckboxesEnabled: START ===");
+        android.util.Log.d("FacilitiesClickDebug", "ensureAllCheckboxesEnabled: isUpdatingIncidentChecks=" + isUpdatingIncidentChecks + ", isUpdatingFacilityChecks=" + isUpdatingFacilityChecks);
+        ensureIncidentsEnabled();
+        ensureFacilitiesEnabled();
+        android.util.Log.d("FacilitiesClickDebug", "=== ensureAllCheckboxesEnabled: END ===");
     }
 
     private void setupButtons() {
