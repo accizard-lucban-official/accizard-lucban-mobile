@@ -1125,10 +1125,37 @@
                 android:clickable="true"
                 android:focusable="true">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/frame__6_"/>
+                <FrameLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_small">
+
+                    <ImageView
+                        android:id="@+id/chat_icon_map"
+                        android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
+                        android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
+                        android:layout_gravity="center"
+                        android:src="@drawable/frame__6_"
+                        android:contentDescription="Chat Icon" />
+
+                    <!-- Chat Notification Badge - Positioned above the icon -->
+                    <TextView
+                        android:id="@+id/chat_badge_map"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="top|center_horizontal"
+                        android:layout_marginTop="-2dp"
+                        android:background="@drawable/notification_badge"
+                        android:gravity="center"
+                        android:text=""
+                        android:textColor="@android:color/white"
+                        android:textSize="@dimen/text_size_tiny"
+                        android:textStyle="bold"
+                        android:minWidth="20dp"
+                        android:minHeight="20dp"
+                        android:visibility="gone" />
+
+                </FrameLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -1136,7 +1163,7 @@
                     android:text="Chat"
                     android:textColor="#999999"
                     android:textSize="12sp"
-                    android:layout_marginTop="4dp"/>
+                    android:layout_marginTop="@dimen/margin_xxsmall"/>
             </LinearLayout>
 
             <!-- Empty space for Report button (same weight as other tabs) -->
@@ -1243,7 +1270,7 @@
                 android:layout_width="28dp"
                 android:layout_height="28dp"
                 android:layout_gravity="center"
-                android:src="@drawable/ic_report_selected"
+                android:src="@drawable/emergencyreporticon"
                 android:tint="#333333"/>
         </FrameLayout>
     </FrameLayout>

@@ -72,6 +72,7 @@ public class ChatActivity extends AppCompatActivity {
     private ImageButton addActionButton;
     private LinearLayout inputContainer;
     private TextView alertsBadgeChat;
+    private TextView chatBadgeChat; // Chat badge for unread messages
     private SharedPreferences sharedPreferences;
     
     private static final int CALL_PERMISSION_REQUEST_CODE = 101;
@@ -113,6 +114,9 @@ public class ChatActivity extends AppCompatActivity {
     // Chat badge count
     private static final int CHAT_BADGE_NOTIFICATION_ID = 999;
     private NotificationManager notificationManager;
+    
+    // Real-time listener for chat badge
+    private com.google.firebase.firestore.ListenerRegistration chatBadgeListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -175,6 +179,9 @@ public class ChatActivity extends AppCompatActivity {
             // ✅ CRITICAL FIX: Clear chat badge IMMEDIATELY when activity is created
             clearChatBadge();
             
+            // ✅ NEW: Mark all messages as viewed when chat opens (like alerts badge)
+            ChatBadgeManager.getInstance().markMessagesAsViewed(this);
+            
             // Update notification badge for alerts (NOT chat)
             updateNotificationBadge();
             
@@ -208,11 +215,28 @@ public class ChatActivity extends AppCompatActivity {
             mapTab = findViewById(R.id.mapTab);
             alertsTab = findViewById(R.id.alertsTab);
             alertsBadgeChat = findViewById(R.id.alerts_badge_chat);
+            chatBadgeChat = findViewById(R.id.chat_badge_chat);
             
             // Register badge with AnnouncementNotificationManager so it gets updated when alerts are viewed
             if (alertsBadgeChat != null) {
                 AnnouncementNotificationManager.getInstance().registerBadge("ChatActivity", alertsBadgeChat);
                 Log.d(TAG, "✅ ChatActivity badge registered with AnnouncementNotificationManager");
+            }
+            
+            // Initialize chat badge as hidden
+            if (chatBadgeChat != null) {
+                chatBadgeChat.setVisibility(View.GONE);
+                chatBadgeChat.setText("0");
+                Log.d(TAG, "✅ Chat badge initialized");
+                
+                // Setup real-time listener for chat badge updates
+                setupChatBadgeListener();
+                
+                // ✅ NEW: Update chat badge immediately (like alerts badge)
+                // Note: Badge will be hidden automatically since user is viewing chat
+                // But it will show when user navigates away
+                ChatBadgeManager.getInstance().updateChatBadge(this, chatBadgeChat);
+                Log.d(TAG, "✅ Chat badge updated immediately after initialization");
             }
 
             Log.d(TAG, "Views initialized successfully");
@@ -1089,11 +1113,22 @@ public class ChatActivity extends AppCompatActivity {
         // ✅ CRITICAL FIX: Clear chat badge IMMEDIATELY when user opens chat
         clearChatBadge();
         
+        // ✅ NEW: Mark all messages as viewed (like alerts badge) - updates last viewed count
+        ChatBadgeManager.getInstance().markMessagesAsViewed(this);
+        
         // ✅ FIXED: Mark all messages as read FIRST (before updating badge)
         markMessagesAsRead();
         
-        // Update notification badge for alerts (NOT chat)
+        // ✅ NEW: Update chat badge using ChatBadgeManager (will hide since user is viewing chat)
+        if (chatBadgeChat != null) {
+            ChatBadgeManager.getInstance().updateChatBadge(this, chatBadgeChat);
+        }
+        
+        // Update notification badge for alerts (shows in ChatActivity like alerts_badge_chat)
         updateNotificationBadge();
+        
+        // ✅ NEW: Note - chat badge will be hidden automatically when user is viewing chat
+        // But it will show when user navigates to other activities (via real-time listener)
         
         // Scroll to bottom to show latest messages
         scrollToBottomWithDelay();
@@ -1146,6 +1181,13 @@ public class ChatActivity extends AppCompatActivity {
         Log.d(TAG, "🔴 CRITICAL: Chat marked as NOT VISIBLE in onDestroy - notifications ALLOWED");
         
         try {
+            // Remove chat badge listener
+            if (chatBadgeListener != null) {
+                chatBadgeListener.remove();
+                chatBadgeListener = null;
+                Log.d(TAG, "✅ Chat badge listener removed");
+            }
+            
             // Unregister badge from notification manager
             AnnouncementNotificationManager.getInstance().unregisterBadge("ChatActivity");
             Log.d(TAG, "ChatActivity badge unregistered");
@@ -1328,8 +1370,10 @@ public class ChatActivity extends AppCompatActivity {
                         }
                     }, 200); // 200ms delay to ensure layout is complete
                     
-                    // ✅ FIXED: Don't update chat badge when loading - user is viewing chat
-                    // Badge will be updated when user leaves ChatActivity
+                    // ✅ NEW: Update chat badge using ChatBadgeManager after loading messages
+                    if (chatBadgeChat != null) {
+                        ChatBadgeManager.getInstance().updateChatBadge(ChatActivity.this, chatBadgeChat);
+                    }
                     
                     Log.d(TAG, "Loaded " + messagesList.size() + " messages from Firestore");
                     // Initialize previous message count for deletion detection
@@ -1448,6 +1492,12 @@ public class ChatActivity extends AppCompatActivity {
                                                 chatAdapter.notifyItemInserted(messagesList.size() - 1);
                                                 
                                                 Log.d(TAG, "✅ New message added via realtime listener: " + newMessage.getContent());
+                                                
+                                                // ✅ NEW: Update chat badge using ChatBadgeManager when new message arrives
+                                                // ChatBadgeManager will automatically check if user is viewing chat
+                                                if (chatBadgeChat != null && !newMessage.isUser()) {
+                                                    ChatBadgeManager.getInstance().updateChatBadge(ChatActivity.this, chatBadgeChat);
+                                                }
                                                 
                                                 // ✅ FIXED: Don't update badge if user is viewing chat (handled by updateChatNotificationBadge)
                                                 updateChatNotificationBadge();
@@ -2340,6 +2390,37 @@ public class ChatActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             Log.e(TAG, "Error marking messages as read: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Setup real-time listener for chat badge updates
+     * This will automatically update the badge when new messages arrive
+     */
+    private void setupChatBadgeListener() {
+        try {
+            if (chatBadgeChat == null) {
+                Log.w(TAG, "Chat badge view is null, cannot setup listener");
+                return;
+            }
+            
+            // Remove existing listener if any
+            if (chatBadgeListener != null) {
+                chatBadgeListener.remove();
+                chatBadgeListener = null;
+            }
+            
+            // Setup real-time listener using ChatBadgeManager
+            chatBadgeListener = ChatBadgeManager.getInstance().setupRealtimeBadgeListener(
+                this, chatBadgeChat);
+            
+            if (chatBadgeListener != null) {
+                Log.d(TAG, "✅ Real-time chat badge listener setup successfully");
+            } else {
+                Log.w(TAG, "⚠️ Failed to setup real-time chat badge listener");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up chat badge listener: " + e.getMessage(), e);
         }
     }
 }

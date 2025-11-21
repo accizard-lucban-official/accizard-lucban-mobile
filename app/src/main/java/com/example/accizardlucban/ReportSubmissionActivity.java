@@ -16,6 +16,7 @@ import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.PopupMenu;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
@@ -119,6 +120,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private TextView chatBadgeReport; // Chat notification badge
     private SharedPreferences sharedPreferences;
     
+    // Real-time listener for chat badge
+    private com.google.firebase.firestore.ListenerRegistration chatBadgeListener;
+    
     // Status count TextViews
     private TextView pendingCountText;
     private TextView ongoingCountText;
@@ -128,10 +132,12 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private TextView totalCountText;
     
     private static final int IMAGE_PICK_REQUEST = 2001;
+    private static final int VIDEO_PICK_REQUEST = 2004;
     private static final int CAMERA_REQUEST_CODE = 2002;
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 2003;
     private Uri selectedImageUri;
-    private List<Uri> selectedImageUris = new ArrayList<>();
+    private List<Uri> selectedImageUris = new ArrayList<>(); // Keep for backward compatibility
+    private List<MediaItem> selectedMediaItems = new ArrayList<>(); // New: supports both images and videos
 
     // Bottom Navigation
     private LinearLayout homeTab;
@@ -248,6 +254,20 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         if (alertsBadgeReport != null) {
             AnnouncementNotificationManager.getInstance().registerBadge("ReportSubmissionActivity", alertsBadgeReport);
             Log.d(TAG, "✅ ReportSubmissionActivity badge registered with AnnouncementNotificationManager");
+        }
+        
+        // Initialize chat badge as hidden and setup real-time listener
+        if (chatBadgeReport != null) {
+            chatBadgeReport.setVisibility(View.GONE);
+            chatBadgeReport.setText("0");
+            Log.d(TAG, "✅ Chat badge initialized in ReportSubmissionActivity");
+            
+            // Setup real-time listener for chat badge updates
+            setupChatBadgeListener();
+            
+            // ✅ NEW: Update chat badge immediately (like alerts badge)
+            ChatBadgeManager.getInstance().updateChatBadge(this, chatBadgeReport);
+            Log.d(TAG, "✅ Chat badge updated immediately in ReportSubmissionActivity");
         }
         
         // Setup required field labels with red asterisks
@@ -573,11 +593,11 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             });
         }
         
-        // Upload images button click
+        // Upload images/videos button click - show popup menu
         uploadImagesButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                pickImageFromGallery();
+                showMediaSelectionMenu(v);
             }
         });
 
@@ -763,11 +783,63 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         }
     }
     
+    /**
+     * Show popup menu to select Image or Video
+     */
+    private void showMediaSelectionMenu(View anchor) {
+        try {
+            PopupMenu popupMenu = new PopupMenu(this, anchor);
+            
+            // Inflate menu from resource
+            popupMenu.getMenuInflater().inflate(R.menu.media_selection_menu, popupMenu.getMenu());
+            
+            // Ensure menu has items (fallback if resource not found)
+            if (popupMenu.getMenu().size() == 0) {
+                popupMenu.getMenu().add(0, 1, 0, "Select Image");
+                popupMenu.getMenu().add(0, 2, 0, "Select Video");
+            }
+            
+            popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                @Override
+                public boolean onMenuItemClick(android.view.MenuItem item) {
+                    int itemId = item.getItemId();
+                    String title = item.getTitle().toString();
+                    
+                    // Check by resource ID first, then by numeric ID, then by title
+                    if (itemId == R.id.menu_select_image || itemId == 1 || title.contains("Image")) {
+                        pickImageFromGallery();
+                        return true;
+                    } else if (itemId == R.id.menu_select_video || itemId == 2 || title.contains("Video")) {
+                        pickVideoFromGallery();
+                        return true;
+                    }
+                    return false;
+                }
+            });
+            
+            popupMenu.show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing media selection menu: " + e.getMessage(), e);
+            // Fallback: just pick image
+            pickImageFromGallery();
+        }
+    }
+    
     private void pickImageFromGallery() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("image/*");
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         startActivityForResult(Intent.createChooser(intent, "Select Pictures"), IMAGE_PICK_REQUEST);
+    }
+    
+    /**
+     * Pick video from gallery
+     */
+    private void pickVideoFromGallery() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("video/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        startActivityForResult(Intent.createChooser(intent, "Select Videos"), VIDEO_PICK_REQUEST);
     }
 
     @Override
@@ -855,7 +927,43 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             
             Log.d(TAG, "Total images stored: " + selectedImageUris.size());
             
+            // Also add to MediaItem list
+            for (Uri imageUri : selectedImageUris) {
+                selectedMediaItems.add(new MediaItem(imageUri, MediaItem.TYPE_IMAGE));
+            }
+            
             // Update professional image gallery
+            updateProfessionalImageGallery();
+        }
+        
+        // Handle video selection
+        if (requestCode == VIDEO_PICK_REQUEST && resultCode == RESULT_OK && data != null) {
+            Log.d(TAG, "Processing video selection result");
+            
+            List<Uri> selectedVideoUris = new ArrayList<>();
+            
+            if (data.getClipData() != null) {
+                int count = data.getClipData().getItemCount();
+                Log.d(TAG, "Multiple videos selected: " + count);
+                for (int i = 0; i < count; i++) {
+                    Uri videoUri = data.getClipData().getItemAt(i).getUri();
+                    selectedVideoUris.add(videoUri);
+                    selectedMediaItems.add(new MediaItem(videoUri, MediaItem.TYPE_VIDEO));
+                    Log.d(TAG, "Added video " + (i + 1) + ": " + videoUri.toString());
+                }
+            } else if (data.getData() != null) {
+                Uri videoUri = data.getData();
+                selectedVideoUris.add(videoUri);
+                selectedMediaItems.add(new MediaItem(videoUri, MediaItem.TYPE_VIDEO));
+                Log.d(TAG, "Single video selected: " + videoUri.toString());
+            } else {
+                Log.d(TAG, "No videos found in result");
+            }
+            
+            Log.d(TAG, "Total videos stored: " + selectedVideoUris.size());
+            Log.d(TAG, "Total media items: " + selectedMediaItems.size());
+            
+            // Update professional image gallery (it will handle videos too)
             updateProfessionalImageGallery();
         }
         
@@ -872,6 +980,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                     
                     if (imageUri != null) {
                         selectedImageUris.add(imageUri);
+                        selectedMediaItems.add(new MediaItem(imageUri, MediaItem.TYPE_IMAGE));
                         Log.d(TAG, "Camera image added: " + imageUri.toString());
                         
                         // Update professional image gallery
@@ -909,7 +1018,19 @@ public class ReportSubmissionActivity extends AppCompatActivity {
 
     
     private void updateProfessionalImageGallery() {
-        if (selectedImageUris.isEmpty()) {
+        // Convert MediaItems to URIs for the adapter
+        List<Uri> allUris = new ArrayList<>();
+        for (MediaItem item : selectedMediaItems) {
+            allUris.add(item.getUri());
+        }
+        // Also add from legacy selectedImageUris
+        for (Uri uri : selectedImageUris) {
+            if (!allUris.contains(uri)) {
+                allUris.add(uri);
+            }
+        }
+        
+        if (allUris.isEmpty()) {
             // Show upload buttons container with animation, hide gallery
             if (uploadImagesButton != null && takePhotoButton != null) {
                 LinearLayout mediaContainer = findViewById(R.id.mediaAttachmentsContainer);
@@ -933,14 +1054,32 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             addMoreImagesButton.setVisibility(View.VISIBLE);
             addMoreImagesButton.startAnimation(AnimationUtils.loadAnimation(this, R.anim.fade_in_scale));
             
-            imageGalleryAdapter.updateImages(selectedImageUris);
+            imageGalleryAdapter.updateImages(allUris);
         }
     }
     
     
     private void removeImageFromGallery(int position) {
-        if (position >= 0 && position < selectedImageUris.size()) {
-            selectedImageUris.remove(position);
+        // Convert MediaItems to URIs to find the correct position
+        List<Uri> allUris = new ArrayList<>();
+        for (MediaItem item : selectedMediaItems) {
+            allUris.add(item.getUri());
+        }
+        for (Uri uri : selectedImageUris) {
+            if (!allUris.contains(uri)) {
+                allUris.add(uri);
+            }
+        }
+        
+        if (position >= 0 && position < allUris.size()) {
+            Uri uriToRemove = allUris.get(position);
+            
+            // Remove from MediaItems
+            selectedMediaItems.removeIf(item -> item.getUri().equals(uriToRemove));
+            
+            // Remove from legacy selectedImageUris
+            selectedImageUris.remove(uriToRemove);
+            
             imageGalleryAdapter.removeImage(position);
             
             // Update gallery visibility
@@ -1233,17 +1372,44 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             
             // Set attachments
             if (tvConfirmAttachments != null && rvConfirmImagePreviews != null) {
-                int attachmentCount = selectedImageUris.size();
-                if (attachmentCount > 0) {
-                    tvConfirmAttachments.setText(attachmentCount + " image(s) attached");
+                int imageCount = 0;
+                int videoCount = 0;
+                for (MediaItem item : selectedMediaItems) {
+                    if (item.isImage()) imageCount++;
+                    else if (item.isVideo()) videoCount++;
+                }
+                // Also count from legacy selectedImageUris
+                imageCount += selectedImageUris.size();
+                
+                int totalCount = imageCount + videoCount;
+                if (totalCount > 0) {
+                    StringBuilder attachmentText = new StringBuilder();
+                    if (imageCount > 0) {
+                        attachmentText.append(imageCount).append(" image").append(imageCount > 1 ? "s" : "");
+                    }
+                    if (videoCount > 0) {
+                        if (attachmentText.length() > 0) attachmentText.append(", ");
+                        attachmentText.append(videoCount).append(" video").append(videoCount > 1 ? "s" : "");
+                    }
+                    attachmentText.append(" attached");
+                    tvConfirmAttachments.setText(attachmentText.toString());
                     
                     // Show image previews in horizontal RecyclerView
                     rvConfirmImagePreviews.setVisibility(View.VISIBLE);
                     LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
                     rvConfirmImagePreviews.setLayoutManager(layoutManager);
                     
-                    // Use the same adapter for preview
-                    ProfessionalImageGalleryAdapter previewAdapter = new ProfessionalImageGalleryAdapter(this, selectedImageUris);
+                    // Convert MediaItems to URIs for preview adapter
+                    List<Uri> previewUris = new ArrayList<>();
+                    for (MediaItem item : selectedMediaItems) {
+                        previewUris.add(item.getUri());
+                    }
+                    for (Uri uri : selectedImageUris) {
+                        if (!previewUris.contains(uri)) {
+                            previewUris.add(uri);
+                        }
+                    }
+                    ProfessionalImageGalleryAdapter previewAdapter = new ProfessionalImageGalleryAdapter(this, previewUris);
                     previewAdapter.setOnImageRemoveListener(null); // Disable remove in preview
                     previewAdapter.setOnImageClickListener(new ProfessionalImageGalleryAdapter.OnImageClickListener() {
                         @Override
@@ -1332,15 +1498,134 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             location
         );
 
-        // Upload images first if any, then submit report
-        if (!selectedImageUris.isEmpty()) {
-            uploadReportImagesAndSubmit(reportData);
+        // Upload images and videos first if any, then submit report
+        List<Uri> imageUris = new ArrayList<>();
+        List<Uri> videoUris = new ArrayList<>();
+        
+        for (MediaItem mediaItem : selectedMediaItems) {
+            if (mediaItem.isImage()) {
+                imageUris.add(mediaItem.getUri());
+            } else if (mediaItem.isVideo()) {
+                videoUris.add(mediaItem.getUri());
+            }
+        }
+        
+        // Also add from legacy selectedImageUris for backward compatibility
+        for (Uri uri : selectedImageUris) {
+            if (!imageUris.contains(uri)) {
+                imageUris.add(uri);
+            }
+        }
+        
+        if (!imageUris.isEmpty() || !videoUris.isEmpty()) {
+            uploadReportMediaAndSubmit(reportData, imageUris, videoUris);
         } else {
-            // Submit report without images
+            // Submit report without media
             submitReportToFirestore(reportData);
         }
     }
 
+    /**
+     * Upload both images and videos, then submit report
+     */
+    private void uploadReportMediaAndSubmit(Map<String, Object> reportData, List<Uri> imageUris, List<Uri> videoUris) {
+        // Generate a temporary report ID for organizing media
+        final String tempReportId = "temp_" + System.currentTimeMillis();
+        
+        final List<String> allMediaUrls = new ArrayList<>();
+        final int[] uploadCount = {0};
+        final int totalMedia = imageUris.size() + videoUris.size();
+        
+        if (totalMedia == 0) {
+            submitReportToFirestore(reportData);
+            return;
+        }
+        
+        submitReportButton.setEnabled(false);
+        submitReportButton.setText("Uploading media...");
+        
+        // Upload images first
+        if (!imageUris.isEmpty()) {
+            StorageHelper.uploadReportImages(tempReportId, imageUris,
+                new OnSuccessListener<List<String>>() {
+                    @Override
+                    public void onSuccess(List<String> imageUrls) {
+                        allMediaUrls.addAll(imageUrls);
+                        uploadCount[0] += imageUrls.size();
+                        
+                        // Upload videos after images
+                        if (!videoUris.isEmpty()) {
+                            StorageHelper.uploadReportVideos(tempReportId, videoUris,
+                                new OnSuccessListener<List<String>>() {
+                                    @Override
+                                    public void onSuccess(List<String> videoUrls) {
+                                        allMediaUrls.addAll(videoUrls);
+                                        uploadCount[0] += videoUrls.size();
+                                        
+                                        // All media uploaded
+                                        if (uploadCount[0] == totalMedia) {
+                                            reportData.put("imageUrls", allMediaUrls);
+                                            if (!videoUris.isEmpty()) {
+                                                reportData.put("videoUrls", videoUrls);
+                                            }
+                                            submitReportToFirestore(reportData);
+                                        }
+                                    }
+                                },
+                                new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        Log.w(TAG, "Error uploading videos", e);
+                                        Toast.makeText(ReportSubmissionActivity.this, 
+                                            "Error uploading videos: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                        submitReportButton.setEnabled(true);
+                                        submitReportButton.setText("Submit Report");
+                                    }
+                                });
+                        } else {
+                            // No videos, just submit with images
+                            reportData.put("imageUrls", allMediaUrls);
+                            submitReportToFirestore(reportData);
+                        }
+                    }
+                },
+                new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w(TAG, "Error uploading images", e);
+                        Toast.makeText(ReportSubmissionActivity.this, 
+                            "Error uploading images: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        submitReportButton.setEnabled(true);
+                        submitReportButton.setText("Submit Report");
+                    }
+                });
+        } else {
+            // Only videos, no images
+            StorageHelper.uploadReportVideos(tempReportId, videoUris,
+                new OnSuccessListener<List<String>>() {
+                    @Override
+                    public void onSuccess(List<String> videoUrls) {
+                        reportData.put("videoUrls", videoUrls);
+                        submitReportToFirestore(reportData);
+                    }
+                },
+                new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w(TAG, "Error uploading videos", e);
+                        Toast.makeText(ReportSubmissionActivity.this, 
+                            "Error uploading videos: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        submitReportButton.setEnabled(true);
+                        submitReportButton.setText("Submit Report");
+                    }
+                });
+        }
+    }
+    
+    /**
+     * @deprecated Use uploadReportMediaAndSubmit instead
+     */
+    @Deprecated
     private void uploadReportImagesAndSubmit(Map<String, Object> reportData) {
         // Generate a temporary report ID for organizing images
         final String tempReportId = "temp_" + System.currentTimeMillis();
@@ -1708,8 +1993,17 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         LinearLayoutManager dialogLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
         dialogRecyclerView.setLayoutManager(dialogLayoutManager);
         
-        // Create adapter for dialog
-        ProfessionalImageGalleryAdapter dialogAdapter = new ProfessionalImageGalleryAdapter(this, selectedImageUris);
+        // Convert MediaItems to URIs for dialog adapter
+        List<Uri> dialogUris = new ArrayList<>();
+        for (MediaItem item : selectedMediaItems) {
+            dialogUris.add(item.getUri());
+        }
+        for (Uri uri : selectedImageUris) {
+            if (!dialogUris.contains(uri)) {
+                dialogUris.add(uri);
+            }
+        }
+        ProfessionalImageGalleryAdapter dialogAdapter = new ProfessionalImageGalleryAdapter(this, dialogUris);
         dialogAdapter.setOnImageClickListener(new ProfessionalImageGalleryAdapter.OnImageClickListener() {
             @Override
             public void onImageClick(int position, Uri clickedImageUri) {
@@ -2686,38 +2980,53 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     }
     
     /**
-     * Update chat notification badge
-     * ✅ NEW: Shows unread chat messages count on the chat tab
-     * ✅ ENHANCED: Now uses detailed debug query to find issues
+     * ✅ NEW: Setup real-time listener for chat badge updates
+     * This will automatically update the badge when new messages arrive
      */
-    private void updateChatBadge() {
+    private void setupChatBadgeListener() {
         try {
-            Log.d(TAG, "=== updateChatBadge() in ReportSubmissionActivity ===");
-            
             if (chatBadgeReport == null) {
-                Log.e(TAG, "❌ chatBadgeReport is NULL!");
-                Log.e(TAG, "❌ This means findViewById(R.id.chat_badge_report) returned null");
-                Log.e(TAG, "❌ Check if chat_badge_report exists in activity_report_submission.xml");
+                Log.w(TAG, "Chat badge view is null, cannot setup listener");
                 return;
             }
             
-            Log.d(TAG, "✅ chatBadgeReport view is NOT null");
-            Log.d(TAG, "✅ Badge view ID: " + chatBadgeReport.getId());
-            Log.d(TAG, "✅ Current badge visibility: " + 
-                (chatBadgeReport.getVisibility() == View.VISIBLE ? "VISIBLE" : 
-                 chatBadgeReport.getVisibility() == View.GONE ? "GONE" : "INVISIBLE"));
+            // Remove existing listener if any
+            if (chatBadgeListener != null) {
+                chatBadgeListener.remove();
+                chatBadgeListener = null;
+            }
             
-            // ✅ ENHANCED: Use flexible query that shows ALL messages and why they count or not
-            Log.d(TAG, "🔍 Calling ChatBadgeManager.updateChatBadgeFlexible()...");
-            Log.d(TAG, "💡 This will show EVERY message and why it's counted or not!");
-            ChatBadgeManager.getInstance().updateChatBadgeFlexible(this, chatBadgeReport);
+            // Setup real-time listener using ChatBadgeManager
+            chatBadgeListener = ChatBadgeManager.getInstance().setupRealtimeBadgeListener(
+                this, chatBadgeReport);
             
-            Log.d(TAG, "✅ ChatBadgeManager.updateChatBadgeFlexible() call completed");
-            Log.d(TAG, "📋 Check Logcat for detailed message analysis!");
-            Log.d(TAG, "=== End updateChatBadge() ===");
+            if (chatBadgeListener != null) {
+                Log.d(TAG, "✅ Real-time chat badge listener setup successfully in ReportSubmissionActivity");
+            } else {
+                Log.w(TAG, "⚠️ Failed to setup real-time chat badge listener in ReportSubmissionActivity");
+            }
         } catch (Exception e) {
-            Log.e(TAG, "❌ ERROR in updateChatBadge(): " + e.getMessage(), e);
-            e.printStackTrace();
+            Log.e(TAG, "Error setting up chat badge listener: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Update chat notification badge
+     * ✅ NEW: Shows unread chat messages count on the chat tab
+     */
+    private void updateChatBadge() {
+        try {
+            if (chatBadgeReport == null) {
+                Log.w(TAG, "Chat badge view is null");
+                return;
+            }
+            
+            // Use ChatBadgeManager to update the badge
+            ChatBadgeManager.getInstance().updateChatBadge(this, chatBadgeReport);
+            
+            Log.d(TAG, "Chat badge updated successfully in ReportSubmissionActivity");
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating chat badge: " + e.getMessage(), e);
         }
     }
     
@@ -2729,6 +3038,13 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             // Unregister badge from notification manager
             AnnouncementNotificationManager.getInstance().unregisterBadge("ReportSubmissionActivity");
             Log.d(TAG, "ReportSubmissionActivity badge unregistered");
+            
+            // ✅ NEW: Remove chat badge listener
+            if (chatBadgeListener != null) {
+                chatBadgeListener.remove();
+                chatBadgeListener = null;
+                Log.d(TAG, "✅ Chat badge listener removed in ReportSubmissionActivity");
+            }
         } catch (Exception e) {
             Log.e(TAG, "Error unregistering badge in onDestroy: " + e.getMessage(), e);
         }

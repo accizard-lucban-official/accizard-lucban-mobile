@@ -127,7 +127,11 @@ public class MapViewActivity extends AppCompatActivity {
     private LinearLayout mapTab;
     private LinearLayout alertsTab;
     private TextView alertsBadgeMap;
+    private TextView chatBadgeMap; // Chat notification badge
     private SharedPreferences sharedPreferences;
+    
+    // Real-time listener for chat badge
+    private com.google.firebase.firestore.ListenerRegistration chatBadgeListener;
 
     // Mapbox MapView
     private MapView mapView;
@@ -566,11 +570,26 @@ public class MapViewActivity extends AppCompatActivity {
         mapTab = findViewById(R.id.mapTab);
         alertsTab = findViewById(R.id.alertsTab);
         alertsBadgeMap = findViewById(R.id.alerts_badge_map);
+        chatBadgeMap = findViewById(R.id.chat_badge_map);
         
         // Register badge with AnnouncementNotificationManager so it gets updated when alerts are viewed
         if (alertsBadgeMap != null) {
             AnnouncementNotificationManager.getInstance().registerBadge("MapViewActivity", alertsBadgeMap);
             Log.d(TAG, "✅ MapViewActivity badge registered with AnnouncementNotificationManager");
+        }
+        
+        // Initialize chat badge as hidden
+        if (chatBadgeMap != null) {
+            chatBadgeMap.setVisibility(View.GONE);
+            chatBadgeMap.setText("0");
+            Log.d(TAG, "✅ Chat badge initialized in MapViewActivity");
+            
+            // Setup real-time listener for chat badge updates
+            setupChatBadgeListener();
+            
+            // ✅ NEW: Update chat badge immediately (like alerts badge)
+            ChatBadgeManager.getInstance().updateChatBadge(this, chatBadgeMap);
+            Log.d(TAG, "✅ Chat badge updated immediately in MapViewActivity");
         }
         
         // Initialize filter indicator
@@ -678,17 +697,21 @@ public class MapViewActivity extends AppCompatActivity {
             String activeIncidentType = null;
 
             if (changedCheckBox != null) {
-                // Update the filter state immediately for the changed checkbox
-                incidentFilters.put(incidentType, isChecked);
-                
                 if (isChecked) {
-                    // Incident checkbox was checked
+                    // ✅ CRITICAL: Incident checkbox was checked
+                    Log.d(TAG, "✅ Incident filter '" + incidentType + "' checked - clearing all facility filters");
                     activeIncidentType = incidentType;
-                    // When an incident is selected, clear all facility checkboxes
+                    
+                    // ✅ CRITICAL: Clear and disable ALL facility checkboxes FIRST
                     clearAndDisableFacilityCheckboxes();
+                    
+                    // Then update the incident filter state
+                    incidentFilters.put(incidentType, true);
                 } else {
                     // Incident checkbox was unchecked - check if any other incident is still checked
                     Log.d(TAG, "Incident filter '" + incidentType + "' unchecked");
+                    incidentFilters.put(incidentType, false);
+                    
                     for (Map.Entry<String, Boolean> entry : incidentFilters.entrySet()) {
                         if (Boolean.TRUE.equals(entry.getValue()) && !entry.getKey().equals(incidentType)) {
                             activeIncidentType = entry.getKey();
@@ -711,6 +734,7 @@ public class MapViewActivity extends AppCompatActivity {
                 }
             }
 
+            // Update all incident checkboxes to reflect the correct state
             for (IncidentCheckboxEntry entry : incidentCheckboxes) {
                 if (entry.checkBox == null) {
                     continue;
@@ -726,11 +750,13 @@ public class MapViewActivity extends AppCompatActivity {
                 updateCheckboxVisualState(entry.checkBox, shouldCheck);
             }
             
-            // Enable/disable facility checkboxes based on whether any incident is selected
+            // ✅ CRITICAL: Ensure facility checkboxes are disabled when incident is active
             if (activeIncidentType != null) {
                 setFacilityCheckboxesEnabled(false);
+                Log.d(TAG, "✅ Incident '" + activeIncidentType + "' is active - facility checkboxes disabled");
             } else {
                 setFacilityCheckboxesEnabled(true);
+                Log.d(TAG, "No incident active - facility checkboxes enabled");
             }
         } finally {
             isUpdatingIncidentCheckboxes = false;
@@ -776,18 +802,22 @@ public class MapViewActivity extends AppCompatActivity {
             String activeFacilityType = null;
 
             if (changedCheckBox != null) {
-                // Update the filter state immediately for the changed checkbox
-                facilityFilters.put(facilityType, isChecked);
-                
+                // ✅ CRITICAL: When a facility is checked, FIRST clear all incident checkboxes
                 if (isChecked) {
                     // Facility checkbox was checked
-                    Log.d(TAG, "Facility filter '" + facilityType + "' checked");
+                    Log.d(TAG, "✅ Facility filter '" + facilityType + "' checked - clearing all incident filters");
                     activeFacilityType = facilityType;
-                    // When a facility is selected, clear all incident checkboxes
+                    
+                    // ✅ CRITICAL: Clear and disable ALL incident checkboxes FIRST
                     clearAndDisableIncidentCheckboxes();
+                    
+                    // Then update the facility filter state
+                    facilityFilters.put(facilityType, true);
                 } else {
                     // Facility checkbox was unchecked - check if any other facility is still checked
                     Log.d(TAG, "Facility filter '" + facilityType + "' unchecked");
+                    facilityFilters.put(facilityType, false);
+                    
                     for (Map.Entry<String, Boolean> entry : facilityFilters.entrySet()) {
                         if (Boolean.TRUE.equals(entry.getValue()) && !entry.getKey().equals(facilityType)) {
                             activeFacilityType = entry.getKey();
@@ -812,6 +842,7 @@ public class MapViewActivity extends AppCompatActivity {
 
             activeFacilityFilter = activeFacilityType;
 
+            // Update all facility checkboxes to reflect the correct state
             for (FacilityCheckboxEntry entry : facilityCheckboxes) {
                 if (entry.checkBox == null) {
                     continue;
@@ -828,11 +859,13 @@ public class MapViewActivity extends AppCompatActivity {
                 applyFacilityLayerVisibility(entry.facilityType, shouldCheck);
             }
             
-            // Enable/disable incident checkboxes based on whether any facility is selected
+            // ✅ CRITICAL: Ensure incident checkboxes are disabled when facility is active
             if (activeFacilityType != null) {
                 setIncidentCheckboxesEnabled(false);
+                Log.d(TAG, "✅ Facility '" + activeFacilityType + "' is active - incident checkboxes disabled");
             } else {
                 setIncidentCheckboxesEnabled(true);
+                Log.d(TAG, "No facility active - incident checkboxes enabled");
             }
         } finally {
             isUpdatingFacilityCheckboxes = false;
@@ -1978,6 +2011,13 @@ public class MapViewActivity extends AppCompatActivity {
             // Unregister badge from notification manager
             AnnouncementNotificationManager.getInstance().unregisterBadge("MapViewActivity");
             Log.d(TAG, "MapViewActivity badge unregistered");
+            
+            // ✅ NEW: Remove chat badge listener
+            if (chatBadgeListener != null) {
+                chatBadgeListener.remove();
+                chatBadgeListener = null;
+                Log.d(TAG, "✅ Chat badge listener removed in MapViewActivity");
+            }
         } catch (Exception e) {
             Log.e(TAG, "Error unregistering badge in onDestroy: " + e.getMessage(), e);
         }
@@ -2576,8 +2616,14 @@ public class MapViewActivity extends AppCompatActivity {
             // Refresh profile picture when returning to this activity
             loadUserProfilePicture();
             
-            // Update notification badge
+            // Update notification badge for alerts
             updateNotificationBadge();
+            
+            // ✅ NEW: Update chat badge when returning to this activity
+            if (chatBadgeMap != null) {
+                ChatBadgeManager.getInstance().updateChatBadge(this, chatBadgeMap);
+                Log.d(TAG, "✅ Chat badge updated in MapViewActivity onResume");
+            }
         } catch (Exception e) {
             Log.e(TAG, "Error in onResume: " + e.getMessage(), e);
         }
@@ -2660,6 +2706,37 @@ public class MapViewActivity extends AppCompatActivity {
                     alertsBadgeMap.setVisibility(View.GONE);
                 });
             }
+        }
+    }
+    
+    /**
+     * ✅ NEW: Setup real-time listener for chat badge updates
+     * This will automatically update the badge when new messages arrive
+     */
+    private void setupChatBadgeListener() {
+        try {
+            if (chatBadgeMap == null) {
+                Log.w(TAG, "Chat badge view is null, cannot setup listener");
+                return;
+            }
+            
+            // Remove existing listener if any
+            if (chatBadgeListener != null) {
+                chatBadgeListener.remove();
+                chatBadgeListener = null;
+            }
+            
+            // Setup real-time listener using ChatBadgeManager
+            chatBadgeListener = ChatBadgeManager.getInstance().setupRealtimeBadgeListener(
+                this, chatBadgeMap);
+            
+            if (chatBadgeListener != null) {
+                Log.d(TAG, "✅ Real-time chat badge listener setup successfully in MapViewActivity");
+            } else {
+                Log.w(TAG, "⚠️ Failed to setup real-time chat badge listener in MapViewActivity");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up chat badge listener: " + e.getMessage(), e);
         }
     }
     

@@ -39,6 +39,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.core.graphics.ColorUtils;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -112,6 +113,7 @@ public class MainDashboard extends AppCompatActivity {
     private static final String PREFS_NAME = "AlertsActivityPrefs";
     private static final String KEY_LAST_VISIT_TIME = "last_visit_time";
     private static final String KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT = "last_viewed_announcement_count";
+    private static final String KEY_LAST_VIEWED_CHAT_MESSAGE_COUNT = "last_viewed_chat_message_count";
     private static final String PERMISSION_PREFS = "permission_requests";
     private static final String KEY_LOCATION_PERMISSION_REQUESTED = "location_permission_requested";
     private static final String KEY_NOTIFICATION_PERMISSION_REQUESTED = "notification_permission_requested";
@@ -245,7 +247,11 @@ public class MainDashboard extends AppCompatActivity {
     private LinearLayout mapTab;
     private LinearLayout alertsTab;
     private TextView alertsBadgeDashboard;
+    private TextView chatBadgeDashboard; // Chat badge for unread messages
     private SharedPreferences sharedPreferences;
+    
+    // Real-time listener for chat badge
+    private com.google.firebase.firestore.ListenerRegistration chatBadgeListener;
 
     private String currentReportFilter = "Per Type";
     
@@ -412,6 +418,16 @@ public class MainDashboard extends AppCompatActivity {
                 Log.e(TAG, "⚠️ updateNotificationBadge failed (non-critical): " + e.getMessage(), e);
             }
             
+            // Update chat badge immediately
+            try {
+                if (chatBadgeDashboard != null) {
+                    ChatBadgeManager.getInstance().updateChatBadge(this, chatBadgeDashboard);
+                    Log.d(TAG, "✅ Chat badge updated");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "⚠️ Chat badge update failed (non-critical): " + e.getMessage(), e);
+            }
+            
             // Initialize FCM token for push notifications (in case it wasn't done at login)
             try {
                 initializeFCMToken();
@@ -501,11 +517,26 @@ public class MainDashboard extends AppCompatActivity {
             mapTab = findViewById(R.id.mapTab);
             alertsTab = findViewById(R.id.alertsTab);
             alertsBadgeDashboard = findViewById(R.id.alerts_badge_dashboard);
+            chatBadgeDashboard = findViewById(R.id.chat_badge_dashboard);
             
             // Register badge with AnnouncementNotificationManager so it gets updated when alerts are viewed
             if (alertsBadgeDashboard != null) {
                 AnnouncementNotificationManager.getInstance().registerBadge("MainDashboard", alertsBadgeDashboard);
                 Log.d(TAG, "✅ MainDashboard badge registered with AnnouncementNotificationManager");
+            }
+            
+            // Initialize chat badge as hidden
+            if (chatBadgeDashboard != null) {
+                chatBadgeDashboard.setVisibility(View.GONE);
+                chatBadgeDashboard.setText("0");
+                Log.d(TAG, "✅ Chat badge initialized");
+                
+                // Setup real-time listener for chat badge updates
+                setupChatBadgeListener();
+                
+                // ✅ NEW: Update chat badge immediately (like alerts badge)
+                ChatBadgeManager.getInstance().updateChatBadge(this, chatBadgeDashboard);
+                Log.d(TAG, "✅ Chat badge updated immediately after initialization");
             }
         } catch (Exception e) {
             Log.e(TAG, "Error initializing views: " + e.getMessage(), e);
@@ -2441,10 +2472,9 @@ public class MainDashboard extends AppCompatActivity {
             dataSet.setColors(colors);
             dataSet.setSliceSpace(2f);
             dataSet.setSelectionShift(6f);
+            dataSet.setDrawValues(false);
 
             PieData pieData = new PieData(dataSet);
-            pieData.setValueTextSize(12f);
-            pieData.setValueTextColor(getColorSafe(R.color.black, android.R.color.black));
 
             reportTypePieChart.setData(pieData);
             reportTypePieChart.highlightValues(null);
@@ -2474,6 +2504,16 @@ public class MainDashboard extends AppCompatActivity {
         try {
             if (reportLegendGrid != null) {
                 reportLegendGrid.removeAllViews();
+                
+                // Also remove the header if it exists
+                ViewGroup parent = (ViewGroup) reportLegendGrid.getParent();
+                if (parent != null) {
+                    String headerTag = "legend_header";
+                    View header = parent.findViewWithTag(headerTag);
+                    if (header != null) {
+                        parent.removeView(header);
+                    }
+                }
             }
         } catch (Exception e) {
             Log.e(TAG, "Error clearing report legend: " + e.getMessage(), e);
@@ -2484,6 +2524,47 @@ public class MainDashboard extends AppCompatActivity {
         try {
             if (reportLegendGrid == null) {
                 return;
+            }
+
+            // Get DM Sans font once for reuse
+            Typeface dmSansTypeface = ResourcesCompat.getFont(this, R.font.dmsans);
+
+            // Get parent container and add header if not already added
+            ViewGroup parent = (ViewGroup) reportLegendGrid.getParent();
+            if (parent != null) {
+                // Check if header already exists using tag
+                String headerTag = "legend_header";
+                View existingHeader = parent.findViewWithTag(headerTag);
+                if (existingHeader == null) {
+                    // Add "Legend" header title to parent container
+                    TextView legendHeader = new TextView(this);
+                    legendHeader.setTag(headerTag);
+                    legendHeader.setText("Legend");
+                    legendHeader.setTextColor(getColorSafe(R.color.black, android.R.color.black));
+                    if (dmSansTypeface != null) {
+                        legendHeader.setTypeface(dmSansTypeface, Typeface.BOLD);
+                    }
+                    legendHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
+                    
+                    // Get the index of reportLegendGrid in parent
+                    int gridIndex = parent.indexOfChild(reportLegendGrid);
+                    
+                    // Create layout params for header
+                    LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                    );
+                    int headerMargin = (int) TypedValue.applyDimension(
+                            TypedValue.COMPLEX_UNIT_DIP,
+                            8,
+                            getResources().getDisplayMetrics()
+                    );
+                    headerParams.setMargins(0, 0, 0, headerMargin);
+                    legendHeader.setLayoutParams(headerParams);
+                    
+                    // Insert header before the GridLayout
+                    parent.addView(legendHeader, gridIndex);
+                }
             }
 
             reportLegendGrid.removeAllViews();
@@ -2517,13 +2598,15 @@ public class MainDashboard extends AppCompatActivity {
                 TextView labelView = new TextView(this);
                 labelView.setText(label);
                 labelView.setTextColor(getColorSafe(R.color.black, android.R.color.black));
-                labelView.setTypeface(Typeface.DEFAULT);
+                if (dmSansTypeface != null) {
+                    labelView.setTypeface(dmSansTypeface);
+                }
                 labelView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
 
                 legendItem.addView(colorDot);
                 legendItem.addView(labelView);
 
-                GridLayout.Spec rowSpec = GridLayout.spec(index / 3);
+                GridLayout.Spec rowSpec = GridLayout.spec(index / 3); // Original row calculation
                 GridLayout.Spec columnSpec = GridLayout.spec(index % 3, 1f);
                 GridLayout.LayoutParams params = new GridLayout.LayoutParams(rowSpec, columnSpec);
                 params.width = 0;
@@ -4574,7 +4657,12 @@ public class MainDashboard extends AppCompatActivity {
             }
             
             loadUserProfilePicture(); // Refresh profile picture when returning to dashboard
-            updateNotificationBadge(); // Update notification badge
+            updateNotificationBadge(); // Update notification badge for alerts
+            
+            // Update chat badge using ChatBadgeManager (real-time listener handles updates automatically)
+            if (chatBadgeDashboard != null) {
+                ChatBadgeManager.getInstance().updateChatBadge(this, chatBadgeDashboard);
+            }
         } catch (Exception e) {
             Log.e(TAG, "Error in onResume: " + e.getMessage(), e);
         }
@@ -4707,6 +4795,13 @@ public class MainDashboard extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         try {
+            // Remove chat badge listener
+            if (chatBadgeListener != null) {
+                chatBadgeListener.remove();
+                chatBadgeListener = null;
+                Log.d(TAG, "✅ Chat badge listener removed");
+            }
+            
             // Unregister badge from notification manager
             AnnouncementNotificationManager.getInstance().unregisterBadge("MainDashboard");
             Log.d(TAG, "MainDashboard badge unregistered");
@@ -5178,6 +5273,37 @@ public class MainDashboard extends AppCompatActivity {
                     alertsBadgeDashboard.setVisibility(View.GONE);
                 });
             }
+        }
+    }
+    
+    /**
+     * Setup real-time listener for chat badge updates
+     * This will automatically update the badge when new messages arrive
+     */
+    private void setupChatBadgeListener() {
+        try {
+            if (chatBadgeDashboard == null) {
+                Log.w(TAG, "Chat badge view is null, cannot setup listener");
+                return;
+            }
+            
+            // Remove existing listener if any
+            if (chatBadgeListener != null) {
+                chatBadgeListener.remove();
+                chatBadgeListener = null;
+            }
+            
+            // Setup real-time listener using ChatBadgeManager
+            chatBadgeListener = ChatBadgeManager.getInstance().setupRealtimeBadgeListener(
+                this, chatBadgeDashboard);
+            
+            if (chatBadgeListener != null) {
+                Log.d(TAG, "✅ Real-time chat badge listener setup successfully");
+            } else {
+                Log.w(TAG, "⚠️ Failed to setup real-time chat badge listener");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up chat badge listener: " + e.getMessage(), e);
         }
     }
     

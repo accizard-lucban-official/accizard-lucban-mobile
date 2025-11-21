@@ -1,6 +1,7 @@
 package com.example.accizardlucban;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
@@ -13,7 +14,8 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
  * ChatBadgeManager - Centralized manager for chat notification badges across all activities
  * 
  * This class handles:
- * - Counting unread chat messages from Firestore
+ * - Counting ALL admin chat messages (not just unread) like alerts badge
+ * - Tracking last viewed message count using SharedPreferences
  * - Updating badge UI across different activities
  * - Real-time badge updates
  * - Badge clearing when user opens chat
@@ -21,6 +23,10 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 public class ChatBadgeManager {
     
     private static final String TAG = "ChatBadgeManager";
+    private static final String PREFS_NAME = "ChatBadgePrefs";
+    private static final String KEY_LAST_VIEWED_MESSAGE_COUNT = "last_viewed_message_count";
+    private static final String KEY_TOTAL_MESSAGE_COUNT = "total_message_count";
+    
     private static ChatBadgeManager instance;
     
     private FirebaseFirestore db;
@@ -41,7 +47,8 @@ public class ChatBadgeManager {
     
     /**
      * Update chat badge for a given TextView
-     * This method queries Firestore for unread messages and updates the badge
+     * ✅ NEW: Counts ALL admin messages (not just unread) like alerts badge
+     * Shows badge count = current total admin messages - last viewed count
      * 
      * @param context The activity context
      * @param chatBadgeView The TextView to update with badge count
@@ -75,52 +82,111 @@ public class ChatBadgeManager {
         String userId = currentUser.getUid();
         
         Log.d(TAG, "✅ Current user ID: " + userId);
-        Log.d(TAG, "🔍 Querying Firestore for unread messages...");
-        Log.d(TAG, "🔍 Query: userId==" + userId + " AND isUser==false AND isRead==false");
+        Log.d(TAG, "🔍 Querying Firestore for ALL admin messages...");
+        Log.d(TAG, "🔍 Query: userId==" + userId + " AND isUser==false");
         
-        // Query Firestore for unread messages (messages from admin that user hasn't read)
+        // ✅ FIXED: Query Firestore for ALL messages for this user, then filter for admin messages
+        // Web app messages might not have "isUser" field, so we filter client-side
+        // Similar to how alerts badge counts all announcements
         db.collection("chat_messages")
-            .whereEqualTo("userId", userId)  // User's chat room
-            .whereEqualTo("isUser", false)    // Messages from admin
-            .whereEqualTo("isRead", false)    // Not read yet
+            .whereEqualTo("userId", userId)  // User's chat room (all messages)
             .get()
             .addOnSuccessListener(queryDocumentSnapshots -> {
-                int unreadCount = queryDocumentSnapshots.size();
-                
-                Log.d(TAG, "📥 Firestore query completed successfully");
-                Log.d(TAG, "📊 Total documents returned: " + queryDocumentSnapshots.size());
-                Log.d(TAG, "📊 Unread message count: " + unreadCount);
-                
-                // Log each unread message for debugging
-                if (unreadCount > 0) {
-                    Log.d(TAG, "📝 Unread messages:");
-                    for (com.google.firebase.firestore.QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        String messageId = doc.getId();
-                        String content = doc.getString("content");
-                        Boolean isUser = doc.getBoolean("isUser");
-                        Boolean isRead = doc.getBoolean("isRead");
-                        Log.d(TAG, "  - ID: " + messageId);
-                        Log.d(TAG, "    Content: " + content);
-                        Log.d(TAG, "    isUser: " + isUser);
-                        Log.d(TAG, "    isRead: " + isRead);
+                // Filter for admin messages (messages NOT from current user)
+                int currentTotalCount = 0;
+                for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                    // Check if message is from admin (not from current user)
+                    String senderId = doc.getString("senderId");
+                    Boolean isUser = doc.getBoolean("isUser");
+                    
+                    // Web app format: check senderId != userId (admin message)
+                    // Mobile app format: check isUser == false (admin message)
+                    boolean isAdminMessage = false;
+                    if (senderId != null && !senderId.equals(userId)) {
+                        // Message sender is not the current user = admin message
+                        isAdminMessage = true;
+                        Log.d(TAG, "✅ Admin message found by senderId: " + senderId);
+                    } else if (isUser != null && !isUser) {
+                        // Mobile app format: isUser == false = admin message
+                        isAdminMessage = true;
+                        Log.d(TAG, "✅ Admin message found by isUser: false");
+                    }
+                    
+                    if (isAdminMessage) {
+                        currentTotalCount++;
                     }
                 }
                 
-                if (unreadCount > 0) {
-                    // Show badge with count
-                    chatBadgeView.setText(String.valueOf(unreadCount));
-                    chatBadgeView.setVisibility(View.VISIBLE);
-                    Log.d(TAG, "✅ Chat badge SHOWN with count: " + unreadCount);
-                    Log.d(TAG, "✅ Badge visibility: VISIBLE");
+                Log.d(TAG, "📥 Firestore query completed successfully");
+                Log.d(TAG, "📊 Total documents queried: " + queryDocumentSnapshots.size());
+                Log.d(TAG, "📊 Total admin messages in database: " + currentTotalCount);
+                
+                // Get last viewed count from SharedPreferences
+                SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+                final int lastViewedCountInitial = prefs.getInt(KEY_LAST_VIEWED_MESSAGE_COUNT, 0);
+                
+                Log.d(TAG, "📊 Last viewed message count: " + lastViewedCountInitial);
+                
+                // Calculate badge count: new messages since last view
+                int badgeCountCalc = currentTotalCount - lastViewedCountInitial;
+                
+                // Ensure badge count is never negative
+                final int badgeCount;
+                final int lastViewedCount;
+                if (badgeCountCalc < 0) {
+                    badgeCount = 0;
+                    // Update last viewed count if it's higher than current total
+                    prefs.edit().putInt(KEY_LAST_VIEWED_MESSAGE_COUNT, currentTotalCount).apply();
+                    lastViewedCount = currentTotalCount;
                 } else {
-                    // Hide badge
-                    chatBadgeView.setVisibility(View.GONE);
-                    Log.d(TAG, "⚪ No unread messages - badge HIDDEN");
-                    Log.d(TAG, "💡 TIP: Have admin send a message via web app to see badge");
+                    badgeCount = badgeCountCalc;
+                    lastViewedCount = lastViewedCountInitial;
+                }
+                
+                // Save current total count
+                prefs.edit().putInt(KEY_TOTAL_MESSAGE_COUNT, currentTotalCount).apply();
+                
+                Log.d(TAG, "📊 Badge count (new messages): " + badgeCount);
+                Log.d(TAG, "📊 Calculation: " + currentTotalCount + " - " + lastViewedCount + " = " + badgeCount);
+                
+                // ✅ FIXED: Update badge on UI thread (exactly like alerts badge)
+                // Make badgeCount final for lambda
+                final int finalBadgeCount = badgeCount;
+                
+                if (context instanceof android.app.Activity) {
+                    ((android.app.Activity) context).runOnUiThread(() -> {
+                        if (chatBadgeView != null) {
+                            if (finalBadgeCount > 0) {
+                                // Show badge with count (exactly like alerts badge)
+                                chatBadgeView.setText(String.valueOf(finalBadgeCount));
+                                chatBadgeView.setVisibility(View.VISIBLE);
+                                Log.d(TAG, "✅✅✅ Chat badge SHOWN with count: " + finalBadgeCount + " ✅✅✅");
+                                Log.d(TAG, "✅ Badge visibility: VISIBLE");
+                            } else {
+                                // Hide badge
+                                chatBadgeView.setVisibility(View.GONE);
+                                chatBadgeView.setText("0");
+                                Log.d(TAG, "⚪ No new messages - badge HIDDEN");
+                            }
+                        }
+                    });
+                } else {
+                    // Fallback if not an Activity
+                    if (chatBadgeView != null) {
+                        if (finalBadgeCount > 0) {
+                            chatBadgeView.setText(String.valueOf(finalBadgeCount));
+                            chatBadgeView.setVisibility(View.VISIBLE);
+                            Log.d(TAG, "✅ Chat badge SHOWN with count: " + finalBadgeCount);
+                        } else {
+                            chatBadgeView.setVisibility(View.GONE);
+                            chatBadgeView.setText("0");
+                            Log.d(TAG, "⚪ No new messages - badge HIDDEN");
+                        }
+                    }
                 }
             })
             .addOnFailureListener(e -> {
-                Log.e(TAG, "❌ ERROR fetching unread messages from Firestore");
+                Log.e(TAG, "❌ ERROR fetching admin messages from Firestore");
                 Log.e(TAG, "❌ Error message: " + e.getMessage(), e);
                 chatBadgeView.setVisibility(View.GONE);
                 
@@ -166,6 +232,78 @@ public class ChatBadgeManager {
                 Log.e(TAG, "Error counting unread messages: " + e.getMessage(), e);
                 callback.onCountReceived(0);
             });
+    }
+    
+    /**
+     * ✅ NEW: Mark all messages as viewed and clear badge count
+     * Called when user opens ChatActivity - similar to how alerts badge works
+     * This updates SharedPreferences to mark all current messages as viewed
+     * 
+     * @param context The activity context
+     */
+    public void markMessagesAsViewed(Context context) {
+        try {
+            FirebaseUser currentUser = mAuth.getCurrentUser();
+            if (currentUser == null) {
+                Log.w(TAG, "No authenticated user, cannot mark messages as viewed");
+                return;
+            }
+            
+            String userId = currentUser.getUid();
+            
+            Log.d(TAG, "✅ Marking all messages as viewed for user: " + userId);
+            
+            // Get current total count of admin messages
+            // ✅ FIXED: Query all messages and filter for admin messages (web app compatibility)
+            // Web app messages might not have "isUser" field, so we filter client-side
+            db.collection("chat_messages")
+                .whereEqualTo("userId", userId)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    // Filter for admin messages (messages NOT from current user)
+                    int currentTotalCount = 0;
+                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                        // Check if message is from admin (not from current user)
+                        String senderId = doc.getString("senderId");
+                        Boolean isUser = doc.getBoolean("isUser");
+                        
+                        // Web app format: check senderId != userId (admin message)
+                        // Mobile app format: check isUser == false (admin message)
+                        boolean isAdminMessage = false;
+                        if (senderId != null && !senderId.equals(userId)) {
+                            // Message sender is not the current user = admin message
+                            isAdminMessage = true;
+                        } else if (isUser != null && !isUser) {
+                            // Mobile app format: isUser == false = admin message
+                            isAdminMessage = true;
+                        }
+                        
+                        if (isAdminMessage) {
+                            currentTotalCount++;
+                        }
+                    }
+                    
+                    Log.d(TAG, "📊 Total documents queried: " + queryDocumentSnapshots.size());
+                    
+                    Log.d(TAG, "📊 Current total admin messages: " + currentTotalCount);
+                    
+                    // Update SharedPreferences: mark all current messages as viewed
+                    SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+                    prefs.edit()
+                        .putInt(KEY_LAST_VIEWED_MESSAGE_COUNT, currentTotalCount)
+                        .putInt(KEY_TOTAL_MESSAGE_COUNT, currentTotalCount)
+                        .commit(); // Use commit for immediate write
+                    
+                    Log.d(TAG, "✅✅✅ All messages marked as viewed - lastViewedCount updated to: " + currentTotalCount);
+                    Log.d(TAG, "✅✅✅ Badge will now show 0 (no new messages)");
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error getting current message count: " + e.getMessage(), e);
+                });
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error marking messages as viewed: " + e.getMessage(), e);
+        }
     }
     
     /**
@@ -221,8 +359,9 @@ public class ChatBadgeManager {
     }
     
     /**
-     * Setup real-time listener for unread messages
+     * ✅ UPDATED: Setup real-time listener for ALL admin messages
      * This will automatically update the badge when new messages arrive
+     * Now counts ALL admin messages (not just unread) like alerts badge
      * 
      * @param context The activity context
      * @param chatBadgeView The TextView to update
@@ -246,11 +385,10 @@ public class ChatBadgeManager {
         
         Log.d(TAG, "Setting up real-time badge listener for user: " + userId);
         
-        // Setup real-time listener
+        // ✅ FIXED: Setup real-time listener for ALL messages, then filter for admin messages
+        // Web app messages might not have "isUser" field, so we filter client-side
         return db.collection("chat_messages")
-            .whereEqualTo("userId", userId)
-            .whereEqualTo("isUser", false)
-            .whereEqualTo("isRead", false)
+            .whereEqualTo("userId", userId)  // All messages for this user
             .addSnapshotListener((snapshots, error) -> {
                 if (error != null) {
                     Log.e(TAG, "Error in real-time listener: " + error.getMessage(), error);
@@ -258,22 +396,85 @@ public class ChatBadgeManager {
                 }
                 
                 if (snapshots != null) {
-                    int unreadCount = snapshots.size();
+                    // Filter for admin messages (messages NOT from current user)
+                    int currentTotalCount = 0;
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : snapshots.getDocuments()) {
+                        // Check if message is from admin (not from current user)
+                        String senderId = doc.getString("senderId");
+                        Boolean isUser = doc.getBoolean("isUser");
+                        
+                        // Web app format: check senderId != userId (admin message)
+                        // Mobile app format: check isUser == false (admin message)
+                        boolean isAdminMessage = false;
+                        if (senderId != null && !senderId.equals(userId)) {
+                            // Message sender is not the current user = admin message
+                            isAdminMessage = true;
+                        } else if (isUser != null && !isUser) {
+                            // Mobile app format: isUser == false = admin message
+                            isAdminMessage = true;
+                        }
+                        
+                        if (isAdminMessage) {
+                            currentTotalCount++;
+                        }
+                    }
+                    
+                    Log.d(TAG, "📡 Real-time badge update: " + snapshots.size() + " total messages, " + currentTotalCount + " admin messages");
                     
                     // ✅ CRITICAL: Don't show badge if user is viewing chat
                     if (ChatActivityTracker.isChatActivityVisible()) {
-                        chatBadgeView.setVisibility(View.GONE);
-                        Log.d(TAG, "User is viewing chat - hiding badge (real-time)");
+                        if (context instanceof android.app.Activity) {
+                            ((android.app.Activity) context).runOnUiThread(() -> {
+                                chatBadgeView.setVisibility(View.GONE);
+                            });
+                        } else {
+                            chatBadgeView.setVisibility(View.GONE);
+                        }
+                        Log.d(TAG, "🔵 User is viewing chat - hiding badge (real-time)");
                         return;
                     }
                     
-                    Log.d(TAG, "Real-time update: " + unreadCount + " unread messages");
+                    // Get last viewed count from SharedPreferences
+                    SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+                    final int lastViewedCount = prefs.getInt(KEY_LAST_VIEWED_MESSAGE_COUNT, 0);
                     
-                    if (unreadCount > 0) {
-                        chatBadgeView.setText(String.valueOf(unreadCount));
-                        chatBadgeView.setVisibility(View.VISIBLE);
+                    // Calculate badge count: new messages since last view
+                    final int badgeCount = Math.max(0, currentTotalCount - lastViewedCount);
+                    
+                    // Save current total count
+                    prefs.edit().putInt(KEY_TOTAL_MESSAGE_COUNT, currentTotalCount).apply();
+                    
+                    Log.d(TAG, "📡 Real-time badge count: " + badgeCount + " (total: " + currentTotalCount + ", last viewed: " + lastViewedCount + ")");
+                    
+                    // Make badgeCount final for lambda (exactly like alerts badge)
+                    final int finalBadgeCount = badgeCount;
+                    
+                    // Update badge on UI thread (exactly like alerts badge)
+                    if (context instanceof android.app.Activity) {
+                        ((android.app.Activity) context).runOnUiThread(() -> {
+                            if (chatBadgeView != null) {
+                                if (finalBadgeCount > 0) {
+                                    chatBadgeView.setText(String.valueOf(finalBadgeCount));
+                                    chatBadgeView.setVisibility(View.VISIBLE);
+                                    Log.d(TAG, "✅✅✅ Real-time badge SHOWN with count: " + finalBadgeCount + " ✅✅✅");
+                                } else {
+                                    chatBadgeView.setVisibility(View.GONE);
+                                    chatBadgeView.setText("0");
+                                    Log.d(TAG, "⚪ Real-time badge HIDDEN - no new messages");
+                                }
+                            }
+                        });
                     } else {
-                        chatBadgeView.setVisibility(View.GONE);
+                        // Fallback if not an Activity
+                        if (chatBadgeView != null) {
+                            if (finalBadgeCount > 0) {
+                                chatBadgeView.setText(String.valueOf(finalBadgeCount));
+                                chatBadgeView.setVisibility(View.VISIBLE);
+                            } else {
+                                chatBadgeView.setVisibility(View.GONE);
+                                chatBadgeView.setText("0");
+                            }
+                        }
                     }
                 }
             });

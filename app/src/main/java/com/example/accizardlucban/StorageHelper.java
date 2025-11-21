@@ -247,6 +247,72 @@ public class StorageHelper {
     }
 
     /**
+     * Upload report videos to Firebase Storage
+     * Uses the same report_images path as images to work with existing Firebase Storage rules
+     */
+    public static void uploadReportVideos(String reportId, List<Uri> videoUris,
+                                        OnSuccessListener<List<String>> onSuccess,
+                                        OnFailureListener onFailure) {
+        try {
+            List<String> downloadUrls = new ArrayList<>();
+            final int[] uploadCount = {0};
+            final int totalVideos = videoUris.size();
+
+            if (totalVideos == 0) {
+                onSuccess.onSuccess(downloadUrls);
+                return;
+            }
+
+            // Get current user ID
+            FirebaseAuth mAuth = FirebaseAuth.getInstance();
+            String userId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : "anonymous";
+
+            for (int i = 0; i < videoUris.size(); i++) {
+                Uri videoUri = videoUris.get(i);
+                String videoId = UUID.randomUUID().toString();
+                
+                // ✅ FIXED: Use report_images path (same as images) to work with existing Firebase Storage rules
+                // Videos are stored with .mp4 extension to distinguish them from images
+                StorageReference reportRef = storage.getReference()
+                        .child("report_images")
+                        .child(userId)
+                        .child(reportId)
+                        .child(videoId + ".mp4");
+
+                Log.d(TAG, "Uploading report video to: " + reportRef.getPath());
+
+                UploadTask uploadTask = reportRef.putFile(videoUri);
+                final int videoIndex = i;
+                
+                uploadTask.addOnSuccessListener(taskSnapshot -> {
+                    reportRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                        Log.d(TAG, "Report video " + (videoIndex + 1) + " uploaded successfully: " + uri.toString());
+                        downloadUrls.add(uri.toString());
+                        uploadCount[0]++;
+                        
+                        if (uploadCount[0] == totalVideos) {
+                            Log.d(TAG, "All " + totalVideos + " report videos uploaded successfully");
+                            onSuccess.onSuccess(downloadUrls);
+                        }
+                    }).addOnFailureListener(e -> {
+                        Log.e(TAG, "Error getting download URL for video " + (videoIndex + 1) + ": " + e.getMessage(), e);
+                        onFailure.onFailure(e);
+                    });
+                }).addOnFailureListener(e -> {
+                    Log.e(TAG, "Error uploading report video " + (videoIndex + 1) + ": " + e.getMessage(), e);
+                    Log.e(TAG, "Video URI: " + videoUri.toString());
+                    Log.e(TAG, "Storage path: " + reportRef.getPath());
+                    onFailure.onFailure(e);
+                });
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error in uploadReportVideos: " + e.getMessage(), e);
+            onFailure.onFailure(e);
+        }
+    }
+
+    /**
      * Upload report images to Firebase Storage
      */
     public static void uploadReportImages(String reportId, List<Uri> imageUris,
