@@ -241,21 +241,21 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginBottom="16dp">
+                    android:layout_marginBottom="0dp">
 
                     <EditText
                         android:id="@+id/coordinatesEditText"
-                        android:layout_width="0dp"
-                        android:layout_height="56dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:background="@drawable/edittext_background"
-                        android:hint="Latitude, Longitude (e.g., 14.123456, 121.567890)"
-                        android:textColorHint="#999999"
+                        android:enabled="false"
+                        android:gravity="center_vertical"
+                        android:hint="Pin location on map to set address"
+                        android:inputType="text"
                         android:paddingHorizontal="20dp"
                         android:paddingVertical="16dp"
-                        android:inputType="text"
-                        android:gravity="center_vertical"
-                        android:enabled="false" />
+                        android:textColorHint="#999999" />
 
                     <ImageView
                         android:id="@+id/pinningButton"
@@ -272,17 +272,37 @@
                 </LinearLayout>
 
                 <!-- Get Current Location Button -->
-                <Button
+                <LinearLayout
                     android:id="@+id/getCurrentLocationButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:text="Get My Current Location"
-                    android:textColor="@color/white"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:background="@drawable/button_outline_background"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingVertical="8dp"
+                    android:paddingHorizontal="4dp"
+                    android:layout_marginStart="0dp"
+                    android:layout_marginTop="0dp"
                     android:layout_marginBottom="16dp"
-                    android:textAllCaps="false" />
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?android:attr/selectableItemBackground">
+                    
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/pingetcurrent"
+                        android:layout_marginEnd="8dp"
+                        android:contentDescription="Location Pin Icon" />
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Get Current Location"
+                        android:textColor="#FF5722"
+                        android:textSize="14sp"
+                        android:textStyle="normal" />
+                    
+                </LinearLayout>
 
                 <!-- Legacy location field (hidden, for backward compatibility) -->
                 <EditText

@@ -17,6 +17,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.PopupMenu;
+import android.widget.VideoView;
+import android.widget.MediaController;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
@@ -97,7 +99,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private EditText locationEditText; // Legacy field (hidden)
     private EditText coordinatesEditText; // Coordinates field for map picker
     private ImageView pinningButton;
-    private Button getCurrentLocationButton;
+    private LinearLayout getCurrentLocationButton;
     private Button uploadImagesButton;
     private Button takePhotoButton;
     private Button submitReportButton;
@@ -158,8 +160,8 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private List<Report> allReports;
     private List<Report> filteredReports;
     
-    // Image Gallery Data
-    private ProfessionalImageGalleryAdapter imageGalleryAdapter;
+    // Media Gallery Data (supports both images and videos)
+    private MediaGalleryAdapter mediaGalleryAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -400,36 +402,40 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     
     
     private void setupProfessionalImageGallery() {
-        // Setup 4-column grid layout with images matching container height
+        // Setup 4-column grid layout with media matching container height
         androidx.recyclerview.widget.GridLayoutManager gridLayoutManager = 
             new androidx.recyclerview.widget.GridLayoutManager(this, 4);
         imageGalleryRecyclerView.setLayoutManager(gridLayoutManager);
         
-        // Initialize professional adapter
-        imageGalleryAdapter = new ProfessionalImageGalleryAdapter(this, selectedImageUris);
+        // Initialize media adapter with MediaItems (supports both images and videos)
+        mediaGalleryAdapter = new MediaGalleryAdapter(this, selectedMediaItems);
         
         // Set click listeners
-        imageGalleryAdapter.setOnImageClickListener(new ProfessionalImageGalleryAdapter.OnImageClickListener() {
+        mediaGalleryAdapter.setOnMediaClickListener(new MediaGalleryAdapter.OnMediaClickListener() {
             @Override
-            public void onImageClick(int position, Uri imageUri) {
-                showImageInDialog(imageUri);
+            public void onMediaClick(int position, MediaItem mediaItem) {
+                if (mediaItem.isImage()) {
+                    showImageInDialog(mediaItem.getUri());
+                } else if (mediaItem.isVideo()) {
+                    showVideoInDialog(mediaItem.getUri());
+                }
             }
         });
         
-        imageGalleryAdapter.setOnImageRemoveListener(new ProfessionalImageGalleryAdapter.OnImageRemoveListener() {
+        mediaGalleryAdapter.setOnMediaRemoveListener(new MediaGalleryAdapter.OnMediaRemoveListener() {
             @Override
-            public void onImageRemove(int position, Uri imageUri) {
-                removeImageFromGallery(position);
+            public void onMediaRemove(int position, MediaItem mediaItem) {
+                removeMediaFromGallery(position);
             }
         });
         
-        imageGalleryRecyclerView.setAdapter(imageGalleryAdapter);
+        imageGalleryRecyclerView.setAdapter(mediaGalleryAdapter);
         
-        // Setup add more images button
+        // Setup add more media button
         addMoreImagesButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                pickImageFromGallery();
+                showMediaSelectionMenu(v);
             }
         });
     }
@@ -1018,19 +1024,24 @@ public class ReportSubmissionActivity extends AppCompatActivity {
 
     
     private void updateProfessionalImageGallery() {
-        // Convert MediaItems to URIs for the adapter
-        List<Uri> allUris = new ArrayList<>();
-        for (MediaItem item : selectedMediaItems) {
-            allUris.add(item.getUri());
-        }
-        // Also add from legacy selectedImageUris
+        // Combine MediaItems and legacy selectedImageUris
+        List<MediaItem> allMediaItems = new ArrayList<>(selectedMediaItems);
+        
+        // Add legacy selectedImageUris as MediaItems if not already present
         for (Uri uri : selectedImageUris) {
-            if (!allUris.contains(uri)) {
-                allUris.add(uri);
+            boolean exists = false;
+            for (MediaItem item : allMediaItems) {
+                if (item.getUri().equals(uri)) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                allMediaItems.add(new MediaItem(uri, MediaItem.TYPE_IMAGE));
             }
         }
         
-        if (allUris.isEmpty()) {
+        if (allMediaItems.isEmpty()) {
             // Show upload buttons container with animation, hide gallery
             if (uploadImagesButton != null && takePhotoButton != null) {
                 LinearLayout mediaContainer = findViewById(R.id.mediaAttachmentsContainer);
@@ -1054,25 +1065,35 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             addMoreImagesButton.setVisibility(View.VISIBLE);
             addMoreImagesButton.startAnimation(AnimationUtils.loadAnimation(this, R.anim.fade_in_scale));
             
-            imageGalleryAdapter.updateImages(allUris);
+            // Update adapter with all media items
+            if (mediaGalleryAdapter != null) {
+                mediaGalleryAdapter.updateMedia(allMediaItems);
+            }
         }
     }
     
     
-    private void removeImageFromGallery(int position) {
-        // Convert MediaItems to URIs to find the correct position
-        List<Uri> allUris = new ArrayList<>();
-        for (MediaItem item : selectedMediaItems) {
-            allUris.add(item.getUri());
-        }
+    private void removeMediaFromGallery(int position) {
+        // Combine MediaItems and legacy selectedImageUris to find the correct position
+        List<MediaItem> allMediaItems = new ArrayList<>(selectedMediaItems);
+        
+        // Add legacy selectedImageUris as MediaItems if not already present
         for (Uri uri : selectedImageUris) {
-            if (!allUris.contains(uri)) {
-                allUris.add(uri);
+            boolean exists = false;
+            for (MediaItem item : allMediaItems) {
+                if (item.getUri().equals(uri)) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                allMediaItems.add(new MediaItem(uri, MediaItem.TYPE_IMAGE));
             }
         }
         
-        if (position >= 0 && position < allUris.size()) {
-            Uri uriToRemove = allUris.get(position);
+        if (position >= 0 && position < allMediaItems.size()) {
+            MediaItem itemToRemove = allMediaItems.get(position);
+            Uri uriToRemove = itemToRemove.getUri();
             
             // Remove from MediaItems
             selectedMediaItems.removeIf(item -> item.getUri().equals(uriToRemove));
@@ -1080,7 +1101,10 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             // Remove from legacy selectedImageUris
             selectedImageUris.remove(uriToRemove);
             
-            imageGalleryAdapter.removeImage(position);
+            // Update adapter
+            if (mediaGalleryAdapter != null) {
+                mediaGalleryAdapter.removeMedia(position);
+            }
             
             // Update gallery visibility
             updateProfessionalImageGallery();
@@ -1394,28 +1418,39 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                     attachmentText.append(" attached");
                     tvConfirmAttachments.setText(attachmentText.toString());
                     
-                    // Show image previews in horizontal RecyclerView
+                    // Show media previews in horizontal RecyclerView
                     rvConfirmImagePreviews.setVisibility(View.VISIBLE);
                     LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
                     rvConfirmImagePreviews.setLayoutManager(layoutManager);
                     
-                    // Convert MediaItems to URIs for preview adapter
-                    List<Uri> previewUris = new ArrayList<>();
-                    for (MediaItem item : selectedMediaItems) {
-                        previewUris.add(item.getUri());
-                    }
+                    // Combine MediaItems for preview adapter
+                    List<MediaItem> previewMediaItems = new ArrayList<>(selectedMediaItems);
+                    // Add legacy selectedImageUris as MediaItems if not already present
                     for (Uri uri : selectedImageUris) {
-                        if (!previewUris.contains(uri)) {
-                            previewUris.add(uri);
+                        boolean exists = false;
+                        for (MediaItem item : previewMediaItems) {
+                            if (item.getUri().equals(uri)) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists) {
+                            previewMediaItems.add(new MediaItem(uri, MediaItem.TYPE_IMAGE));
                         }
                     }
-                    ProfessionalImageGalleryAdapter previewAdapter = new ProfessionalImageGalleryAdapter(this, previewUris);
-                    previewAdapter.setOnImageRemoveListener(null); // Disable remove in preview
-                    previewAdapter.setOnImageClickListener(new ProfessionalImageGalleryAdapter.OnImageClickListener() {
+                    
+                    MediaGalleryAdapter previewAdapter = new MediaGalleryAdapter(this, previewMediaItems);
+                    previewAdapter.setOnMediaRemoveListener(null); // Disable remove in preview
+                    previewAdapter.setOnMediaClickListener(new MediaGalleryAdapter.OnMediaClickListener() {
                         @Override
-                        public void onImageClick(int position, Uri imageUri) {
-                            // Show full screen image when clicked
-                            showFullScreenImage(imageUri);
+                        public void onMediaClick(int position, MediaItem mediaItem) {
+                            if (mediaItem.isImage()) {
+                                // Show full screen image when clicked
+                                showFullScreenImage(mediaItem.getUri());
+                            } else if (mediaItem.isVideo()) {
+                                // Show video player when clicked
+                                showVideoInDialog(mediaItem.getUri());
+                            }
                         }
                     });
                     rvConfirmImagePreviews.setAdapter(previewAdapter);
@@ -1982,7 +2017,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     }
 
     private void showImageInDialog(Uri imageUri) {
-        if (selectedImageUris.isEmpty()) return;
+        if (selectedMediaItems.isEmpty() && selectedImageUris.isEmpty()) return;
         
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         LayoutInflater inflater = getLayoutInflater();
@@ -1993,22 +2028,34 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         LinearLayoutManager dialogLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
         dialogRecyclerView.setLayoutManager(dialogLayoutManager);
         
-        // Convert MediaItems to URIs for dialog adapter
-        List<Uri> dialogUris = new ArrayList<>();
-        for (MediaItem item : selectedMediaItems) {
-            dialogUris.add(item.getUri());
-        }
+        // Combine MediaItems for dialog adapter
+        List<MediaItem> dialogMediaItems = new ArrayList<>(selectedMediaItems);
+        // Add legacy selectedImageUris as MediaItems if not already present
         for (Uri uri : selectedImageUris) {
-            if (!dialogUris.contains(uri)) {
-                dialogUris.add(uri);
+            boolean exists = false;
+            for (MediaItem item : dialogMediaItems) {
+                if (item.getUri().equals(uri)) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                dialogMediaItems.add(new MediaItem(uri, MediaItem.TYPE_IMAGE));
             }
         }
-        ProfessionalImageGalleryAdapter dialogAdapter = new ProfessionalImageGalleryAdapter(this, dialogUris);
-        dialogAdapter.setOnImageClickListener(new ProfessionalImageGalleryAdapter.OnImageClickListener() {
+        
+        MediaGalleryAdapter dialogAdapter = new MediaGalleryAdapter(this, dialogMediaItems);
+        dialogAdapter.setOnMediaRemoveListener(null); // Disable remove in dialog
+        dialogAdapter.setOnMediaClickListener(new MediaGalleryAdapter.OnMediaClickListener() {
             @Override
-            public void onImageClick(int position, Uri clickedImageUri) {
-                // Show full screen image view
-                showFullScreenImage(clickedImageUri);
+            public void onMediaClick(int position, MediaItem mediaItem) {
+                if (mediaItem.isImage()) {
+                    // Show full screen image view
+                    showFullScreenImage(mediaItem.getUri());
+                } else if (mediaItem.isVideo()) {
+                    // Show video player
+                    showVideoInDialog(mediaItem.getUri());
+                }
             }
         });
         
@@ -2065,6 +2112,87 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Error showing full screen image", e);
             Toast.makeText(this, "Error loading full screen image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * Show video in a dialog with playback controls
+     */
+    private void showVideoInDialog(Uri videoUri) {
+        try {
+            Log.d(TAG, "Showing video in dialog: " + videoUri.toString());
+            
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            LayoutInflater inflater = getLayoutInflater();
+            View dialogView = inflater.inflate(R.layout.dialog_fullscreen_video, null);
+            
+            VideoView videoView = dialogView.findViewById(R.id.fullScreenVideoView);
+            if (videoView != null) {
+                // Set up video player
+                try {
+                    // Clear previous video URI to avoid issues
+                    videoView.setVideoURI(null);
+                    
+                    // Set the video URI
+                    videoView.setVideoURI(videoUri);
+                    
+                    // Create and set MediaController for video controls
+                    MediaController mediaController = new MediaController(this);
+                    mediaController.setAnchorView(videoView);
+                    videoView.setMediaController(mediaController);
+                    
+                    // Set up video player callbacks
+                    videoView.setOnPreparedListener(mp -> {
+                        Log.d(TAG, "Video prepared successfully");
+                        // After preparation, seek to 1ms to show first frame
+                        try {
+                            videoView.seekTo(1);
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error seeking video", e);
+                        }
+                    });
+                    
+                    videoView.setOnErrorListener((mp, what, extra) -> {
+                        Log.e(TAG, "Video playback error: what=" + what + ", extra=" + extra);
+                        Toast.makeText(ReportSubmissionActivity.this, 
+                            "Error playing video", Toast.LENGTH_SHORT).show();
+                        return true;
+                    });
+                    
+                    videoView.setOnCompletionListener(mp -> {
+                        Log.d(TAG, "Video playback completed");
+                    });
+                    
+                    // Request focus to ensure video view is properly displayed
+                    videoView.requestFocus();
+                    
+                    Log.d(TAG, "Video player setup complete for URI: " + videoUri.toString());
+                } catch (Exception e) {
+                    Log.e(TAG, "Error setting up video player: " + e.getMessage(), e);
+                    Toast.makeText(this, "Error setting up video player: " + e.getMessage(), 
+                        Toast.LENGTH_SHORT).show();
+                }
+            }
+            
+            AlertDialog dialog = builder.setView(dialogView)
+                    .setPositiveButton("Close", null)
+                    .create();
+            
+            // Stop video playback when dialog is dismissed
+            dialog.setOnDismissListener(dialogInterface -> {
+                if (videoView != null) {
+                    videoView.stopPlayback();
+                    videoView.setVideoURI(null);
+                }
+            });
+            
+            dialog.show();
+                    
+            Log.d(TAG, "Video dialog shown successfully");
+                    
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing video dialog", e);
+            Toast.makeText(this, "Error loading video: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 

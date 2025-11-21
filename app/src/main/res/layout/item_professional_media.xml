@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="180dp"
+    android:layout_margin="2dp">
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:background="@drawable/professional_image_background" />
+
+    <!-- VideoView for inline video playback (shown only for videos) -->
+    <VideoView
+        android:id="@+id/videoView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:background="@drawable/professional_image_background" />
+
+    <!-- Video Play Icon Overlay (shown only for videos when paused) -->
+    <ImageView
+        android:id="@+id/videoPlayIcon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_play_circle"
+        android:background="@drawable/circle_play_button_background"
+        android:padding="8dp"
+        android:visibility="gone"
+        android:contentDescription="Play video"
+        android:elevation="6dp"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <!-- Video Duration Text (shown only for videos) -->
+    <TextView
+        android:id="@+id/videoDurationText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="8dp"
+        android:background="@drawable/video_duration_background"
+        android:textColor="@android:color/white"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:paddingHorizontal="6dp"
+        android:paddingVertical="3dp"
+        android:visibility="gone"
+        android:contentDescription="Video duration"
+        android:elevation="6dp" />
+
+    <!-- Professional Remove Button -->
+    <ImageView
+        android:id="@+id/removeButton"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="6dp"
+        android:src="@drawable/ic_close_white"
+        android:background="@drawable/circle_remove_button"
+        android:padding="6dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:contentDescription="Remove media"
+        android:elevation="4dp" />
+
+    <!-- Media Count Badge -->
+    <TextView
+        android:id="@+id/imageCountText"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="6dp"
+        android:background="@drawable/circle_count_badge"
+        android:textColor="@android:color/white"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:visibility="gone"
+        android:contentDescription="Media count"
+        android:elevation="4dp" />
+
+    <!-- Professional Overlay for better visibility -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/image_overlay_gradient"
+        android:alpha="0.1" />
+
+</FrameLayout>
