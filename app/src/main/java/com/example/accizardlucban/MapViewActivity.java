@@ -3562,14 +3562,15 @@ public class MapViewActivity extends AppCompatActivity {
     
     /**
      * Check if any map layers are currently active/visible
-     * Note: evacuationCentersVisible is excluded because evacuation centers come from Firestore pins, not Mapbox layers
+     * Note: evacuationCentersVisible and healthFacilitiesVisible are excluded because 
+     * they come from Firestore pins, not Mapbox layers
      */
     private boolean hasAnyLayerActive() {
         return barangayBoundariesVisible || 
                roadNetworkVisible || 
-               waterwaysVisible || 
-               healthFacilitiesVisible;
-               // evacuationCentersVisible excluded - evacuation centers come from Firestore pins only
+               waterwaysVisible;
+               // evacuationCentersVisible and healthFacilitiesVisible excluded - 
+               // they come from Firestore pins only, not Mapbox layers
     }
     
     /**
@@ -3631,8 +3632,9 @@ public class MapViewActivity extends AppCompatActivity {
             applyBarangayBoundariesVisibility();
             applyRoadNetworkVisibility();
             applyWaterwaysVisibility();
-            setLayerVisibility(style, "health-facilities", healthFacilitiesVisible);
-            // Always hide evacuation-centers layer - evacuation centers come from Firestore pins only
+            // Always hide health-facilities and evacuation-centers layers - 
+            // they come from Firestore pins only, not Mapbox layers
+            setLayerVisibility(style, "health-facilities", false);
             setLayerVisibility(style, "evacuation-centers", false);
             
             // Ensure lucban-boundary is always visible
@@ -4253,13 +4255,13 @@ public class MapViewActivity extends AppCompatActivity {
             
             // List of our custom layers that should ALWAYS remain visible (regardless of satellite state)
             // Note: road and waterway will be handled by their individual toggle states
+            // Note: health-facilities and evacuation-centers come from Firestore pins, not Mapbox layers
             Set<String> customLayers = new HashSet<>(Arrays.asList(
                 "lucban-boundary",      // Lucban boundary (always visible)
                 "lucban-brgys",         // Barangay boundaries (if enabled)
                 "lucban-fill",          // Barangay fill (if enabled)
                 "lucban-brgy-names",    // Barangay names (if enabled)
-                "health-facilities",    // Health facilities (if enabled)
-                "evacuation-centers",   // Evacuation centers (if enabled)
+                // health-facilities and evacuation-centers excluded - they come from Firestore pins only
                 SATELLITE_LAYER_ID      // Satellite layer itself
             ));
             
@@ -4341,22 +4343,17 @@ public class MapViewActivity extends AppCompatActivity {
     }
     
     /**
-     * Toggle Health Facilities layer visibility
-     * Controls: health-facilities
+     * Toggle Health Facilities visibility
+     * Health Facilities come from Firestore pins only, not from Mapbox layers
      */
     private void toggleHealthFacilities(boolean visible) {
         try {
             healthFacilitiesVisible = visible;
-            Style style = mapboxMap.getStyle();
-            if (style != null) {
-                setLayerVisibility(style, "health-facilities", visible);
-                Log.d(TAG, "Health facilities layer toggled: " + visible);
-            } else {
-                // Style not ready yet, will be applied when style loads
-                Log.d(TAG, "Style not ready, layer state saved for later: " + visible);
-            }
-            // Update pins visibility based on all layers
-            updatePinsVisibilityBasedOnLayers();
+            // Health Facilities come from Firestore pins only, not Mapbox layers
+            // No need to toggle Mapbox layer - just apply filters to Firestore pins
+            Log.d(TAG, "Health facilities filter toggled: " + visible);
+            // Apply filters to show/hide Firestore pins based on facility type
+            applyFiltersToFirestorePins(false);
         } catch (Exception e) {
             Log.e(TAG, "Error toggling health facilities: " + e.getMessage(), e);
         }
@@ -5249,6 +5246,9 @@ public class MapViewActivity extends AppCompatActivity {
                                     pin.setLongitude(longitude);
                                     pin.setCreatedBy(currentUser.getUid());
                                     pin.setReportId(reportId);
+                                    // Read title field from report document
+                                    String reportTitle = document.getString("title");
+                                    pin.setTitle(reportTitle != null && !reportTitle.trim().isEmpty() ? reportTitle : null);
                                     
                                     // Get timestamp - reports store timestamp as long (milliseconds), not Firestore Timestamp
                                     // Try to get as long first to avoid RuntimeException
@@ -5544,6 +5544,7 @@ public class MapViewActivity extends AppCompatActivity {
             pin.setLocationName(document.getString("locationName"));
             pin.setReportId(document.getString("reportId"));
             pin.setDescription(document.getString("description")); // Read description field for facilities
+            pin.setTitle(document.getString("title")); // Read title field from Firestore
             
             // Get coordinates
             Double lat = document.getDouble("latitude");
@@ -6447,9 +6448,18 @@ public class MapViewActivity extends AppCompatActivity {
                     pinCategory.setVisibility(View.VISIBLE);
                 }
                 
-                // Show facility name (large, bold) - use displayTitle which extracts first part of locationName
+                // Show facility name (large, bold) - use title field from Firestore
                 if (pinTitle != null) {
-                    String nameText = pin.getDisplayTitle();
+                    String nameText = null;
+                    // Priority: Use title field from Firestore
+                    if (pin.getTitle() != null && !pin.getTitle().trim().isEmpty()) {
+                        nameText = pin.getTitle().trim();
+                    }
+                    // Fallback to displayTitle if title is not available
+                    if (nameText == null || nameText.isEmpty()) {
+                        nameText = pin.getDisplayTitle();
+                    }
+                    // Final fallback
                     if (nameText == null || nameText.isEmpty()) {
                         nameText = "Unknown Facility";
                     }
@@ -6483,14 +6493,24 @@ public class MapViewActivity extends AppCompatActivity {
                     pinCategory.setVisibility(View.GONE);
                 }
                 
-                // Set incident type as title
+                // Set incident type as title - use title field from Firestore
                 if (pinTitle != null) {
-                    String titleText = "Unknown Type";
-                    // For incidents, use type field first, then category
-                    if (pin.getType() != null && !pin.getType().trim().isEmpty()) {
-                        titleText = pin.getType().trim();
-                    } else if (pin.getCategory() != null && !pin.getCategory().trim().isEmpty()) {
-                        titleText = formatCategoryLabel(pin.getCategory());
+                    String titleText = null;
+                    // Priority: Use title field from Firestore
+                    if (pin.getTitle() != null && !pin.getTitle().trim().isEmpty()) {
+                        titleText = pin.getTitle().trim();
+                    }
+                    // Fallback to type field if title is not available
+                    if (titleText == null || titleText.isEmpty()) {
+                        if (pin.getType() != null && !pin.getType().trim().isEmpty()) {
+                            titleText = pin.getType().trim();
+                        } else if (pin.getCategory() != null && !pin.getCategory().trim().isEmpty()) {
+                            titleText = formatCategoryLabel(pin.getCategory());
+                        }
+                    }
+                    // Final fallback
+                    if (titleText == null || titleText.isEmpty()) {
+                        titleText = "Unknown Type";
                     }
                     pinTitle.setText(titleText);
                     pinTitle.setGravity(android.view.Gravity.CENTER);
@@ -6515,13 +6535,19 @@ public class MapViewActivity extends AppCompatActivity {
                 }
             }
             
-            // Set location (common for both)
+            // Set location (common for both) - Use locationName field from Firestore
             if (pinLocation != null) {
+                String locationText = null;
+                // Priority: Use locationName field from Firestore
                 String fullAddress = pin.getFullAddress();
-                if (fullAddress == null || fullAddress.isEmpty() || fullAddress.equals("No address available")) {
-                    fullAddress = "Location not available";
+                if (fullAddress != null && !fullAddress.isEmpty() && !fullAddress.equals("No address available")) {
+                    locationText = fullAddress;
                 }
-                pinLocation.setText(fullAddress);
+                // Final fallback
+                if (locationText == null || locationText.isEmpty()) {
+                    locationText = "Location not available";
+                }
+                pinLocation.setText(locationText);
             }
             
             // Show dialog with animation

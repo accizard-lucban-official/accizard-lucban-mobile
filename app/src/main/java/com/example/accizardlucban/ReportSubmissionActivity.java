@@ -949,12 +949,13 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 // Use provided location name if available, otherwise get it via geocoding
                 if (locationName != null && !locationName.trim().isEmpty()) {
                     selectedLocationName = locationName;
-                    // Update coordinates field with location name (not coordinates)
+                    // Update coordinates field with location name only (no coordinates)
                     coordinatesEditText.setText(selectedLocationName);
+                    coordinatesEditText.setEnabled(true);
                     
                     // Update legacy field for backward compatibility
-                    String displayText = selectedLocationName + " (" + coordinatesText + ")";
-                    locationEditText.setText(displayText);
+                    String legacyDisplayText = selectedLocationName + " (" + coordinatesText + ")";
+                    locationEditText.setText(legacyDisplayText);
                     
                     // Make coordinates EditText read-only and add click listener
                     makeCoordinatesEditTextReadOnly();
@@ -967,9 +968,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                     Log.d(TAG, "   Longitude: " + longitude);
                     Log.d(TAG, "   Coordinates: " + coordinatesText);
                 } else {
-                    // Location name not provided, show placeholder and get it via geocoding
+                    // Location name not provided, show placeholder and get full address via geocoding
                     coordinatesEditText.setText("Getting location name...");
-                    coordinatesEditText.setEnabled(false);
+                    coordinatesEditText.setEnabled(true);
                     
                     // Get location name using reverse geocoding
                     getLocationNameFromCoordinates(latitude, longitude);
@@ -1303,8 +1304,10 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             String coordinatesText = String.format("%.6f, %.6f", selectedLatitude, selectedLongitude);
             
             // Show placeholder while geocoding is in progress
-            coordinatesEditText.setText("Getting location name...");
-            coordinatesEditText.setEnabled(false);
+            if (coordinatesEditText != null) {
+                coordinatesEditText.setText("Getting location name...");
+                coordinatesEditText.setEnabled(true);
+            }
             
             // Get location name using reverse geocoding (will update the display when complete)
             getLocationNameFromCoordinates(selectedLatitude, selectedLongitude);
@@ -1332,6 +1335,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     
     /**
      * Get location name from coordinates using reverse geocoding
+     * Builds full address and displays it with coordinates
      */
     private void getLocationNameFromCoordinates(double latitude, double longitude) {
         try {
@@ -1341,50 +1345,86 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             if (addresses != null && !addresses.isEmpty()) {
                 android.location.Address address = addresses.get(0);
                 
-                // Try to get the most specific location name
-                String locationName = null;
+                // Build full address string
+                StringBuilder fullAddress = new StringBuilder();
                 
-                // Priority 1: Sublocality (Barangay in Philippines)
-                if (address.getSubLocality() != null) {
-                    locationName = address.getSubLocality();
-                }
-                // Priority 2: Locality (City/Town)
-                else if (address.getLocality() != null) {
-                    locationName = address.getLocality();
-                }
-                // Priority 3: SubAdminArea
-                else if (address.getSubAdminArea() != null) {
-                    locationName = address.getSubAdminArea();
-                }
-                // Priority 4: AdminArea (Province)
-                else if (address.getAdminArea() != null) {
-                    locationName = address.getAdminArea();
-                }
-                // Fallback
-                else {
-                    locationName = "Current Location";
+                // Add feature name (street name)
+                if (address.getFeatureName() != null && !address.getFeatureName().trim().isEmpty()) {
+                    fullAddress.append(address.getFeatureName().trim());
                 }
                 
-                selectedLocationName = locationName;
-                Log.d(TAG, "✅ Location name from geocoding: " + selectedLocationName);
+                // Add thoroughfare (street)
+                if (address.getThoroughfare() != null && !address.getThoroughfare().trim().isEmpty()) {
+                    if (fullAddress.length() > 0) {
+                        fullAddress.append(" ");
+                    }
+                    fullAddress.append(address.getThoroughfare().trim());
+                }
                 
-                // Update UI with the location name in the EditText
+                // Add sub-locality (barangay)
+                if (address.getSubLocality() != null && !address.getSubLocality().trim().isEmpty()) {
+                    if (fullAddress.length() > 0) {
+                        fullAddress.append(", ");
+                    }
+                    fullAddress.append(address.getSubLocality().trim());
+                }
+                
+                // Add locality (city/town)
+                if (address.getLocality() != null && !address.getLocality().trim().isEmpty()) {
+                    if (fullAddress.length() > 0) {
+                        fullAddress.append(", ");
+                    }
+                    fullAddress.append(address.getLocality().trim());
+                }
+                
+                // Add admin area (province)
+                if (address.getAdminArea() != null && !address.getAdminArea().trim().isEmpty()) {
+                    if (fullAddress.length() > 0) {
+                        fullAddress.append(", ");
+                    }
+                    fullAddress.append(address.getAdminArea().trim());
+                }
+                
+                // Add country
+                if (address.getCountryName() != null && !address.getCountryName().trim().isEmpty()) {
+                    if (fullAddress.length() > 0) {
+                        fullAddress.append(", ");
+                    }
+                    fullAddress.append(address.getCountryName().trim());
+                }
+                
+                // If no address components found, use sublocality or locality as fallback
+                if (fullAddress.length() == 0) {
+                    if (address.getSubLocality() != null) {
+                        fullAddress.append(address.getSubLocality());
+                    } else if (address.getLocality() != null) {
+                        fullAddress.append(address.getLocality());
+                    } else {
+                        fullAddress.append("Current Location");
+                    }
+                }
+                
+                selectedLocationName = fullAddress.toString();
+                Log.d(TAG, "✅ Full address from geocoding: " + selectedLocationName);
+                
+                // Update UI with full address only (no coordinates)
                 runOnUiThread(() -> {
-                    // Update coordinates field with location name (not coordinates)
                     if (coordinatesEditText != null) {
                         coordinatesEditText.setText(selectedLocationName);
+                        coordinatesEditText.setEnabled(true);
                     }
-                    Toast.makeText(this, "Location: " + selectedLocationName, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Location obtained: " + selectedLocationName, Toast.LENGTH_SHORT).show();
                 });
                 
             } else {
                 selectedLocationName = "Current Location";
                 Log.w(TAG, "⚠️ Geocoder returned no addresses, using default name");
                 
-                // Update UI with default name
+                // Update UI with default name only (no coordinates)
                 runOnUiThread(() -> {
                     if (coordinatesEditText != null) {
                         coordinatesEditText.setText(selectedLocationName);
+                        coordinatesEditText.setEnabled(true);
                     }
                 });
             }
@@ -1392,10 +1432,11 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             selectedLocationName = "Current Location";
             Log.e(TAG, "Error getting location name from coordinates: " + e.getMessage(), e);
             
-            // Update UI with default name on error
+            // Update UI with default name only (no coordinates) on error
             runOnUiThread(() -> {
                 if (coordinatesEditText != null) {
                     coordinatesEditText.setText(selectedLocationName);
+                    coordinatesEditText.setEnabled(true);
                 }
             });
         }

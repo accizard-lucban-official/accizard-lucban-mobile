@@ -16,6 +16,7 @@ public class Pin {
     private String reportId; // Can be null
     private List<String> searchTerms; // For search functionality
     private String description; // Description for facilities
+    private String title; // Title field from Firestore
     
     // Empty constructor required for Firestore
     public Pin() {
@@ -139,6 +140,14 @@ public class Pin {
     
     public void setDescription(String description) {
         this.description = description;
+    }
+    
+    public String getTitle() {
+        return title;
+    }
+    
+    public void setTitle(String title) {
+        this.title = title;
     }
 }
 

@@ -133,50 +133,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:background="#FFF3E0"
-            android:padding="12dp"
-            android:layout_marginBottom="12dp">
-
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_info"
-                android:tint="#FF5722"
-                android:layout_marginEnd="8dp"
-                android:layout_gravity="center_vertical" />
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Submitting false or misleading reports may delay emergency response or result in penalties."
-                android:textSize="12sp"
-                android:textColor="#E65100"
-                android:lineSpacingExtra="2dp" />
-        </LinearLayout>
-
-        <!-- Warning Section -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:background="#FFEBEE"
             android:padding="12dp"
             android:layout_marginBottom="20dp">
 
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_info"
-                android:tint="#C62828"
-                android:layout_marginEnd="8dp"
-                android:layout_gravity="center_vertical" />
-
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Please review your report details before submitting. You won't be able to edit or delete it afterward."
+                android:text="Please review your report details before submitting. You won't be able to edit or delete it afterward. Submitting false or misleading reports may delay emergency response or result in penalties."
                 android:textSize="12sp"
                 android:textColor="#C62828"
                 android:lineSpacingExtra="2dp" />
