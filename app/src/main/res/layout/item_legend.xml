@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="@dimen/spacing_small">
+
+    <View
+        android:id="@+id/legendColorDot"
+        android:layout_width="@dimen/legend_dot_size"
+        android:layout_height="@dimen/legend_dot_size"
+        android:layout_marginEnd="@dimen/spacing_small"
+        android:background="@drawable/legend_color_dot_background" />
+
+    <TextView
+        android:id="@+id/legendLabel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Label"
+        android:textColor="@color/black"
+        android:textSize="@dimen/text_size_small"
+        android:fontFamily="@font/dmsans"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+</LinearLayout>

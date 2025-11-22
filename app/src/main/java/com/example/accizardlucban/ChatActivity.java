@@ -892,8 +892,6 @@ public class ChatActivity extends AppCompatActivity {
             // Setup click listeners for each menu item
             LinearLayout menuTakePhoto = popupView.findViewById(R.id.menuTakePhoto);
             LinearLayout menuOpenGallery = popupView.findViewById(R.id.menuOpenGallery);
-            LinearLayout menuRecordVideo = popupView.findViewById(R.id.menuRecordVideo);
-            LinearLayout menuRecordAudio = popupView.findViewById(R.id.menuRecordAudio);
             
             if (menuTakePhoto != null) {
                 menuTakePhoto.setOnClickListener(v -> {
@@ -917,28 +915,6 @@ public class ChatActivity extends AppCompatActivity {
                 });
             }
             
-            if (menuRecordVideo != null) {
-                menuRecordVideo.setOnClickListener(v -> {
-                    dialog.dismiss();
-                    if (checkCameraPermission()) {
-                        openVideoRecorder();
-                    } else {
-                        requestCameraPermission();
-                    }
-                });
-            }
-            
-            if (menuRecordAudio != null) {
-                menuRecordAudio.setOnClickListener(v -> {
-                    dialog.dismiss();
-                    if (checkAudioPermission()) {
-                        openAudioRecorder();
-                    } else {
-                        requestAudioPermission();
-                    }
-                });
-            }
-            
             // Position dialog above the anchor button
             dialog.show();
             android.view.Window window = dialog.getWindow();
@@ -951,7 +927,7 @@ public class ChatActivity extends AppCompatActivity {
                 // Position the popup above the button
                 layoutParams.gravity = android.view.Gravity.TOP | android.view.Gravity.START;
                 layoutParams.x = location[0] + anchor.getWidth() / 2 - 100; // Center horizontally
-                layoutParams.y = location[1] - (int)(280 * getResources().getDisplayMetrics().density); // Above the button
+                layoutParams.y = location[1] - (int)(140 * getResources().getDisplayMetrics().density); // Above the button (reduced for 2 menu items)
                 window.setAttributes(layoutParams);
             }
             
@@ -2110,7 +2086,7 @@ public class ChatActivity extends AppCompatActivity {
     
     private void makeEmergencyCall() {
         try {
-            String ldrrmoNumber = "tel:042-555-0101"; // LDRRMO emergency number
+            String ldrrmoNumber = "tel:09175204211"; // LDRRMO emergency number
             
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
                     != PackageManager.PERMISSION_GRANTED) {
@@ -2154,11 +2130,11 @@ public class ChatActivity extends AppCompatActivity {
         try {
             if (requestCode == CALL_PERMISSION_REQUEST_CODE) {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    makeCall("tel:042-555-0101");
+                    makeCall("tel:09175204211");
                 } else {
                     // Permission denied, show dial pad instead
                     Intent dialIntent = new Intent(Intent.ACTION_DIAL);
-                    dialIntent.setData(Uri.parse("tel:042-555-0101"));
+                    dialIntent.setData(Uri.parse("tel:09175204211"));
                     startActivity(dialIntent);
                     Toast.makeText(this, "Permission denied. Opening dial pad instead.", Toast.LENGTH_SHORT).show();
                 }

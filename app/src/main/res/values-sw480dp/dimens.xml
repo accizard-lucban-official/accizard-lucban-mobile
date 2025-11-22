@@ -237,4 +237,7 @@
     <dimen name="main_emergency_margin_top">110dp</dimen>
     <dimen name="main_input_height">56dp</dimen>
     <dimen name="main_button_height">52dp</dimen>
+    
+    <!-- Legend -->
+    <dimen name="legend_dot_size">10dp</dimen>
 </resources>

@@ -1514,16 +1514,28 @@
                     </LinearLayout>
             </LinearLayout>
 
-            <GridLayout
-                android:id="@+id/reportLegendGrid"
+            <!-- Legend Title -->
+            <TextView
+                android:id="@+id/legendTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Legend"
+                android:textColor="@color/black"
+                android:textSize="@dimen/text_size_medium"
+                android:textStyle="bold"
+                android:fontFamily="@font/dmsans"
+                android:layout_marginTop="@dimen/spacing_small"
+                android:layout_marginBottom="@dimen/spacing_small"
+                android:visibility="gone" />
+
+            <!-- Responsive Legend RecyclerView -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/reportLegendRecyclerView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:alignmentMode="alignMargins"
-                android:columnCount="3"
-                android:rowCount="5"
                 android:layout_marginTop="@dimen/spacing_small"
                 android:layout_marginBottom="@dimen/spacing_medium"
-                android:useDefaultMargins="false" />
+                android:nestedScrollingEnabled="false" />
             </LinearLayout>
         </ScrollView>
     </FrameLayout>

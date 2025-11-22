@@ -32,6 +32,8 @@ import android.widget.GridLayout;
 import android.graphics.Typeface;
 import android.view.Gravity;
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
@@ -137,7 +139,9 @@ public class MainDashboard extends AppCompatActivity {
     private LinearLayout emergencyContactsLayout;
     private BarChart reportChart;
     private TextView reportFilterText;
-    private GridLayout reportLegendGrid;
+    private RecyclerView reportLegendRecyclerView;
+    private TextView legendTitle;
+    private LegendAdapter legendAdapter;
     
     // Statistics views
     private TextView totalReportsCount;
@@ -469,7 +473,11 @@ public class MainDashboard extends AppCompatActivity {
             emergencyContactsLayout = findViewById(R.id.emergencyContactsLayout);
             reportChart = findViewById(R.id.reportChart);
             reportFilterText = findViewById(R.id.reportFilterText);
-            reportLegendGrid = findViewById(R.id.reportLegendGrid);
+            reportLegendRecyclerView = findViewById(R.id.reportLegendRecyclerView);
+            legendTitle = findViewById(R.id.legendTitle);
+            
+            // Initialize responsive legend RecyclerView
+            setupLegendRecyclerView();
             
             // Statistics views
             totalReportsCount = findViewById(R.id.totalReportsCount);
@@ -2500,20 +2508,65 @@ public class MainDashboard extends AppCompatActivity {
         }
     }
 
+    /**
+     * Setup responsive legend RecyclerView with adaptive column count
+     */
+    private void setupLegendRecyclerView() {
+        try {
+            if (reportLegendRecyclerView == null) {
+                return;
+            }
+            
+            // Calculate responsive column count based on screen width
+            int screenWidthDp = (int) (getResources().getDisplayMetrics().widthPixels / 
+                    getResources().getDisplayMetrics().density);
+            
+            // Adaptive column count:
+            // - Small screens (< 480dp): 2 columns
+            // - Medium screens (480-720dp): 3 columns
+            // - Large screens (720-960dp): 4 columns
+            // - Extra large screens (> 960dp): 5 columns
+            int columnCount = 3; // Default
+            if (screenWidthDp < 480) {
+                columnCount = 2;
+            } else if (screenWidthDp < 720) {
+                columnCount = 3;
+            } else if (screenWidthDp < 960) {
+                columnCount = 4;
+            } else {
+                columnCount = 5;
+            }
+            
+            // Setup GridLayoutManager with responsive column count
+            GridLayoutManager layoutManager = new GridLayoutManager(this, columnCount);
+            reportLegendRecyclerView.setLayoutManager(layoutManager);
+            
+            // Disable nested scrolling to work properly inside ScrollView
+            reportLegendRecyclerView.setNestedScrollingEnabled(false);
+            
+            // Initialize adapter with empty list (will be populated later)
+            List<String> legendItems = new ArrayList<>();
+            legendAdapter = new LegendAdapter(this, legendItems, new LegendAdapter.LegendColorProvider() {
+                @Override
+                public int getColorForType(String type) {
+                    return MainDashboard.this.getColorForType(type);
+                }
+            });
+            reportLegendRecyclerView.setAdapter(legendAdapter);
+            
+            Log.d(TAG, "Legend RecyclerView setup complete with " + columnCount + " columns (screen width: " + screenWidthDp + "dp)");
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up legend RecyclerView: " + e.getMessage(), e);
+        }
+    }
+    
     private void clearReportLegend() {
         try {
-            if (reportLegendGrid != null) {
-                reportLegendGrid.removeAllViews();
-                
-                // Also remove the header if it exists
-                ViewGroup parent = (ViewGroup) reportLegendGrid.getParent();
-                if (parent != null) {
-                    String headerTag = "legend_header";
-                    View header = parent.findViewWithTag(headerTag);
-                    if (header != null) {
-                        parent.removeView(header);
-                    }
-                }
+            if (legendAdapter != null) {
+                legendAdapter.updateLegendItems(new ArrayList<>());
+            }
+            if (legendTitle != null) {
+                legendTitle.setVisibility(View.GONE);
             }
         } catch (Exception e) {
             Log.e(TAG, "Error clearing report legend: " + e.getMessage(), e);
@@ -2522,99 +2575,25 @@ public class MainDashboard extends AppCompatActivity {
 
     private void populateReportLegend() {
         try {
-            if (reportLegendGrid == null) {
+            if (reportLegendRecyclerView == null || legendAdapter == null) {
                 return;
             }
 
-            // Get DM Sans font once for reuse
-            Typeface dmSansTypeface = ResourcesCompat.getFont(this, R.font.dmsans);
-
-            // Get parent container and add header if not already added
-            ViewGroup parent = (ViewGroup) reportLegendGrid.getParent();
-            if (parent != null) {
-                // Check if header already exists using tag
-                String headerTag = "legend_header";
-                View existingHeader = parent.findViewWithTag(headerTag);
-                if (existingHeader == null) {
-                    // Add "Legend" header title to parent container
-                    TextView legendHeader = new TextView(this);
-                    legendHeader.setTag(headerTag);
-                    legendHeader.setText("Legend");
-                    legendHeader.setTextColor(getColorSafe(R.color.black, android.R.color.black));
-                    if (dmSansTypeface != null) {
-                        legendHeader.setTypeface(dmSansTypeface, Typeface.BOLD);
-                    }
-                    legendHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
-                    
-                    // Get the index of reportLegendGrid in parent
-                    int gridIndex = parent.indexOfChild(reportLegendGrid);
-                    
-                    // Create layout params for header
-                    LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                    );
-                    int headerMargin = (int) TypedValue.applyDimension(
-                            TypedValue.COMPLEX_UNIT_DIP,
-                            8,
-                            getResources().getDisplayMetrics()
-                    );
-                    headerParams.setMargins(0, 0, 0, headerMargin);
-                    legendHeader.setLayoutParams(headerParams);
-                    
-                    // Insert header before the GridLayout
-                    parent.addView(legendHeader, gridIndex);
-                }
+            // Show legend title
+            if (legendTitle != null) {
+                legendTitle.setVisibility(View.VISIBLE);
             }
 
-            reportLegendGrid.removeAllViews();
-
-            int margin = (int) TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP,
-                    4,
-                    getResources().getDisplayMetrics()
-            );
-
-            for (int index = 0; index < LEGEND_ORDER.length; index++) {
-                String label = LEGEND_ORDER[index];
-
-                LinearLayout legendItem = new LinearLayout(this);
-                legendItem.setOrientation(LinearLayout.HORIZONTAL);
-                legendItem.setGravity(Gravity.CENTER_VERTICAL);
-
-                View colorDot = new View(this);
-                int dotSize = (int) TypedValue.applyDimension(
-                        TypedValue.COMPLEX_UNIT_DIP,
-                        10,
-                        getResources().getDisplayMetrics()
-                );
-                LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dotSize, dotSize);
-                dotParams.setMargins(0, 0, margin, 0);
-                colorDot.setLayoutParams(dotParams);
-                colorDot.setBackgroundResource(R.drawable.legend_color_dot_background);
-                int color = getColorForType(label);
-                colorDot.getBackground().setTint(color);
-
-                TextView labelView = new TextView(this);
-                labelView.setText(label);
-                labelView.setTextColor(getColorSafe(R.color.black, android.R.color.black));
-                if (dmSansTypeface != null) {
-                    labelView.setTypeface(dmSansTypeface);
-                }
-                labelView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
-
-                legendItem.addView(colorDot);
-                legendItem.addView(labelView);
-
-                GridLayout.Spec rowSpec = GridLayout.spec(index / 3); // Original row calculation
-                GridLayout.Spec columnSpec = GridLayout.spec(index % 3, 1f);
-                GridLayout.LayoutParams params = new GridLayout.LayoutParams(rowSpec, columnSpec);
-                params.width = 0;
-                params.setMargins(margin, margin, margin, margin);
-                legendItem.setLayoutParams(params);
-
-                reportLegendGrid.addView(legendItem);
+            // Convert LEGEND_ORDER array to List
+            List<String> legendItems = new ArrayList<>();
+            for (String label : LEGEND_ORDER) {
+                legendItems.add(label);
             }
+            
+            // Update adapter with legend items
+            legendAdapter.updateLegendItems(legendItems);
+            
+            Log.d(TAG, "Legend populated with " + legendItems.size() + " items");
         } catch (Exception e) {
             Log.e(TAG, "Error populating report legend: " + e.getMessage(), e);
         }
