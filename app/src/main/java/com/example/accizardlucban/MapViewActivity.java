@@ -4924,6 +4924,41 @@ public class MapViewActivity extends AppCompatActivity {
     // ========================================
     
     /**
+     * Update all facility pin categories in Firestore to match Emergency Support Facilities options
+     * Call this method once to fix existing facility pins
+     * Categories will be updated to:
+     * - Evacuation Centers
+     * - Health Facilities
+     * - Police Stations
+     * - Fire Stations
+     * - Government Offices
+     */
+    public void updateFacilityPinCategories() {
+        Log.d(TAG, "Starting facility pin category update...");
+        
+        FirestorePinUpdater.updateAllFacilityPinCategories(
+                updateCount -> {
+                    Log.d(TAG, "Successfully updated " + updateCount + " facility pins");
+                    runOnUiThread(() -> {
+                        android.widget.Toast.makeText(this, 
+                                "Updated " + updateCount + " facility pin categories", 
+                                android.widget.Toast.LENGTH_LONG).show();
+                        // Reload pins to reflect changes
+                        refreshPinsFromFirestore();
+                    });
+                },
+                e -> {
+                    Log.e(TAG, "Error updating facility pin categories", e);
+                    runOnUiThread(() -> {
+                        android.widget.Toast.makeText(this, 
+                                "Error updating facility pins: " + e.getMessage(), 
+                                android.widget.Toast.LENGTH_LONG).show();
+                    });
+                }
+        );
+    }
+    
+    /**
      * Fetch all pins from Firestore and display them on the map
      */
     private void loadPinsFromFirestore() {
@@ -5495,6 +5530,7 @@ public class MapViewActivity extends AppCompatActivity {
             pin.setCreatedByName(document.getString("createdByName"));
             pin.setLocationName(document.getString("locationName"));
             pin.setReportId(document.getString("reportId"));
+            pin.setDescription(document.getString("description")); // Read description field for facilities
             
             // Get coordinates
             Double lat = document.getDouble("latitude");
@@ -6074,23 +6110,10 @@ public class MapViewActivity extends AppCompatActivity {
             String typeLower = typeTrimmed.toLowerCase();
             
             // First, check if this is clearly a facility type (before checking incidents)
+            // PRIORITY: Use type field for facilities - this is what user clicks in Emergency Support Facilities
             // This prevents facility types from being misidentified as incidents
             // Must be specific to avoid false matches
-            boolean isFacilityType = false;
-            if (typeLower.contains("government office") || typeLower.contains("government offices") || 
-                typeLower.contains("gobyerno") || (typeLower.contains("government") && typeLower.contains("office")) ||
-                typeLower.contains("evacuation center") || typeLower.contains("evacuation centers") ||
-                (typeLower.contains("health facility") || typeLower.contains("health facilities")) ||
-                typeLower.contains("police station") || typeLower.contains("police stations") ||
-                typeLower.contains("fire station") || typeLower.contains("fire stations") ||
-                typeLower.contains("bumbero") || typeLower.contains("pulisya") ||
-                typeLower.contains("hospital") || typeLower.contains("clinic")) {
-                // Make sure it's not an incident type that mentions these words
-                if (!typeLower.contains("medical emergency") && !typeLower.contains("health emergency") &&
-                    !typeLower.contains("evacuation order") && !typeLower.contains("evacuation warning")) {
-                    isFacilityType = true;
-                }
-            }
+            boolean isFacilityType = isFacilityCategory(typeTrimmed); // Use helper method to check if type is a facility
             
             // Check if this type matches any Incident Type filter
             // Only check if it's NOT a facility type
@@ -6157,8 +6180,19 @@ public class MapViewActivity extends AppCompatActivity {
             }
             
             // Check if type matches any Facility Type filter
+            // PRIORITY: Use type field directly - it should match Emergency Support Facilities options exactly
             // Only check if it's identified as a facility type
             if (hasActiveFacilityFilters && isFacilityType) {
+                // Try exact match first (case-insensitive) - type should match filter names exactly
+                // This handles: "Evacuation Centers", "Health Facilities", "Police Stations", "Fire Stations", "Government Offices"
+                for (String filterName : facilityFilters.keySet()) {
+                    if (typeTrimmed.equalsIgnoreCase(filterName)) {
+                        Log.d(TAG, "Facility type exact match: '" + typeTrimmed + "' matches filter: '" + filterName + "'");
+                        return facilityFilters.getOrDefault(filterName, false);
+                    }
+                }
+                
+                // Fallback: Check partial matches for variations
                 // Check Government Offices
                 if (typeLower.contains("government office") || typeLower.contains("government offices") || 
                     typeLower.contains("gobyerno") || (typeLower.contains("government") && typeLower.contains("office"))) {
@@ -6186,13 +6220,6 @@ public class MapViewActivity extends AppCompatActivity {
                 if (typeLower.contains("fire station") || typeLower.contains("fire stations") || 
                     typeLower.contains("bumbero") || (typeLower.contains("fire") && typeLower.contains("station"))) {
                     return facilityFilters.getOrDefault("Fire Stations", false);
-                }
-                
-                // Try exact match with facility filter names (case-insensitive)
-                for (String filterName : facilityFilters.keySet()) {
-                    if (typeTrimmed.equalsIgnoreCase(filterName)) {
-                        return facilityFilters.getOrDefault(filterName, false);
-                    }
                 }
             }
             
@@ -6358,8 +6385,24 @@ public class MapViewActivity extends AppCompatActivity {
             
             // Get views from custom layout
             ImageView pinIcon = dialog.findViewById(R.id.pinIcon);
+            TextView pinCategory = dialog.findViewById(R.id.pinCategory);
             TextView pinTitle = dialog.findViewById(R.id.pinTitle);
+            TextView pinLocation = dialog.findViewById(R.id.pinLocation);
+            TextView pinDate = dialog.findViewById(R.id.pinDate);
             TextView pinDescription = dialog.findViewById(R.id.pinDescription);
+            LinearLayout dateRow = dialog.findViewById(R.id.dateRow);
+            LinearLayout descriptionRow = dialog.findViewById(R.id.descriptionRow);
+            
+            // Determine if this is a facility pin - PRIORITY: Use type field first (for facilities)
+            boolean isFacilityPin = false;
+            if (pin.getType() != null && !pin.getType().trim().isEmpty()) {
+                isFacilityPin = isFacilityCategory(pin.getType());
+            }
+            // Fallback to category field if type is not available
+            if (!isFacilityPin && pin.getCategory() != null) {
+                isFacilityPin = isFacilityCategory(pin.getCategory());
+            }
+            Log.d(TAG, "showPinDetails - Category: '" + pin.getCategory() + "', Type: '" + pin.getType() + "', isFacilityPin: " + isFacilityPin);
             
             // Set pin icon based on type or category
             if (pinIcon != null) {
@@ -6369,59 +6412,104 @@ public class MapViewActivity extends AppCompatActivity {
                 pinIcon.setColorFilter(null);
             }
             
-            // Set title
-            if (pinTitle != null) {
-                pinTitle.setText(pin.getDisplayTitle());
-            }
-            
-            // Build description message following required format
-            StringBuilder description = new StringBuilder();
-
-            boolean isFacilityPin = isFacilityCategory(pin.getCategory());
-            String fullAddress = pin.getFullAddress();
-            if (fullAddress == null || fullAddress.isEmpty()) {
-                fullAddress = "Not available";
-            }
-
             if (isFacilityPin) {
-                description.append("Emergency Facility:\n");
-                String title = pin.getDisplayTitle();
-                if (title == null || title.isEmpty()) {
-                    title = "Not available";
+                Log.d(TAG, "Showing FACILITY layout");
+                // FACILITY LAYOUT: Category label, Name, Location, Description
+                
+                // Show category label (grey, smaller) - Use type field for facilities
+                if (pinCategory != null) {
+                    String categoryText = null;
+                    // PRIORITY: Use type field for facilities
+                    if (pin.getType() != null && !pin.getType().trim().isEmpty()) {
+                        categoryText = formatCategoryLabel(pin.getType());
+                    }
+                    // Fallback to category field if type is not available
+                    if (categoryText == null || categoryText.isEmpty()) {
+                        categoryText = formatCategoryLabel(pin.getCategory());
+                    }
+                    if (categoryText == null || categoryText.isEmpty()) {
+                        categoryText = "Emergency Facility";
+                    }
+                    pinCategory.setText(categoryText);
+                    pinCategory.setVisibility(View.VISIBLE);
                 }
-                description.append("- Title: ").append(title).append("\n");
-                description.append("- Location: ").append(fullAddress);
+                
+                // Show facility name (large, bold) - use displayTitle which extracts first part of locationName
+                if (pinTitle != null) {
+                    String nameText = pin.getDisplayTitle();
+                    if (nameText == null || nameText.isEmpty()) {
+                        nameText = "Unknown Facility";
+                    }
+                    pinTitle.setText(nameText);
+                    pinTitle.setGravity(android.view.Gravity.START); // Left align for facilities (matches design)
+                }
+                
+                // Hide date row, show description row
+                if (dateRow != null) {
+                    dateRow.setVisibility(View.GONE);
+                }
+                if (descriptionRow != null) {
+                    descriptionRow.setVisibility(View.VISIBLE);
+                }
+                
+                // Set description
+                if (pinDescription != null) {
+                    String descriptionText = pin.getDescription();
+                    if (descriptionText == null || descriptionText.trim().isEmpty()) {
+                        descriptionText = "No description available";
+                    }
+                    pinDescription.setText(descriptionText);
+                }
+                
             } else {
-                description.append("Report Details:\n");
-                // PRIORITY: Use "type" field from Firestore, fallback to "category"
-                String type = null;
-                if (pin.getType() != null && !pin.getType().trim().isEmpty()) {
-                    type = pin.getType().trim();
-                } else if (pin.getCategory() != null && !pin.getCategory().trim().isEmpty()) {
-                    type = formatCategoryLabel(pin.getCategory());
-                } else {
-                    type = "Not available";
+                Log.d(TAG, "Showing INCIDENT layout");
+                // INCIDENT LAYOUT: Title, Location, Date
+                
+                // Hide category label
+                if (pinCategory != null) {
+                    pinCategory.setVisibility(View.GONE);
                 }
-                description.append("- Type: ").append(type).append("\n");
-                description.append("- Location: ").append(fullAddress).append("\n");
-
-                String dateText = "Not available";
-                String timeText = "Not available";
-                if (pin.getCreatedAt() != null) {
-                    java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault());
-                    java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault());
-                    dateText = dateFormat.format(pin.getCreatedAt());
-                    timeText = timeFormat.format(pin.getCreatedAt());
+                
+                // Set incident type as title
+                if (pinTitle != null) {
+                    String titleText = "Unknown Type";
+                    // For incidents, use type field first, then category
+                    if (pin.getType() != null && !pin.getType().trim().isEmpty()) {
+                        titleText = pin.getType().trim();
+                    } else if (pin.getCategory() != null && !pin.getCategory().trim().isEmpty()) {
+                        titleText = formatCategoryLabel(pin.getCategory());
+                    }
+                    pinTitle.setText(titleText);
+                    pinTitle.setGravity(android.view.Gravity.CENTER);
                 }
-                description.append("- Date: ").append(dateText).append("\n");
-                description.append("- Time: ").append(timeText);
-            }
-
-            if (pinDescription != null) {
-                pinDescription.setText(description.toString());
+                
+                // Show date row, hide description row
+                if (dateRow != null) {
+                    dateRow.setVisibility(View.VISIBLE);
+                }
+                if (descriptionRow != null) {
+                    descriptionRow.setVisibility(View.GONE);
+                }
+                
+                // Set date
+                if (pinDate != null) {
+                    String dateText = "Date not available";
+                    if (pin.getCreatedAt() != null) {
+                        java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("MMMM dd, yyyy", java.util.Locale.getDefault());
+                        dateText = dateFormat.format(pin.getCreatedAt());
+                    }
+                    pinDate.setText(dateText);
+                }
             }
             
-            // Navigate button removed
+            // Set location (common for both)
+            if (pinLocation != null) {
+                String fullAddress = pin.getFullAddress();
+                if (fullAddress == null || fullAddress.isEmpty() || fullAddress.equals("No address available")) {
+                    fullAddress = "Location not available";
+                }
+                pinLocation.setText(fullAddress);
+            }
             
             // Show dialog with animation
             dialog.show();

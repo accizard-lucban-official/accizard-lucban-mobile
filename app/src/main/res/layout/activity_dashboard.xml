@@ -802,7 +802,7 @@
                         android:id="@+id/ldrrmoIcon"
                         android:layout_width="@dimen/dashboard_emergency_contact_size"
                         android:layout_height="@dimen/dashboard_emergency_contact_size"
-                        android:src="@drawable/ic_ldrrmo"
+                        android:src="@drawable/logosplashscreenldrrmo"
                         android:padding="@dimen/spacing_medium"
                         android:layout_marginBottom="@dimen/spacing_small"
                         android:clickable="true"

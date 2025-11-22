@@ -1,49 +1,161 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:background="@drawable/dialog_background"
-    android:padding="24dp"
-    android:layout_margin="32dp">
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:padding="16dp">
 
-    <!-- Success/Info Icon -->
-    <ImageView
-        android:id="@+id/pinIcon"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="16dp"
-        android:src="@drawable/ic_location_pin"
-        android:contentDescription="Pin icon" />
-
-    <!-- Main Title -->
-    <TextView
-        android:id="@+id/pinTitle"
+    <!-- White Card with Rounded Corners -->
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="8dp"
-        android:text="Pin Details"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="#1A1A1A"
-        android:gravity="center"
-        android:fontFamily="@font/dmsans" />
+        android:layout_gravity="center"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="@color/white"
+        android:layout_margin="16dp">
 
-    <!-- Description Message -->
-    <TextView
-        android:id="@+id/pinDescription"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="24dp"
-        android:text="Tap on a pin to view details.\n\nReport: Type, Location, Date, Time\nEmergency Facility: Title, Location"
-        android:textSize="16sp"
-        android:textColor="#666666"
-        android:gravity="start"
-        android:textAlignment="viewStart"
-        android:lineSpacingExtra="4dp"
-        android:fontFamily="@font/dmsans" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
 
-</LinearLayout>
+            <!-- Large Icon Container -->
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="20dp">
+
+                <!-- Large Icon (Dynamic based on pin type) -->
+                <ImageView
+                    android:id="@+id/pinIcon"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:layout_gravity="center"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="Pin icon" />
+
+            </FrameLayout>
+
+            <!-- Category Label (For Facilities Only) -->
+            <TextView
+                android:id="@+id/pinCategory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Evacuation Center"
+                android:textSize="14sp"
+                android:textColor="@color/gray_medium"
+                android:gravity="center"
+                android:fontFamily="@font/dmsans"
+                android:visibility="gone" />
+
+            <!-- Title (Incident Type or Facility Name) -->
+            <TextView
+                android:id="@+id/pinTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:text="Animal Concern"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="@color/black"
+                android:gravity="start"
+                android:fontFamily="@font/dmsans" />
+
+            <!-- Location Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_location_pin"
+                    android:tint="#D32F2F"
+                    android:layout_marginEnd="8dp"
+                    android:contentDescription="Location icon" />
+
+                <TextView
+                    android:id="@+id/pinLocation"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Tayabas Rd, Lucban, 4328 Quezon"
+                    android:textSize="14sp"
+                    android:textColor="@color/dark_gray"
+                    android:fontFamily="@font/dmsans" />
+
+            </LinearLayout>
+
+            <!-- Date Row (For Incidents Only) -->
+            <LinearLayout
+                android:id="@+id/dateRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="visible">
+
+                <TextView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:gravity="center"
+                    android:text="📅"
+                    android:textSize="14sp"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:id="@+id/pinDate"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="November 20, 2025"
+                    android:textSize="14sp"
+                    android:textColor="@color/dark_gray"
+                    android:fontFamily="@font/dmsans" />
+
+            </LinearLayout>
+
+            <!-- Description Row (For Facilities Only) -->
+            <LinearLayout
+                android:id="@+id/descriptionRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Description: "
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/dark_gray"
+                    android:fontFamily="@font/dmsans"
+                    android:layout_marginEnd="4dp" />
+
+                <TextView
+                    android:id="@+id/pinDescription"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="No description available"
+                    android:textSize="14sp"
+                    android:textColor="@color/dark_gray"
+                    android:fontFamily="@font/dmsans" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
+</FrameLayout>

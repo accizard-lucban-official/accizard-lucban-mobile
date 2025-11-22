@@ -169,5 +169,13 @@
         <item name="android:fontFamily">@font/dmsans</item>
         <item name="fontFamily">@font/dmsans</item>
     </style>
+    
+    <!-- Splash Screen Theme -->
+    <style name="SplashTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:statusBarColor">@android:color/white</item>
+    </style>
 
 </resources>

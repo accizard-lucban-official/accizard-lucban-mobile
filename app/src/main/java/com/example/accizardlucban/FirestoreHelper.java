@@ -212,6 +212,89 @@ public class FirestoreHelper {
                 .addOnCompleteListener(completeListener);
     }
     
+    /**
+     * Create a facility pin in Firestore with the correct type field
+     * Type field must match Emergency Support Facilities options exactly:
+     * - "Evacuation Centers"
+     * - "Health Facilities"
+     * - "Police Stations"
+     * - "Fire Stations"
+     * - "Government Offices"
+     * 
+     * @param pinData Map containing pin data (type field will be normalized to correct name)
+     * @param successListener Success callback
+     * @param failureListener Failure callback
+     */
+    public static void createFacilityPin(Map<String, Object> pinData,
+                                        OnSuccessListener<com.google.firebase.firestore.DocumentReference> successListener,
+                                        OnFailureListener failureListener) {
+        // PRIORITY: Normalize type field to match Emergency Support Facilities options
+        if (pinData.containsKey("type")) {
+            String type = (String) pinData.get("type");
+            String normalizedType = FirestorePinUpdater.getCorrectCategoryName(type);
+            if (normalizedType != null) {
+                pinData.put("type", normalizedType);
+                // Also set category field for consistency
+                pinData.put("category", normalizedType);
+            }
+        } else if (pinData.containsKey("category")) {
+            // If type is not set, use category and set both fields
+            String category = (String) pinData.get("category");
+            String normalizedType = FirestorePinUpdater.getCorrectCategoryName(category);
+            if (normalizedType != null) {
+                pinData.put("type", normalizedType);
+                pinData.put("category", normalizedType);
+            }
+        }
+        
+        getInstance().collection("pins")
+                .add(pinData)
+                .addOnSuccessListener(successListener)
+                .addOnFailureListener(failureListener);
+    }
+    
+    /**
+     * Helper method to create facility pin data map with correct type field
+     * Use this when creating facility pins to ensure type matches Emergency Support Facilities
+     * 
+     * @param facilityType Must be one of: "Evacuation Centers", "Health Facilities", 
+     *                    "Police Stations", "Fire Stations", "Government Offices"
+     *                    This is what the user clicks in Emergency Support Facilities
+     * @param locationName Full address of the facility
+     * @param latitude Latitude coordinate
+     * @param longitude Longitude coordinate
+     * @param description Optional description
+     * @return Map with pin data ready to save to Firestore (type field will match user selection)
+     */
+    public static Map<String, Object> createFacilityPinData(String facilityType,
+                                                            String locationName,
+                                                            double latitude,
+                                                            double longitude,
+                                                            String description) {
+        Map<String, Object> pinData = new HashMap<>();
+        
+        // Normalize type to match Emergency Support Facilities options
+        // This ensures the type field matches exactly what the user clicked
+        String normalizedType = FirestorePinUpdater.getCorrectCategoryName(facilityType);
+        String finalType = normalizedType != null ? normalizedType : facilityType;
+        
+        // PRIORITY: Set type field (this is what the app reads for facilities)
+        pinData.put("type", finalType);
+        // Also set category field for consistency
+        pinData.put("category", finalType);
+        
+        pinData.put("locationName", locationName);
+        pinData.put("latitude", latitude);
+        pinData.put("longitude", longitude);
+        pinData.put("createdAt", com.google.firebase.Timestamp.now());
+        
+        if (description != null && !description.trim().isEmpty()) {
+            pinData.put("description", description);
+        }
+        
+        return pinData;
+    }
+    
     // Batch operations
     public static WriteBatch getBatch() {
         return getInstance().batch();

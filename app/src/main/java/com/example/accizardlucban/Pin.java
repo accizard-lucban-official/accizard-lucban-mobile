@@ -15,6 +15,7 @@ public class Pin {
     private double longitude;
     private String reportId; // Can be null
     private List<String> searchTerms; // For search functionality
+    private String description; // Description for facilities
     
     // Empty constructor required for Firestore
     public Pin() {
@@ -130,6 +131,14 @@ public class Pin {
     
     public String getFullAddress() {
         return locationName != null ? locationName : "No address available";
+    }
+    
+    public String getDescription() {
+        return description;
+    }
+    
+    public void setDescription(String description) {
+        this.description = description;
     }
 }
 

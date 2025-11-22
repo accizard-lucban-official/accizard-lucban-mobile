@@ -69,6 +69,13 @@ android {
         checkReleaseBuilds = false
         ignoreWarnings = true
     }
+    sourceSets {
+        getByName("main") {
+            assets {
+                srcDirs("src\\main\\assets", "src\\main\\assets")
+            }
+        }
+    }
 
 }
 
@@ -123,4 +130,7 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
+
+    // Lottie Animation Library
+    implementation("com.airbnb.android:lottie:6.1.0")
 }

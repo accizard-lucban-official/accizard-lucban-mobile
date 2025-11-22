@@ -70,15 +70,23 @@
             android:name="com.mapbox.maps.token"
             android:value="@string/mapbox_access_token" />
 
-        <!-- Launcher Activity -->
+        <!-- Splash Screen Activity (Launcher) -->
         <activity
-            android:name=".MainActivity"
-            android:exported="true">
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:theme="@style/SplashTheme"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Main Activity (No longer launcher) -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name=".PasswordResetConfirmActivity"
