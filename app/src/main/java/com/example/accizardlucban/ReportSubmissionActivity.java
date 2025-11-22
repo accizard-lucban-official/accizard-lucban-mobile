@@ -573,9 +573,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         locationInfoIcon.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(ReportSubmissionActivity.this, 
-                    "We only respond to reports within Lucban. Please select a location within Lucban.",
-                    Toast.LENGTH_LONG).show();
+                showLocationInfoDialog();
             }
         });
 
@@ -720,6 +718,49 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Error showing report type guide dialog", e);
             Toast.makeText(this, "Unable to open report type guide", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Show location information modal dialog
+     */
+    private void showLocationInfoDialog() {
+        try {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            LayoutInflater inflater = getLayoutInflater();
+            View dialogView = inflater.inflate(R.layout.dialog_location_info, null);
+            
+            // Find views in dialog
+            TextView tvLocationInfoMessage = dialogView.findViewById(R.id.tvLocationInfoMessage);
+            Button btnCloseLocationInfo = dialogView.findViewById(R.id.btnCloseLocationInfo);
+            
+            // Set message
+            if (tvLocationInfoMessage != null) {
+                tvLocationInfoMessage.setText("We only respond to reports within Lucban. Please select a location within Lucban.");
+            }
+            
+            // Create dialog
+            AlertDialog dialog = builder.setView(dialogView)
+                    .setCancelable(true)
+                    .create();
+            
+            // Close button
+            if (btnCloseLocationInfo != null) {
+                btnCloseLocationInfo.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        dialog.dismiss();
+                    }
+                });
+            }
+            
+            dialog.show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing location info dialog", e);
+            // Fallback to Toast if dialog fails
+            Toast.makeText(this, 
+                "We only respond to reports within Lucban. Please select a location within Lucban.",
+                Toast.LENGTH_LONG).show();
         }
     }
 

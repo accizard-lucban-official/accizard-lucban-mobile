@@ -52,14 +52,13 @@ public class EditProfileActivity extends AppCompatActivity {
     private ImageView backButton, profilePicture, editPictureButton;
     private Button saveButton;
     private EditText firstNameEdit, lastNameEdit, mobileNumberEdit,
-            emailEdit, provinceEdit, cityEdit, streetAddressEdit;
+            provinceEdit, cityEdit, streetAddressEdit;
     private AutoCompleteTextView barangayEdit;
 
     private static final String PREFS_NAME = "user_profile_prefs";
     private static final String KEY_FIRST_NAME = "first_name";
     private static final String KEY_LAST_NAME = "last_name";
     private static final String KEY_MOBILE = "mobile_number";
-    private static final String KEY_EMAIL = "email";
     private static final String KEY_PROVINCE = "province";
     private static final String KEY_CITY = "city";
     private static final String KEY_BARANGAY = "barangay";
@@ -90,7 +89,6 @@ public class EditProfileActivity extends AppCompatActivity {
         firstNameEdit = findViewById(R.id.first_name_edit);
         lastNameEdit = findViewById(R.id.last_name_edit);
         mobileNumberEdit = findViewById(R.id.mobile_number_edit);
-        emailEdit = findViewById(R.id.email_edit);
         provinceEdit = findViewById(R.id.province_edit);
         cityEdit = findViewById(R.id.city_edit);
         barangayEdit = findViewById(R.id.barangay_edit);
@@ -181,7 +179,6 @@ public class EditProfileActivity extends AppCompatActivity {
             String firstName = intent.getStringExtra("firstName");
             String lastName = intent.getStringExtra("lastName");
             String mobileNumber = intent.getStringExtra("mobileNumber");
-            String email = intent.getStringExtra("email");
             String province = intent.getStringExtra("province");
             String city = intent.getStringExtra("city");
             String barangay = intent.getStringExtra("barangay");
@@ -190,7 +187,6 @@ public class EditProfileActivity extends AppCompatActivity {
             if (firstName != null) firstNameEdit.setText(firstName);
             if (lastName != null) lastNameEdit.setText(lastName);
             if (mobileNumber != null) mobileNumberEdit.setText(mobileNumber);
-            if (email != null) emailEdit.setText(email);
             if (province != null) provinceEdit.setText(province);
             if (city != null) cityEdit.setText(city);
             if (barangay != null) barangayEdit.setText(barangay);
@@ -201,7 +197,6 @@ public class EditProfileActivity extends AppCompatActivity {
             firstNameEdit.setText(prefs.getString(KEY_FIRST_NAME, ""));
             lastNameEdit.setText(prefs.getString(KEY_LAST_NAME, ""));
             mobileNumberEdit.setText(prefs.getString(KEY_MOBILE, ""));
-            emailEdit.setText(prefs.getString(KEY_EMAIL, ""));
             provinceEdit.setText(prefs.getString(KEY_PROVINCE, ""));
             cityEdit.setText(prefs.getString(KEY_CITY, ""));
             barangayEdit.setText(prefs.getString(KEY_BARANGAY, ""));
@@ -228,19 +223,7 @@ public class EditProfileActivity extends AppCompatActivity {
                 if (!queryDocumentSnapshots.isEmpty()) {
                     QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
                     
-                    // Load email from Firebase Auth (most reliable)
-                    String email = user.getEmail();
-                    if (email != null && !email.isEmpty()) {
-                        emailEdit.setText(email);
-                    } else {
-                        // Fallback to Firestore
-                        String firestoreEmail = doc.getString("email");
-                        if (firestoreEmail != null && !firestoreEmail.isEmpty()) {
-                            emailEdit.setText(firestoreEmail);
-                        }
-                    }
-                    
-                    // Load other fields from Firestore
+                    // Load fields from Firestore
                     String firstName = doc.getString("firstName");
                     String lastName = doc.getString("lastName");
                     String mobileNumber = doc.getString("mobileNumber");
@@ -294,7 +277,6 @@ public class EditProfileActivity extends AppCompatActivity {
         String firstName = firstNameEdit.getText().toString().trim();
         String lastName = lastNameEdit.getText().toString().trim();
         String mobileNumber = mobileNumberEdit.getText().toString().trim();
-        String email = emailEdit.getText().toString().trim();
         String province = provinceEdit.getText().toString().trim();
         String city = cityEdit.getText().toString().trim();
         String barangay = barangayEdit.getText().toString().trim();
@@ -302,31 +284,31 @@ public class EditProfileActivity extends AppCompatActivity {
 
         // Save to SharedPreferences immediately for instant local updates
         ProfileDataManager profileManager = ProfileDataManager.getInstance(this);
-        profileManager.saveProfileLocally(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+        profileManager.saveProfileLocally(firstName, lastName, mobileNumber, null, province, city, barangay, streetAddress);
         
         Log.d(TAG, "Profile data saved locally, now syncing to Firestore...");
 
         // Proceed with profile sync
-        proceedWithProfileSync(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+        proceedWithProfileSync(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
     }
 
     private void proceedWithProfileSync(String firstName, String lastName, String mobileNumber,
-                                       String email, String province, String city, String barangay, String streetAddress) {
+                                       String province, String city, String barangay, String streetAddress) {
         // If there's a new profile picture, upload it first, then sync profile data
         if (hasNewProfilePicture) {
             uploadNewProfilePicture();
         } else {
             // Sync profile data to Firestore
-            syncProfileToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+            syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
         }
     }
 
 
     private void syncProfileToFirestore(String firstName, String lastName, String mobileNumber,
-                                       String email, String province, String city, String barangay, String streetAddress) {
+                                       String province, String city, String barangay, String streetAddress) {
         ProfileDataManager profileManager = ProfileDataManager.getInstance(this);
         
-        profileManager.syncToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress, 
+        profileManager.syncToFirestore(firstName, lastName, mobileNumber, null, province, city, barangay, streetAddress, 
             new ProfileDataManager.SyncCallback() {
                 @Override
                 public void onSuccess() {
@@ -411,13 +393,6 @@ public class EditProfileActivity extends AppCompatActivity {
         String mobile = mobileNumberEdit.getText().toString().trim();
         if (!mobile.isEmpty() && !mobile.matches("^09\\d{9}$")) {
             mobileNumberEdit.setError("Invalid mobile number format (should be 09XXXXXXXXX)");
-            isValid = false;
-        }
-
-        // Validate email (required if provided)
-        String email = emailEdit.getText().toString().trim();
-        if (!email.isEmpty() && !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            emailEdit.setError("Invalid email format");
             isValid = false;
         }
 
@@ -677,12 +652,11 @@ public class EditProfileActivity extends AppCompatActivity {
             String firstName = firstNameEdit.getText().toString().trim();
             String lastName = lastNameEdit.getText().toString().trim();
             String mobileNumber = mobileNumberEdit.getText().toString().trim();
-            String email = emailEdit.getText().toString().trim();
             String province = provinceEdit.getText().toString().trim();
             String city = cityEdit.getText().toString().trim();
             String barangay = barangayEdit.getText().toString().trim();
             String streetAddress = streetAddressEdit.getText().toString().trim();
-            syncProfileToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+            syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
             return;
         }
 
@@ -714,12 +688,11 @@ public class EditProfileActivity extends AppCompatActivity {
                                         String firstName = firstNameEdit.getText().toString().trim();
                                         String lastName = lastNameEdit.getText().toString().trim();
                                         String mobileNumber = mobileNumberEdit.getText().toString().trim();
-                                        String email = emailEdit.getText().toString().trim();
                                         String province = provinceEdit.getText().toString().trim();
                                         String city = cityEdit.getText().toString().trim();
                                         String barangay = barangayEdit.getText().toString().trim();
                                         String streetAddress = streetAddressEdit.getText().toString().trim();
-                                        syncProfileToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+                                        syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
                                     }
                                     
                                     @Override
@@ -729,12 +702,11 @@ public class EditProfileActivity extends AppCompatActivity {
                                         String firstName = firstNameEdit.getText().toString().trim();
                                         String lastName = lastNameEdit.getText().toString().trim();
                                         String mobileNumber = mobileNumberEdit.getText().toString().trim();
-                                        String email = emailEdit.getText().toString().trim();
                                         String province = provinceEdit.getText().toString().trim();
                                         String city = cityEdit.getText().toString().trim();
                                         String barangay = barangayEdit.getText().toString().trim();
                                         String streetAddress = streetAddressEdit.getText().toString().trim();
-                                        syncProfileToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+                                        syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
                                     }
                                 });
                         }
@@ -749,12 +721,11 @@ public class EditProfileActivity extends AppCompatActivity {
                             String firstName = firstNameEdit.getText().toString().trim();
                             String lastName = lastNameEdit.getText().toString().trim();
                             String mobileNumber = mobileNumberEdit.getText().toString().trim();
-                            String email = emailEdit.getText().toString().trim();
                             String province = provinceEdit.getText().toString().trim();
                             String city = cityEdit.getText().toString().trim();
                             String barangay = barangayEdit.getText().toString().trim();
                             String streetAddress = streetAddressEdit.getText().toString().trim();
-                            syncProfileToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+                            syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
                         }
                     });
         } else {
@@ -762,12 +733,11 @@ public class EditProfileActivity extends AppCompatActivity {
             String firstName = firstNameEdit.getText().toString().trim();
             String lastName = lastNameEdit.getText().toString().trim();
             String mobileNumber = mobileNumberEdit.getText().toString().trim();
-            String email = emailEdit.getText().toString().trim();
             String province = provinceEdit.getText().toString().trim();
             String city = cityEdit.getText().toString().trim();
             String barangay = barangayEdit.getText().toString().trim();
             String streetAddress = streetAddressEdit.getText().toString().trim();
-            syncProfileToFirestore(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
+            syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
         }
     }
 
