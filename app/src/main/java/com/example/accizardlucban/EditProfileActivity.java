@@ -52,8 +52,9 @@ public class EditProfileActivity extends AppCompatActivity {
     private ImageView backButton, profilePicture, editPictureButton;
     private Button saveButton;
     private EditText firstNameEdit, lastNameEdit, mobileNumberEdit,
-            provinceEdit, cityEdit, streetAddressEdit;
+            provinceEdit, cityEdit, streetAddressEdit, birthdayEdit, religionEdit;
     private AutoCompleteTextView barangayEdit;
+    private Spinner genderSpinner, civilStatusSpinner, bloodTypeSpinner, pwdStatusSpinner;
 
     private static final String PREFS_NAME = "user_profile_prefs";
     private static final String KEY_FIRST_NAME = "first_name";
@@ -93,6 +94,18 @@ public class EditProfileActivity extends AppCompatActivity {
         cityEdit = findViewById(R.id.city_edit);
         barangayEdit = findViewById(R.id.barangay_edit);
         streetAddressEdit = findViewById(R.id.etStreetAddress);
+        birthdayEdit = findViewById(R.id.birthday_edit);
+        genderSpinner = findViewById(R.id.gender_spinner);
+        civilStatusSpinner = findViewById(R.id.civil_status_spinner);
+        religionEdit = findViewById(R.id.religion_edit);
+        bloodTypeSpinner = findViewById(R.id.blood_type_spinner);
+        pwdStatusSpinner = findViewById(R.id.pwd_status_spinner);
+        
+        // Setup spinners
+        setupGenderSpinner();
+        setupCivilStatusSpinner();
+        setupBloodTypeSpinner();
+        setupPWDStatusSpinner();
     }
 
 
@@ -145,6 +158,50 @@ public class EditProfileActivity extends AppCompatActivity {
     private void setupBarangayAdapter() {
         barangayEdit.setThreshold(1);
         updateBarangayAdapter();
+    }
+
+    private void setupGenderSpinner() {
+        String[] genders = {"Select Gender", "Male", "Female", "Other"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                genders
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        genderSpinner.setAdapter(adapter);
+    }
+
+    private void setupCivilStatusSpinner() {
+        String[] civilStatuses = {"Select Civil Status", "Single", "Married", "Divorced", "Widowed", "Separated", "Annulled"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                civilStatuses
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        civilStatusSpinner.setAdapter(adapter);
+    }
+
+    private void setupBloodTypeSpinner() {
+        String[] bloodTypes = {"Select Blood Type", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                bloodTypes
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        bloodTypeSpinner.setAdapter(adapter);
+    }
+
+    private void setupPWDStatusSpinner() {
+        String[] pwdStatuses = {"Select PWD Status", "PWD", "Not PWD"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                pwdStatuses
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        pwdStatusSpinner.setAdapter(adapter);
     }
 
     private void updateBarangayAdapter() {
@@ -201,6 +258,16 @@ public class EditProfileActivity extends AppCompatActivity {
             cityEdit.setText(prefs.getString(KEY_CITY, ""));
             barangayEdit.setText(prefs.getString(KEY_BARANGAY, ""));
             streetAddressEdit.setText(prefs.getString(KEY_STREET_ADDRESS, ""));
+            
+            // Load new fields
+            birthdayEdit.setText(prefs.getString("birthday", ""));
+            religionEdit.setText(prefs.getString("religion", ""));
+            
+            // Set spinner selections
+            setSpinnerSelection(genderSpinner, prefs.getString("gender", ""));
+            setSpinnerSelection(civilStatusSpinner, prefs.getString("civil_status", ""));
+            setSpinnerSelection(bloodTypeSpinner, prefs.getString("blood_type", ""));
+            setSpinnerSelection(pwdStatusSpinner, prefs.getString("pwd_status", ""));
         }
         
         // Also try to load from Firestore to get the latest data
@@ -257,6 +324,47 @@ public class EditProfileActivity extends AppCompatActivity {
                         streetAddressEdit.setText(streetAddress);
                     }
                     
+                    // Load new fields from Firestore
+                    String birthday = doc.getString("birthday");
+                    String gender = doc.getString("gender");
+                    String civilStatus = doc.getString("civil_status");
+                    if (civilStatus == null || civilStatus.isEmpty()) {
+                        civilStatus = doc.getString("civilStatus");
+                    }
+                    String religion = doc.getString("religion");
+                    
+                    // ✅ FIXED: Fetch blood_type from Firestore (field name is blood_type with underscore)
+                    String bloodType = doc.getString("blood_type");
+                    if (bloodType == null || bloodType.isEmpty()) {
+                        // Fallback to camelCase if underscore version doesn't exist
+                        bloodType = doc.getString("bloodType");
+                    }
+                    
+                    String pwdStatus = doc.getString("pwdStatus");
+                    if (pwdStatus == null || pwdStatus.isEmpty()) {
+                        pwdStatus = doc.getString("pwd_status");
+                    }
+                    
+                    // Only update fields that are empty (don't overwrite existing data)
+                    if (birthday != null && birthdayEdit.getText().toString().trim().isEmpty()) {
+                        birthdayEdit.setText(birthday);
+                    }
+                    if (gender != null && genderSpinner.getSelectedItemPosition() == 0) {
+                        setSpinnerSelection(genderSpinner, gender);
+                    }
+                    if (civilStatus != null && civilStatusSpinner.getSelectedItemPosition() == 0) {
+                        setSpinnerSelection(civilStatusSpinner, civilStatus);
+                    }
+                    if (religion != null && religionEdit.getText().toString().trim().isEmpty()) {
+                        religionEdit.setText(religion);
+                    }
+                    if (bloodType != null && bloodTypeSpinner.getSelectedItemPosition() == 0) {
+                        setSpinnerSelection(bloodTypeSpinner, bloodType);
+                    }
+                    if (pwdStatus != null && pwdStatusSpinner.getSelectedItemPosition() == 0) {
+                        setSpinnerSelection(pwdStatusSpinner, pwdStatus);
+                    }
+                    
                     // Update barangay adapter after loading data
                     updateBarangayAdapter();
                     
@@ -266,6 +374,26 @@ public class EditProfileActivity extends AppCompatActivity {
             .addOnFailureListener(e -> {
                 Log.e(TAG, "Error loading user data from Firestore", e);
             });
+    }
+
+    /**
+     * Set spinner selection by value
+     */
+    private void setSpinnerSelection(Spinner spinner, String value) {
+        if (spinner == null || value == null || value.isEmpty()) {
+            return;
+        }
+        
+        ArrayAdapter adapter = (ArrayAdapter) spinner.getAdapter();
+        if (adapter != null) {
+            for (int i = 0; i < adapter.getCount(); i++) {
+                String item = adapter.getItem(i).toString();
+                if (value.equalsIgnoreCase(item)) {
+                    spinner.setSelection(i);
+                    return;
+                }
+            }
+        }
     }
 
     private void saveProfile() {
@@ -281,37 +409,68 @@ public class EditProfileActivity extends AppCompatActivity {
         String city = cityEdit.getText().toString().trim();
         String barangay = barangayEdit.getText().toString().trim();
         String streetAddress = streetAddressEdit.getText().toString().trim();
+        String birthday = birthdayEdit.getText().toString().trim();
+        String gender = genderSpinner.getSelectedItemPosition() > 0 ? genderSpinner.getSelectedItem().toString() : "";
+        String civilStatus = civilStatusSpinner.getSelectedItemPosition() > 0 ? civilStatusSpinner.getSelectedItem().toString() : "";
+        String religion = religionEdit.getText().toString().trim();
+        String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
+        String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
 
         // Save to SharedPreferences immediately for instant local updates
         ProfileDataManager profileManager = ProfileDataManager.getInstance(this);
         profileManager.saveProfileLocally(firstName, lastName, mobileNumber, null, province, city, barangay, streetAddress);
         
+        // Save additional fields to SharedPreferences
+        SharedPreferences prefs = getUserPrefs();
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString("birthday", birthday);
+        editor.putString("gender", gender);
+        editor.putString("civil_status", civilStatus);
+        editor.putString("civilStatus", civilStatus);
+        editor.putString("religion", religion);
+        editor.putString("blood_type", bloodType);
+        editor.putString("bloodType", bloodType);
+        editor.putString("pwd_status", pwdStatus);
+        editor.putString("pwdStatus", pwdStatus);
+        editor.putBoolean("is_pwd", "PWD".equalsIgnoreCase(pwdStatus));
+        editor.apply();
+        
+        Log.d(TAG, "Profile data saved locally, including blood_type: " + bloodType);
         Log.d(TAG, "Profile data saved locally, now syncing to Firestore...");
 
         // Proceed with profile sync
-        proceedWithProfileSync(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
+        proceedWithProfileSync(firstName, lastName, mobileNumber, province, city, barangay, streetAddress, 
+                birthday, gender, civilStatus, religion, bloodType, pwdStatus);
     }
 
     private void proceedWithProfileSync(String firstName, String lastName, String mobileNumber,
-                                       String province, String city, String barangay, String streetAddress) {
+                                       String province, String city, String barangay, String streetAddress,
+                                       String birthday, String gender, String civilStatus, String religion, 
+                                       String bloodType, String pwdStatus) {
         // If there's a new profile picture, upload it first, then sync profile data
         if (hasNewProfilePicture) {
             uploadNewProfilePicture();
         } else {
             // Sync profile data to Firestore
-            syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
+            syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
+                    birthday, gender, civilStatus, religion, bloodType, pwdStatus);
         }
     }
 
 
     private void syncProfileToFirestore(String firstName, String lastName, String mobileNumber,
-                                       String province, String city, String barangay, String streetAddress) {
+                                       String province, String city, String barangay, String streetAddress,
+                                       String birthday, String gender, String civilStatus, String religion,
+                                       String bloodType, String pwdStatus) {
         ProfileDataManager profileManager = ProfileDataManager.getInstance(this);
         
-        profileManager.syncToFirestore(firstName, lastName, mobileNumber, null, province, city, barangay, streetAddress, 
+        profileManager.syncToFirestore(firstName, lastName, mobileNumber, null, province, city, barangay, streetAddress,
             new ProfileDataManager.SyncCallback() {
                 @Override
                 public void onSuccess() {
+                    // After basic profile sync, sync additional fields
+                    syncAdditionalFieldsToFirestore(birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                    
                     Log.d(TAG, "Profile synced to Firestore successfully");
                     runOnUiThread(() -> {
                         Toast.makeText(EditProfileActivity.this, "Profile updated successfully!", Toast.LENGTH_SHORT).show();
@@ -343,6 +502,9 @@ public class EditProfileActivity extends AppCompatActivity {
                 @Override
                 public void onFailure(Exception e) {
                     Log.e(TAG, "Failed to sync profile to Firestore: " + e.getMessage(), e);
+                    // Still try to sync additional fields
+                    syncAdditionalFieldsToFirestore(birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                    
                     runOnUiThread(() -> {
                         Toast.makeText(EditProfileActivity.this, 
                             "Profile updated locally, but failed to sync to server. Changes will sync when online.", 
@@ -372,6 +534,86 @@ public class EditProfileActivity extends AppCompatActivity {
                     });
                 }
             });
+    }
+
+    /**
+     * Sync additional profile fields (birthday, gender, civil_status, religion, blood_type, pwd_status) to Firestore
+     */
+    private void syncAdditionalFieldsToFirestore(String birthday, String gender, String civilStatus, 
+                                                 String religion, String bloodType, String pwdStatus) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Log.w(TAG, "No user signed in, skipping additional fields sync");
+            return;
+        }
+
+        try {
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            String firebaseUid = user.getUid();
+            
+            db.collection("users")
+                .whereEqualTo("firebaseUid", firebaseUid)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
+                        String docId = doc.getId();
+                        
+                        Map<String, Object> updates = new HashMap<>();
+                        
+                        // Add additional fields if they have values
+                        if (birthday != null && !birthday.trim().isEmpty()) {
+                            updates.put("birthday", birthday.trim());
+                        }
+                        if (gender != null && !gender.trim().isEmpty() && !gender.equals("Select Gender")) {
+                            updates.put("gender", gender.trim());
+                        }
+                        if (civilStatus != null && !civilStatus.trim().isEmpty() && !civilStatus.equals("Select Civil Status")) {
+                            updates.put("civil_status", civilStatus.trim());
+                            updates.put("civilStatus", civilStatus.trim()); // Also save as camelCase for compatibility
+                        }
+                        if (religion != null && !religion.trim().isEmpty()) {
+                            updates.put("religion", religion.trim());
+                        }
+                        if (bloodType != null && !bloodType.trim().isEmpty() && !bloodType.equals("Select Blood Type")) {
+                            // ✅ FIXED: Save blood_type with underscore as primary field in Firestore
+                            String trimmedBloodType = bloodType.trim();
+                            updates.put("blood_type", trimmedBloodType);
+                            updates.put("bloodType", trimmedBloodType); // Also save as camelCase for compatibility
+                            Log.d(TAG, "Syncing blood type to Firestore: " + trimmedBloodType);
+                        }
+                        if (pwdStatus != null && !pwdStatus.trim().isEmpty() && !pwdStatus.equals("Select PWD Status")) {
+                            updates.put("pwdStatus", pwdStatus.trim());
+                            updates.put("pwd_status", pwdStatus.trim()); // Also save with underscore for compatibility
+                            updates.put("isPWD", "PWD".equalsIgnoreCase(pwdStatus.trim()));
+                        }
+                        
+                        if (!updates.isEmpty()) {
+                            updates.put("lastUpdated", System.currentTimeMillis());
+                            
+                            Log.d(TAG, "Syncing additional fields to Firestore: " + updates.toString());
+                            
+                            db.collection("users").document(docId)
+                                .update(updates)
+                                .addOnSuccessListener(aVoid -> {
+                                    Log.d(TAG, "Additional profile fields synced to Firestore successfully, including blood_type: " + 
+                                        (updates.containsKey("blood_type") ? updates.get("blood_type") : "not included"));
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Error syncing additional fields to Firestore", e);
+                                });
+                        } else {
+                            Log.d(TAG, "No additional fields to sync (all fields are empty or default)");
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error querying user document for additional fields sync", e);
+                });
+        } catch (Exception e) {
+            Log.e(TAG, "Error in syncAdditionalFieldsToFirestore", e);
+        }
     }
 
     private boolean validateForm() {
@@ -656,7 +898,14 @@ public class EditProfileActivity extends AppCompatActivity {
             String city = cityEdit.getText().toString().trim();
             String barangay = barangayEdit.getText().toString().trim();
             String streetAddress = streetAddressEdit.getText().toString().trim();
-            syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
+            String birthday = birthdayEdit.getText().toString().trim();
+            String gender = genderSpinner.getSelectedItemPosition() > 0 ? genderSpinner.getSelectedItem().toString() : "";
+            String civilStatus = civilStatusSpinner.getSelectedItemPosition() > 0 ? civilStatusSpinner.getSelectedItem().toString() : "";
+            String religion = religionEdit.getText().toString().trim();
+            String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
+            String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
+            syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
+                    birthday, gender, civilStatus, religion, bloodType, pwdStatus);
             return;
         }
 
@@ -692,7 +941,14 @@ public class EditProfileActivity extends AppCompatActivity {
                                         String city = cityEdit.getText().toString().trim();
                                         String barangay = barangayEdit.getText().toString().trim();
                                         String streetAddress = streetAddressEdit.getText().toString().trim();
-                                        syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
+                                        String birthday = birthdayEdit.getText().toString().trim();
+                                        String gender = genderSpinner.getSelectedItemPosition() > 0 ? genderSpinner.getSelectedItem().toString() : "";
+                                        String civilStatus = civilStatusSpinner.getSelectedItemPosition() > 0 ? civilStatusSpinner.getSelectedItem().toString() : "";
+                                        String religion = religionEdit.getText().toString().trim();
+                                        String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
+                                        String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
+                                        syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
+                                                birthday, gender, civilStatus, religion, bloodType, pwdStatus);
                                     }
                                     
                                     @Override
@@ -706,7 +962,14 @@ public class EditProfileActivity extends AppCompatActivity {
                                         String city = cityEdit.getText().toString().trim();
                                         String barangay = barangayEdit.getText().toString().trim();
                                         String streetAddress = streetAddressEdit.getText().toString().trim();
-                                        syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
+                                        String birthday = birthdayEdit.getText().toString().trim();
+                                        String gender = genderSpinner.getSelectedItemPosition() > 0 ? genderSpinner.getSelectedItem().toString() : "";
+                                        String civilStatus = civilStatusSpinner.getSelectedItemPosition() > 0 ? civilStatusSpinner.getSelectedItem().toString() : "";
+                                        String religion = religionEdit.getText().toString().trim();
+                                        String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
+                                        String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
+                                        syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
+                                                birthday, gender, civilStatus, religion, bloodType, pwdStatus);
                                     }
                                 });
                         }
@@ -725,7 +988,14 @@ public class EditProfileActivity extends AppCompatActivity {
                             String city = cityEdit.getText().toString().trim();
                             String barangay = barangayEdit.getText().toString().trim();
                             String streetAddress = streetAddressEdit.getText().toString().trim();
-                            syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
+                            String birthday = birthdayEdit.getText().toString().trim();
+                            String gender = genderSpinner.getSelectedItemPosition() > 0 ? genderSpinner.getSelectedItem().toString() : "";
+                            String civilStatus = civilStatusSpinner.getSelectedItemPosition() > 0 ? civilStatusSpinner.getSelectedItem().toString() : "";
+                            String religion = religionEdit.getText().toString().trim();
+                            String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
+                            String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
+                            syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
+                                    birthday, gender, civilStatus, religion, bloodType, pwdStatus);
                         }
                     });
         } else {
@@ -737,7 +1007,14 @@ public class EditProfileActivity extends AppCompatActivity {
             String city = cityEdit.getText().toString().trim();
             String barangay = barangayEdit.getText().toString().trim();
             String streetAddress = streetAddressEdit.getText().toString().trim();
-            syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress);
+            String birthday = birthdayEdit.getText().toString().trim();
+            String gender = genderSpinner.getSelectedItemPosition() > 0 ? genderSpinner.getSelectedItem().toString() : "";
+            String civilStatus = civilStatusSpinner.getSelectedItemPosition() > 0 ? civilStatusSpinner.getSelectedItem().toString() : "";
+            String religion = religionEdit.getText().toString().trim();
+            String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
+            String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
+            syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
+                    birthday, gender, civilStatus, religion, bloodType, pwdStatus);
         }
     }
 

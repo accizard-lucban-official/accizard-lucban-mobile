@@ -62,6 +62,12 @@ public class ProfileActivity extends AppCompatActivity {
     private LinearLayout mobileNumberInfoLayout;
     private LinearLayout emailAddressInfoLayout;
     private LinearLayout mailingAddressInfoLayout;
+    private LinearLayout birthdayInfoLayout;
+    private LinearLayout genderInfoLayout;
+    private LinearLayout civilStatusInfoLayout;
+    private LinearLayout religionInfoLayout;
+    private LinearLayout bloodTypeInfoLayout;
+    private LinearLayout pwdStatusInfoLayout;
     
     // Invite Friends section
     private LinearLayout inviteFriendsLayout;
@@ -135,6 +141,12 @@ public class ProfileActivity extends AppCompatActivity {
         mobileNumberInfoLayout = findViewById(R.id.mobile_number_info_layout);
         emailAddressInfoLayout = findViewById(R.id.email_address_info_layout);
         mailingAddressInfoLayout = findViewById(R.id.mailing_address_info_layout);
+        birthdayInfoLayout = findViewById(R.id.birthday_info_layout);
+        genderInfoLayout = findViewById(R.id.gender_info_layout);
+        civilStatusInfoLayout = findViewById(R.id.civil_status_info_layout);
+        religionInfoLayout = findViewById(R.id.religion_info_layout);
+        bloodTypeInfoLayout = findViewById(R.id.blood_type_info_layout);
+        pwdStatusInfoLayout = findViewById(R.id.pwd_status_info_layout);
         
         // Initialize Invite Friends section
         inviteFriendsLayout = findViewById(R.id.invite_friends_layout);
@@ -311,6 +323,78 @@ public class ProfileActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View v) {
                     // Navigate to edit profile for address
+                    Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+                    editProfileLauncher.launch(intent);
+                    overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+                }
+            });
+        }
+
+        if (birthdayInfoLayout != null) {
+            birthdayInfoLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Navigate to edit profile for birthday
+                    Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+                    editProfileLauncher.launch(intent);
+                    overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+                }
+            });
+        }
+
+        if (genderInfoLayout != null) {
+            genderInfoLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Navigate to edit profile for gender
+                    Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+                    editProfileLauncher.launch(intent);
+                    overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+                }
+            });
+        }
+
+        if (civilStatusInfoLayout != null) {
+            civilStatusInfoLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Navigate to edit profile for civil status
+                    Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+                    editProfileLauncher.launch(intent);
+                    overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+                }
+            });
+        }
+
+        if (religionInfoLayout != null) {
+            religionInfoLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Navigate to edit profile for religion
+                    Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+                    editProfileLauncher.launch(intent);
+                    overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+                }
+            });
+        }
+
+        if (bloodTypeInfoLayout != null) {
+            bloodTypeInfoLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Navigate to edit profile for blood type
+                    Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
+                    editProfileLauncher.launch(intent);
+                    overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+                }
+            });
+        }
+
+        if (pwdStatusInfoLayout != null) {
+            pwdStatusInfoLayout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Navigate to edit profile for PWD status
                     Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
                     editProfileLauncher.launch(intent);
                     overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
@@ -771,6 +855,60 @@ public class ProfileActivity extends AppCompatActivity {
         
         updateInfoText(mailingAddressInfoLayout, mailingAddress);
         Log.d(TAG, "✅ Final mailing address displayed: " + mailingAddress);
+        
+        // Load birthday from SharedPreferences
+        String birthday = prefs.getString("birthday", "");
+        if (birthday.isEmpty()) {
+            birthday = "Birthday";
+        }
+        updateInfoText(birthdayInfoLayout, birthday);
+        
+        // Load gender from SharedPreferences
+        String gender = prefs.getString("gender", "");
+        if (gender.isEmpty()) {
+            gender = "Gender";
+        }
+        updateInfoText(genderInfoLayout, gender);
+        
+        // Load civil status from SharedPreferences
+        String civilStatus = prefs.getString("civil_status", "");
+        if (civilStatus.isEmpty()) {
+            civilStatus = prefs.getString("civilStatus", "");
+        }
+        if (civilStatus.isEmpty()) {
+            civilStatus = "Civil Status";
+        }
+        updateInfoText(civilStatusInfoLayout, civilStatus);
+        
+        // Load religion from SharedPreferences
+        String religion = prefs.getString("religion", "");
+        if (religion.isEmpty()) {
+            religion = "Religion";
+        }
+        updateInfoText(religionInfoLayout, religion);
+        
+        // Load blood type from SharedPreferences
+        // ✅ FIXED: Prioritize blood_type (with underscore) from SharedPreferences
+        String bloodType = prefs.getString("blood_type", "");
+        if (bloodType.isEmpty()) {
+            bloodType = prefs.getString("bloodType", "");
+        }
+        if (bloodType.isEmpty()) {
+            bloodType = "Blood Type";
+        }
+        updateInfoText(bloodTypeInfoLayout, bloodType);
+        
+        // Load PWD status from SharedPreferences
+        String pwdStatus = prefs.getString("pwd_status", "");
+        if (pwdStatus.isEmpty()) {
+            pwdStatus = prefs.getString("pwdStatus", "");
+        }
+        if (pwdStatus.isEmpty()) {
+            // Check if user is PWD
+            boolean isPWD = prefs.getBoolean("is_pwd", false);
+            pwdStatus = isPWD ? "PWD" : "Not PWD";
+        }
+        updateInfoText(pwdStatusInfoLayout, pwdStatus);
     }
     
     private void updateSharedPreferencesFromFirestore(QueryDocumentSnapshot doc) {
@@ -813,6 +951,41 @@ public class ProfileActivity extends AppCompatActivity {
             editor.putString("location_text", barangay);
         }
         
+        // Save additional personal info fields
+        editor.putString("birthday", doc.getString("birthday"));
+        editor.putString("gender", doc.getString("gender"));
+        
+        // ✅ FIXED: Fetch civil_status from Firestore (field name is civil_status with underscore)
+        String civilStatus = doc.getString("civil_status");
+        if (civilStatus == null || civilStatus.isEmpty()) {
+            // Fallback to camelCase if underscore version doesn't exist
+            civilStatus = doc.getString("civilStatus");
+        }
+        editor.putString("civil_status", civilStatus);
+        editor.putString("civilStatus", civilStatus);
+        
+        editor.putString("religion", doc.getString("religion"));
+        
+        // ✅ FIXED: Fetch blood_type from Firestore (field name is blood_type with underscore)
+        String bloodType = doc.getString("blood_type");
+        if (bloodType == null || bloodType.isEmpty()) {
+            // Fallback to camelCase if underscore version doesn't exist
+            bloodType = doc.getString("bloodType");
+        }
+        editor.putString("blood_type", bloodType);
+        editor.putString("bloodType", bloodType);
+        
+        editor.putString("pwd_status", doc.getString("pwdStatus"));
+        editor.putString("pwdStatus", doc.getString("pwdStatus"));
+        
+        // Save PWD status as boolean if available
+        Object pwdObj = doc.get("isPWD");
+        if (pwdObj instanceof Boolean) {
+            editor.putBoolean("is_pwd", (Boolean) pwdObj);
+        } else if (pwdObj != null) {
+            editor.putBoolean("is_pwd", Boolean.parseBoolean(pwdObj.toString()));
+        }
+        
         // Commit changes for immediate sync
         editor.commit();
         
@@ -821,7 +994,8 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void updateInfoText(LinearLayout layout, String text) {
         if (layout != null) {
-            // Find the TextView in the layout (it should be the second child)
+            // Find the value TextView in the layout
+            // New structure (vertical): Inner LinearLayout (0) with icon and label, Value TextView (1)
             if (layout.getChildCount() > 1) {
                 View child = layout.getChildAt(1);
                 if (child instanceof TextView) {
