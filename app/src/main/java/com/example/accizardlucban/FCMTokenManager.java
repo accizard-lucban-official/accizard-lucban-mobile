@@ -41,12 +41,21 @@ public class FCMTokenManager {
     /**
      * Initialize FCM token - get token and save to Firestore
      * Call this when user logs in or app starts with authenticated user
+     * Only saves token if notifications are enabled in settings
      */
     public void initializeFCMToken() {
         FirebaseUser currentUser = auth.getCurrentUser();
         
         if (currentUser == null) {
             Log.w(TAG, "No authenticated user, skipping FCM token initialization");
+            return;
+        }
+        
+        // Check if notifications are enabled in settings
+        if (!NotificationPermissionHelper.areNotificationsEnabledWithLog(context, "FCMTokenManager")) {
+            Log.w(TAG, "Notifications are disabled in settings - NOT initializing FCM token");
+            // Delete any existing token
+            deleteFCMTokenFromFirestore();
             return;
         }
         
@@ -64,6 +73,13 @@ public class FCMTokenManager {
                         // Get the FCM token
                         String token = task.getResult();
                         if (token != null) {
+                            // Double-check notification preference before saving
+                            if (!NotificationPermissionHelper.areNotificationsEnabled(context)) {
+                                Log.w(TAG, "Notifications disabled - NOT saving FCM token");
+                                deleteFCMTokenFromFirestore();
+                                return;
+                            }
+                            
                             Log.d(TAG, "✅ FCM token obtained: " + token);
                             saveFCMTokenToFirestore(token);
                         } else {
@@ -77,12 +93,19 @@ public class FCMTokenManager {
      * Save FCM token to Firestore
      * Stores in users/{userId}/fcmToken field
      * Uses query to find user document by firebaseUid field
+     * Only saves if notifications are enabled in settings
      */
     public void saveFCMTokenToFirestore(String token) {
         FirebaseUser currentUser = auth.getCurrentUser();
         
         if (currentUser == null) {
             Log.w(TAG, "No authenticated user, cannot save FCM token to Firestore");
+            return;
+        }
+        
+        // Check if notifications are enabled before saving token
+        if (!NotificationPermissionHelper.areNotificationsEnabledWithLog(context, "FCMTokenManager")) {
+            Log.w(TAG, "Notifications are disabled - NOT saving FCM token to Firestore");
             return;
         }
         
@@ -185,9 +208,18 @@ public class FCMTokenManager {
     /**
      * Refresh FCM token
      * Call this when token is refreshed by Firebase
+     * Only saves if notifications are enabled in settings
      */
     public void refreshFCMToken(String newToken) {
         Log.d(TAG, "FCM token refreshed: " + newToken);
+        
+        // Check if notifications are enabled before saving refreshed token
+        if (!NotificationPermissionHelper.areNotificationsEnabled(context)) {
+            Log.w(TAG, "Notifications are disabled - NOT saving refreshed FCM token");
+            deleteFCMTokenFromFirestore();
+            return;
+        }
+        
         saveFCMTokenToFirestore(newToken);
     }
     

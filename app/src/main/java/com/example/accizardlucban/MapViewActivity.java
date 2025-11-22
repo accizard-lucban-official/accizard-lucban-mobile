@@ -59,6 +59,7 @@ import java.io.IOException;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -114,7 +115,7 @@ public class MapViewActivity extends AppCompatActivity {
     private ImageView clearSearchButton;
     private FloatingActionButton alertFab;
     private FloatingActionButton pinLocationFab;
-    private FloatingActionButton helpFab;
+    private ImageButton helpFab;
     private ImageView filterButton;
     private ImageButton profile;
     private RecyclerView searchResultsRecyclerView;
@@ -557,6 +558,7 @@ public class MapViewActivity extends AppCompatActivity {
         alertFab = findViewById(R.id.alertFab);
         pinLocationFab = findViewById(R.id.pinLocationFab);
         helpFab = findViewById(R.id.helpFab);
+        // helpFab is now an ImageButton with white background from XML
         filterButton = findViewById(R.id.filterButton);
         profile = findViewById(R.id.profile);
         searchResultsRecyclerView = findViewById(R.id.searchResultsRecyclerView);
@@ -2050,6 +2052,12 @@ public class MapViewActivity extends AppCompatActivity {
     }
 
     private void pinCurrentLocation() {
+        // First check if user has enabled location access in settings
+        if (!LocationPermissionHelper.isLocationAccessEnabledWithLog(this, "MapViewActivity")) {
+            Toast.makeText(this, "Location access is disabled in settings. Please enable it in Profile settings.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        
         if (checkLocationPermission()) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 return;
@@ -2087,6 +2095,11 @@ public class MapViewActivity extends AppCompatActivity {
      */
     private void requestFreshLocation() {
         try {
+            // Check if user has enabled location access in settings
+            if (!LocationPermissionHelper.isLocationAccessEnabledWithLog(this, "MapViewActivity")) {
+                return;
+            }
+            
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 return;
             }

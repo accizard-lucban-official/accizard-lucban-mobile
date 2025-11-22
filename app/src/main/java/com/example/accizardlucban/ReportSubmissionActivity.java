@@ -1171,6 +1171,12 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     }
     
     private void getCurrentLocation() {
+        // First check if user has enabled location access in ProfileActivity settings
+        if (!LocationPermissionHelper.isLocationAccessEnabledWithLog(this, "ReportSubmissionActivity")) {
+            Toast.makeText(this, "Location access is disabled in settings. Please enable it in Profile settings to use this feature.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        
         // Check if location permissions are granted
         if (!checkLocationPermissions()) {
             requestLocationPermissions();
@@ -1209,6 +1215,11 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     
     private void getCurrentLocationWithCallback() {
         try {
+            // Check if user has enabled location access in settings
+            if (!LocationPermissionHelper.isLocationAccessEnabledWithLog(this, "ReportSubmissionActivity")) {
+                return;
+            }
+            
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 // Create location request
                 LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000)
@@ -2835,7 +2846,12 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && (grantResults[0] == PackageManager.PERMISSION_GRANTED || grantResults[1] == PackageManager.PERMISSION_GRANTED)) {
-                // Permission granted, try to get location again
+                // Permission granted, but check if location access is enabled in settings
+                if (!LocationPermissionHelper.isLocationAccessEnabledWithLog(this, "ReportSubmissionActivity")) {
+                    Toast.makeText(this, "Location access is disabled in settings. Please enable it in Profile settings.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                // Permission granted and location access enabled, try to get location again
                 getCurrentLocation();
             } else {
                 // Permission denied

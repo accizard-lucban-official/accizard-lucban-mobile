@@ -18,8 +18,7 @@
 
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="120dp"
-            android:background="@drawable/bg_incident_hotspot_header">
+            android:layout_height="120dp">
 
             <LinearLayout
                 android:layout_width="wrap_content"

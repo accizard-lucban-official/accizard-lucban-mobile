@@ -178,4 +178,5 @@
         <item name="android:statusBarColor">@android:color/white</item>
     </style>
 
+
 </resources>

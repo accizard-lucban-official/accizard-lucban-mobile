@@ -22,6 +22,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import android.Manifest;
+import android.content.pm.PackageManager;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -45,6 +49,8 @@ public class ProfileActivity extends AppCompatActivity {
     private TextView residentName;
     private TextView editProfileButton;
     private Switch locationSwitch, notificationSwitch;
+    private boolean isUpdatingLocationSwitch = false;
+    private boolean isUpdatingNotificationSwitch = false;
     private LinearLayout termsLayout, deleteAccountLayout;
     private TextView createdDateText;
     private ImageView profilePictureImageView;
@@ -71,6 +77,10 @@ public class ProfileActivity extends AppCompatActivity {
     private static final String PREFS_NAME = "user_profile_prefs";
     private static final String KEY_FIRST_NAME = "first_name";
     private static final String KEY_LAST_NAME = "last_name";
+    private static final String KEY_LOCATION_ENABLED = "location_enabled";
+    private static final String KEY_NOTIFICATIONS_ENABLED = "notifications_enabled";
+    
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
     
     // ActivityResultLauncher for handling profile updates
     private ActivityResultLauncher<Intent> editProfileLauncher;
@@ -198,22 +208,37 @@ public class ProfileActivity extends AppCompatActivity {
             }
         });
 
+        // Load saved preferences
+        loadLocationPreference();
+        loadNotificationPreference();
+        
         locationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            // Handle location permission toggle
+            // Prevent recursive calls
+            if (isUpdatingLocationSwitch) {
+                return;
+            }
+            
             if (isChecked) {
-                // Request location permission if needed
-                Toast.makeText(ProfileActivity.this, "Location access enabled", Toast.LENGTH_SHORT).show();
+                // User wants to enable location - request permission first
+                handleLocationEnable();
             } else {
-                Toast.makeText(ProfileActivity.this, "Location access disabled", Toast.LENGTH_SHORT).show();
+                // User wants to disable location - just save preference
+                handleLocationDisable();
             }
         });
 
         notificationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            // Handle notification settings
+            // Prevent recursive calls
+            if (isUpdatingNotificationSwitch) {
+                return;
+            }
+            
             if (isChecked) {
-                Toast.makeText(ProfileActivity.this, "Notifications enabled", Toast.LENGTH_SHORT).show();
+                // User wants to enable notifications
+                handleNotificationEnable();
             } else {
-                Toast.makeText(ProfileActivity.this, "Notifications disabled", Toast.LENGTH_SHORT).show();
+                // User wants to disable notifications
+                handleNotificationDisable();
             }
         });
 
@@ -291,6 +316,188 @@ public class ProfileActivity extends AppCompatActivity {
                     overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
                 }
             });
+        }
+    }
+
+    /**
+     * Load saved location preference and update switch state
+     */
+    private void loadLocationPreference() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean locationEnabled = prefs.getBoolean(KEY_LOCATION_ENABLED, true); // Default to enabled
+        
+        isUpdatingLocationSwitch = true;
+        locationSwitch.setChecked(locationEnabled);
+        isUpdatingLocationSwitch = false;
+        
+        Log.d(TAG, "Location preference loaded: " + locationEnabled);
+    }
+
+    /**
+     * Handle location enable - request permission first
+     */
+    private void handleLocationEnable() {
+        // Check if permission is already granted
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) 
+                == PackageManager.PERMISSION_GRANTED) {
+            // Permission already granted, just save preference
+            saveLocationPreference(true);
+            Toast.makeText(this, "Location access enabled", Toast.LENGTH_SHORT).show();
+        } else {
+            // Request permission
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                // Show explanation dialog
+                new AlertDialog.Builder(this)
+                    .setTitle("Location Permission")
+                    .setMessage("This app needs location permission to show your current location on the map and help you submit reports with accurate location data.")
+                    .setPositiveButton("Grant", (dialog, which) -> {
+                        requestLocationPermission();
+                    })
+                    .setNegativeButton("Cancel", (dialog, which) -> {
+                        // Revert switch
+                        isUpdatingLocationSwitch = true;
+                        locationSwitch.setChecked(false);
+                        isUpdatingLocationSwitch = false;
+                    })
+                    .show();
+            } else {
+                // Request permission directly
+                requestLocationPermission();
+            }
+        }
+    }
+
+    /**
+     * Handle location disable - just save preference
+     */
+    private void handleLocationDisable() {
+        saveLocationPreference(false);
+        Toast.makeText(this, "Location access disabled. The app will not access your location.", Toast.LENGTH_LONG).show();
+        Log.d(TAG, "Location access disabled by user");
+    }
+
+    /**
+     * Request location permission
+     */
+    private void requestLocationPermission() {
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                LOCATION_PERMISSION_REQUEST_CODE);
+    }
+
+    /**
+     * Save location preference to SharedPreferences
+     */
+    private void saveLocationPreference(boolean enabled) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putBoolean(KEY_LOCATION_ENABLED, enabled).apply();
+        Log.d(TAG, "Location preference saved: " + enabled);
+    }
+
+    /**
+     * Handle permission request result
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted - save preference
+                saveLocationPreference(true);
+                Toast.makeText(this, "Location access enabled", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "Location permission granted");
+            } else {
+                // Permission denied - revert switch
+                isUpdatingLocationSwitch = true;
+                locationSwitch.setChecked(false);
+                isUpdatingLocationSwitch = false;
+                saveLocationPreference(false);
+                
+                if (!ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    // User permanently denied - show dialog
+                    new AlertDialog.Builder(this)
+                        .setTitle("Location Permission Required")
+                        .setMessage("Location permission is required to use location features. Please enable it in app settings.")
+                        .setPositiveButton("Open Settings", (dialog, which) -> {
+                            Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                            intent.setData(android.net.Uri.fromParts("package", getPackageName(), null));
+                            startActivity(intent);
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+                } else {
+                    Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
+                }
+                Log.d(TAG, "Location permission denied");
+            }
+        }
+    }
+
+    /**
+     * Load saved notification preference and update switch state
+     */
+    private void loadNotificationPreference() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        boolean notificationsEnabled = prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true); // Default to enabled
+        
+        isUpdatingNotificationSwitch = true;
+        notificationSwitch.setChecked(notificationsEnabled);
+        isUpdatingNotificationSwitch = false;
+        
+        Log.d(TAG, "Notification preference loaded: " + notificationsEnabled);
+        
+        // Apply preference immediately (register/unregister FCM token)
+        applyNotificationPreference(notificationsEnabled);
+    }
+
+    /**
+     * Handle notification enable - register FCM token
+     */
+    private void handleNotificationEnable() {
+        saveNotificationPreference(true);
+        applyNotificationPreference(true);
+        Toast.makeText(this, "Notifications enabled. You will receive push notifications for chats, reports, and alerts.", Toast.LENGTH_LONG).show();
+        Log.d(TAG, "Notifications enabled by user");
+    }
+
+    /**
+     * Handle notification disable - unregister FCM token
+     */
+    private void handleNotificationDisable() {
+        saveNotificationPreference(false);
+        applyNotificationPreference(false);
+        Toast.makeText(this, "Notifications disabled. You will not receive any push notifications.", Toast.LENGTH_LONG).show();
+        Log.d(TAG, "Notifications disabled by user");
+    }
+
+    /**
+     * Save notification preference to SharedPreferences
+     */
+    private void saveNotificationPreference(boolean enabled) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled).apply();
+        Log.d(TAG, "Notification preference saved: " + enabled);
+    }
+
+    /**
+     * Apply notification preference - register or unregister FCM token
+     */
+    private void applyNotificationPreference(boolean enabled) {
+        try {
+            FCMTokenManager tokenManager = new FCMTokenManager(this);
+            
+            if (enabled) {
+                // Enable notifications - register FCM token
+                Log.d(TAG, "Enabling notifications - registering FCM token");
+                tokenManager.initializeFCMToken();
+            } else {
+                // Disable notifications - delete FCM token from Firestore
+                Log.d(TAG, "Disabling notifications - removing FCM token from Firestore");
+                tokenManager.deleteFCMTokenFromFirestore();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error applying notification preference: " + e.getMessage(), e);
         }
     }
 

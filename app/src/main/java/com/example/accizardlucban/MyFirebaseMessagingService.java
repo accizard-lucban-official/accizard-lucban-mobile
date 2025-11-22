@@ -53,9 +53,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         
         Log.d(TAG, "🔄 FCM token refreshed: " + token);
         
-        // Save the new token to Firestore
+        // Save the new token to Firestore (only if notifications are enabled)
         FCMTokenManager tokenManager = new FCMTokenManager(this);
-        tokenManager.saveFCMTokenToFirestore(token);
+        tokenManager.refreshFCMToken(token); // This method checks notification preference
     }
     
     /**
@@ -81,6 +81,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Log.d(TAG, "📩 App state: " + (isAppInForeground() ? "FOREGROUND" : "BACKGROUND/TERMINATED"));
         Log.d(TAG, "📩 Message ID: " + remoteMessage.getMessageId());
         Log.d(TAG, "📩 Message Type: " + remoteMessage.getMessageType());
+        
+        // ✅ CRITICAL: Check if notifications are enabled in settings FIRST
+        if (!NotificationPermissionHelper.areNotificationsEnabledWithLog(this, "MyFirebaseMessagingService")) {
+            Log.w(TAG, "🚫 Notifications are DISABLED by user - NOT showing notification");
+            Log.w(TAG, "🚫 Message will be ignored (chats, reports, alerts will not be shown)");
+            return; // Exit immediately - don't process or show notification
+        }
         
         // Check if message contains a notification payload
         RemoteMessage.Notification notification = remoteMessage.getNotification();

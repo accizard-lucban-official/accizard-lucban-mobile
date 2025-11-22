@@ -1075,8 +1075,7 @@
                 android:layout_width="28dp"
                 android:layout_height="28dp"
                 android:layout_gravity="center"
-                android:src="@drawable/emergencyreporticon"
-                android:tint="#333333"/>
+                android:src="@drawable/emergencyreporticon" />
         </FrameLayout>
     </FrameLayout>
 
