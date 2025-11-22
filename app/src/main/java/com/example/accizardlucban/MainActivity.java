@@ -8,6 +8,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.LinearLayout;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 import android.text.method.PasswordTransformationMethod;
 import android.widget.ImageView;
@@ -56,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText emailEditText, passwordEditText;
     private Button signInButton;
     private TextView forgotPasswordText, signUpText, emergencyText;
-    private LinearLayout callLucbanLayout; // Changed from TextView to LinearLayout
+    private FrameLayout callLucbanLayout; // Changed from LinearLayout to FrameLayout
     private ImageView phoneIconMain;
     private ImageView ivTogglePassword;
     private static final String PREFS_NAME = "user_profile_prefs";
@@ -295,7 +296,7 @@ public class MainActivity extends AppCompatActivity {
             forgotPasswordText = findViewById(R.id.forgot_password_text);
             signUpText = findViewById(R.id.sign_up_text);
             emergencyText = findViewById(R.id.emergency_text);
-            callLucbanLayout = findViewById(R.id.call_lucban_text); // Changed to LinearLayout
+            callLucbanLayout = findViewById(R.id.call_lucban_text); // Changed to FrameLayout
             phoneIconMain = findViewById(R.id.phoneIconMain);
             ivTogglePassword = findViewById(R.id.ivTogglePassword);
             

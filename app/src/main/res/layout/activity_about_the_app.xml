@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF">
+
+    <!-- Header with Shadow -->
+    <LinearLayout
+        android:id="@+id/header_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="@android:color/white"
+        android:elevation="8dp"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/back_button_about"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_arrow_back"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:padding="8dp"
+            android:contentDescription="Back button"
+            android:scaleType="centerInside" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="About the App"
+            android:textSize="22sp"
+            android:textColor="#1A1A1A"
+            android:textStyle="bold"
+            android:gravity="center" />
+
+        <View
+            android:layout_width="32dp"
+            android:layout_height="32dp" />
+
+    </LinearLayout>
+
+    <!-- Scrollable Content -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/header_layout"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- App Logo and Name -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginTop="16dp">
+
+                <ImageView
+                    android:id="@+id/app_logo"
+                    android:layout_width="170dp"
+                    android:layout_height="170dp"
+                    android:src="@drawable/logotypelogomark"
+                    android:contentDescription="AcciZard Lucban Logo"
+                    android:layout_marginBottom="16dp" />
+
+            </LinearLayout>
+
+            <!-- App Description -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="AcciZard Lucban is a community safety app that enables residents to report geotagged accidents and hazards. It helps the Lucban LDRRMO respond faster by providing accurate locations and instant communication tools. Through the app, the entire Lucban community is empowered to play an active role in disaster management."
+                android:textSize="14sp"
+                android:textColor="#555555"
+                android:lineSpacingMultiplier="1.3"
+                android:gravity="center"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Separator Line -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E0E0E0"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Partner Logos -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="16dp">
+
+                <!-- SLSU Logo -->
+                <ImageView
+                    android:id="@+id/partner_slsu_logo"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@drawable/slsulogo"
+                    android:contentDescription="SLSU Logo"
+                    android:layout_marginEnd="16dp"
+                    android:scaleType="centerCrop"/>
+
+                <!-- LDRRMO Logo -->
+                <ImageView
+                    android:id="@+id/partner_ldrrmo_logo"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@drawable/logosplashscreenldrrmo"
+                    android:contentDescription="LDRRMO Logo"
+                    android:layout_marginEnd="16dp"
+                    android:scaleType="centerCrop" />
+
+                <!-- Lucban Logo -->
+                <ImageView
+                    android:id="@+id/partner_lucban_logo"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@drawable/lucbanlogo"
+                    android:contentDescription="Lucban Logo"
+                    android:scaleType="centerCrop" />
+
+            </LinearLayout>
+
+            <!-- Our Partners Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Our Partners"
+                android:textSize="20sp"
+                android:textColor="#1A1A1A"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Partnership Text -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="In partnership with Southern Luzon State University, the Local Disaster Risk Reduction and Management Office (LDRRMO), and the Local Government Unit (LGU) of Lucban, Quezon."
+                android:textSize="14sp"
+                android:textColor="#555555"
+                android:lineSpacingMultiplier="1.3"
+                android:gravity="center"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Separator Line -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E0E0E0"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Developer Photo (Landscape) -->
+            <ImageView
+                android:id="@+id/developers_photo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:src="@drawable/devslong"
+                android:contentDescription="Developers Photo"
+                android:scaleType="fitCenter"
+                android:adjustViewBounds="true"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Meet the Developers Section -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Meet the Developers"
+                android:textSize="20sp"
+                android:textColor="#1A1A1A"
+                android:textStyle="bold"
+                android:gravity="center" />
+
+            <!-- Developer Description -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="The app was developed by Sofiah Illyzah Marquez, Ashley Shane Corpuz, and Dane Mar Dela Torre, a group of fourth-year BS Information Technology (BSIT) students from Southern Luzon State University (SLSU)."
+                android:textSize="14sp"
+                android:textColor="#555555"
+                android:lineSpacingMultiplier="1.3"
+                android:gravity="center"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="24dp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</RelativeLayout>

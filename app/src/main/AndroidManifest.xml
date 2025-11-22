@@ -233,6 +233,11 @@
             android:parentActivityName=".MainDashboard" />
 
         <activity
+            android:name=".AboutTheAppActivity"
+            android:exported="false"
+            android:parentActivityName=".MainDashboard" />
+
+        <activity
             android:name=".MapPickerActivity"
             android:exported="false"
             android:screenOrientation="portrait"

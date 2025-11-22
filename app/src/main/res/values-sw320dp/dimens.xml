@@ -200,7 +200,7 @@
     <dimen name="dashboard_bottom_nav_text_size">11sp</dimen>
 
     <!-- Activity Main (Login) specific dimensions for small devices -->
-    <dimen name="main_logo_size">100dp</dimen>
+    <dimen name="main_logo_size">150dp</dimen>
     <dimen name="main_emergency_margin_top">100dp</dimen>
     <dimen name="main_input_height">52dp</dimen>
     <dimen name="main_button_height">48dp</dimen>

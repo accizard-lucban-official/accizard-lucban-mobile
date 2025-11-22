@@ -284,15 +284,15 @@
                         android:gravity="center_vertical"
                         android:layout_marginBottom="4dp">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_person"
-                            android:tint="#FF5722"
-                            android:layout_marginEnd="16dp"
-                            android:contentDescription="Person icon" />
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_person"
+                        android:tint="#FF5722"
+                        android:layout_marginEnd="16dp"
+                        android:contentDescription="Person icon" />
 
-                        <TextView
+                    <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Resident Name:"
@@ -330,15 +330,15 @@
                         android:gravity="center_vertical"
                         android:layout_marginBottom="4dp">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_phone"
-                            android:tint="#FF5722"
-                            android:layout_marginEnd="16dp"
-                            android:contentDescription="Phone icon" />
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_phone"
+                        android:tint="#FF5722"
+                        android:layout_marginEnd="16dp"
+                        android:contentDescription="Phone icon" />
 
-                        <TextView
+                    <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Mobile Number:"
@@ -376,15 +376,15 @@
                         android:gravity="center_vertical"
                         android:layout_marginBottom="4dp">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_email"
-                            android:tint="#FF5722"
-                            android:layout_marginEnd="16dp"
-                            android:contentDescription="Email icon" />
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_email"
+                        android:tint="#FF5722"
+                        android:layout_marginEnd="16dp"
+                        android:contentDescription="Email icon" />
 
-                        <TextView
+                    <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Email Address:"
@@ -422,15 +422,15 @@
                         android:gravity="center_vertical"
                         android:layout_marginBottom="4dp">
 
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/vector"
-                            android:tint="#FF5722"
-                            android:layout_marginEnd="16dp"
-                            android:contentDescription="Location icon" />
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/vector"
+                        android:tint="#FF5722"
+                        android:layout_marginEnd="16dp"
+                        android:contentDescription="Location icon" />
 
-                        <TextView
+                    <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Mailing Address:"
@@ -517,7 +517,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/gender"
+                            android:src="@drawable/ic_person"
                             android:tint="#FF5722"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Gender icon" />
@@ -609,7 +609,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/religion"
+                            android:src="@drawable/ic_shield"
                             android:tint="#FF5722"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Religion icon" />
@@ -655,7 +655,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/blood"
+                            android:src="@drawable/ic_medical"
                             android:tint="#FF5722"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Blood type icon" />
@@ -865,6 +865,37 @@
                     android:textStyle="bold"
                     android:padding="16dp"
                     android:paddingBottom="8dp" />
+
+                <!-- About the App -->
+                <LinearLayout
+                    android:id="@+id/about_app_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_info"
+                        android:tint="#FF5722"
+                        android:layout_marginEnd="16dp"
+                        android:contentDescription="Info icon" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="About the App"
+                        android:textSize="16sp"
+                        android:textColor="#333333"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
 
                 <!-- Terms and Conditions -->
                 <LinearLayout

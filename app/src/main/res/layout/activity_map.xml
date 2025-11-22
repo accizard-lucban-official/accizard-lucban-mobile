@@ -1054,20 +1054,19 @@
             android:elevation="0dp"
             app:elevation="0dp" />
 
-        <!-- Help FAB - Using ImageButton to ensure white background -->
-        <ImageButton
+        <!-- Help FAB -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/helpFab"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
             android:contentDescription="Map help"
             android:src="@drawable/ic_help_circle"
-            android:background="@drawable/circle_white_bg"
-            android:padding="8dp"
-            android:scaleType="fitCenter"
-            android:tint="@color/colorPrimary"
+            app:backgroundTint="@color/white"
+            app:fabSize="mini"
+            app:tint="@color/colorPrimary"
             android:elevation="0dp"
-            android:clickable="true"
-            android:focusable="true" />
+            app:elevation="0dp" />
     </LinearLayout>
 
     <!-- Bottom Navigation Container (FrameLayout for floating button) -->

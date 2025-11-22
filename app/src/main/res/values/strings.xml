@@ -100,7 +100,7 @@
     <string name="incident_hotspot_icon">Incident hotspot illustration</string>
     <string name="close">Close</string>
     <string name="hotspot_tutorial_welcome_title">Welcome to the Map</string>
-    <string name="hotspot_tutorial_welcome_description">The map shows pins of verified incident reports starting on October 29, 2025. Stay informed about emergencies in your area.</string>
+    <string name="hotspot_tutorial_welcome_description">The map shows pins of verified incident reports starting on November 2025. Stay informed about emergencies in your area.</string>
     <string name="view_incident_hotspots">View Incident Hotspots</string>
     <string name="view_incident_hotspots_description">Toggle the heatmap feature to view incident hotspots and identify high-risk areas at a glance.</string>
     <string name="previous">Previous</string>

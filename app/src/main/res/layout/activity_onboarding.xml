@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center"
-        android:layout_marginTop="@dimen/margin_xxxlarge"
+        android:layout_marginTop="24dp"
         android:paddingHorizontal="@dimen/padding_large"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -22,20 +22,10 @@
         <ImageView
             android:layout_width="wrap_content"
             android:layout_height="@dimen/logo_size_large"
-            android:src="@drawable/accizard_logotype_svg"
+            android:src="@drawable/onboarding"
             android:adjustViewBounds="true"
             android:scaleType="fitCenter"
             android:contentDescription="App Logo" />
-
-        <!-- Header Text -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/margin_medium"
-            android:text="REPORT, PROTECT, PREVENT."
-            android:textColor="@android:color/white"
-            android:textSize="@dimen/text_size_small"
-            android:letterSpacing="0.1" />
     </LinearLayout>
 
     <!-- ViewPager for onboarding screens -->

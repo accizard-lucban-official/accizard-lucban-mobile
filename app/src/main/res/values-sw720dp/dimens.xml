@@ -201,7 +201,7 @@
 
     <!-- Activity Main (Login) specific dimensions for large devices -->
     <!-- Keep logo sizes reasonable to prevent overflow -->
-    <dimen name="main_logo_size">100dp</dimen>
+    <dimen name="main_logo_size">200dp</dimen>
     <dimen name="main_emergency_margin_top">180dp</dimen>
     <dimen name="main_input_height">56dp</dimen>
     <dimen name="main_button_height">52dp</dimen>

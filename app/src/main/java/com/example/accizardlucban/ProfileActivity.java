@@ -51,7 +51,7 @@ public class ProfileActivity extends AppCompatActivity {
     private Switch locationSwitch, notificationSwitch;
     private boolean isUpdatingLocationSwitch = false;
     private boolean isUpdatingNotificationSwitch = false;
-    private LinearLayout termsLayout, deleteAccountLayout;
+    private LinearLayout aboutAppLayout, termsLayout, deleteAccountLayout;
     private TextView createdDateText;
     private ImageView profilePictureImageView;
     private TextView verifiedStatusText;
@@ -118,6 +118,7 @@ public class ProfileActivity extends AppCompatActivity {
         editProfileButton = findViewById(R.id.edit_profile_button);
         locationSwitch = findViewById(R.id.location_switch);
         notificationSwitch = findViewById(R.id.notification_switch);
+        aboutAppLayout = findViewById(R.id.about_app_layout);
         termsLayout = findViewById(R.id.terms_layout);
         deleteAccountLayout = findViewById(R.id.delete_account_layout);
         createdDateText = findViewById(R.id.created_date_text);
@@ -251,6 +252,16 @@ public class ProfileActivity extends AppCompatActivity {
             } else {
                 // User wants to disable notifications
                 handleNotificationDisable();
+            }
+        });
+
+        aboutAppLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Navigate to About the App Activity
+                Intent intent = new Intent(ProfileActivity.this, AboutTheAppActivity.class);
+                startActivity(intent);
+                overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
             }
         });
 

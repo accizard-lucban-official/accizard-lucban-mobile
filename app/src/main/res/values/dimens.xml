@@ -38,7 +38,7 @@
     <dimen name="margin_large">16dp</dimen>
     <dimen name="margin_xlarge">20dp</dimen>
     <dimen name="margin_xxlarge">24dp</dimen>
-    <dimen name="margin_xxxlarge">32dp</dimen>
+    <dimen name="margin_xxxlarge">38dp</dimen>
     
     <!-- Component sizes -->
     <dimen name="button_height_small">40dp</dimen>
@@ -62,7 +62,7 @@
     <dimen name="logo_size_large">120dp</dimen>
     
     <!-- Activity Main (Login) specific dimensions -->
-    <dimen name="main_logo_size">120dp</dimen>
+    <dimen name="main_logo_size">180dp</dimen>
     <dimen name="main_emergency_margin_top">120dp</dimen>
     <dimen name="main_input_height">56dp</dimen>
     <dimen name="main_button_height">48dp</dimen>
