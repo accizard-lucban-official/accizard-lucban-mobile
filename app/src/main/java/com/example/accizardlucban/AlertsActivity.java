@@ -137,7 +137,18 @@ public class AlertsActivity extends AppCompatActivity {
     }
 
     private void setupSpinner() {
-        String[] filterOptions = {"All", "Weather Warning", "Flood", "Landslide", "Earthquake", "Road Closure", "Evacuation Order", "Missing Person", "Informational"};
+        // Create array of filter options with emojis (matching ReportSubmissionActivity style)
+        String[] filterOptions = {
+                "All",
+                "🌩️ Weather Warning",
+                "🌊 Flood",
+                "⛰️ Landslide",
+                "🏚️ Earthquake",
+                "🚧 Road Closure",
+                "🚨 Evacuation Order",
+                "👤 Missing Person",
+                "ℹ️ Informational"
+        };
         
         // Create adapter and set to spinner (same as ReportSubmissionActivity)
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
@@ -154,8 +165,10 @@ public class AlertsActivity extends AppCompatActivity {
         filterSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                selectedFilter = filterOptions[position];
-                android.util.Log.d("AlertsActivity", "Filter selected: " + selectedFilter);
+                String filterWithEmoji = filterOptions[position];
+                // Strip emoji for filtering (announcement types don't have emojis)
+                selectedFilter = getFilterWithoutEmoji(filterWithEmoji);
+                android.util.Log.d("AlertsActivity", "Filter selected: " + filterWithEmoji + " (filtering with: " + selectedFilter + ")");
                 filterAnnouncements(selectedFilter);
             }
             
@@ -164,6 +177,36 @@ public class AlertsActivity extends AppCompatActivity {
                 android.util.Log.d("AlertsActivity", "Nothing selected in spinner");
             }
         });
+    }
+    
+    /**
+     * Helper method to remove emoji from filter string
+     * This ensures the filter value matches announcement types (which don't have emojis)
+     */
+    private String getFilterWithoutEmoji(String filterWithEmoji) {
+        if (filterWithEmoji == null || filterWithEmoji.isEmpty()) {
+            return filterWithEmoji;
+        }
+        
+        // Remove emoji characters using regex pattern that matches emojis
+        String withoutEmoji = filterWithEmoji.replaceAll("[\uD83C-\uDBFF\uDC00-\uDFFF]+", "").trim();
+        
+        // Fallback: if regex didn't work, try removing specific emojis we know we're using
+        if (withoutEmoji.equals(filterWithEmoji)) {
+            // Remove specific emojis we know we're using
+            withoutEmoji = filterWithEmoji
+                .replace("🌩️", "")
+                .replace("🌊", "")
+                .replace("⛰️", "")
+                .replace("🏚️", "")
+                .replace("🚧", "")
+                .replace("🚨", "")
+                .replace("👤", "")
+                .replace("ℹ️", "")
+                .trim();
+        }
+        
+        return withoutEmoji;
     }
 
     private void filterAnnouncements(String filter) {

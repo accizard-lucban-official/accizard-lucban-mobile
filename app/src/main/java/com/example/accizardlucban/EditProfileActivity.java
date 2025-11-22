@@ -52,7 +52,7 @@ public class EditProfileActivity extends AppCompatActivity {
     private ImageView backButton, profilePicture, editPictureButton;
     private Button saveButton;
     private EditText firstNameEdit, lastNameEdit, mobileNumberEdit,
-            emailEdit, provinceEdit, cityEdit, streetAddressEdit, passwordEdit;
+            emailEdit, provinceEdit, cityEdit, streetAddressEdit;
     private AutoCompleteTextView barangayEdit;
 
     private static final String PREFS_NAME = "user_profile_prefs";
@@ -95,7 +95,6 @@ public class EditProfileActivity extends AppCompatActivity {
         cityEdit = findViewById(R.id.city_edit);
         barangayEdit = findViewById(R.id.barangay_edit);
         streetAddressEdit = findViewById(R.id.etStreetAddress);
-        passwordEdit = findViewById(R.id.password_edit);
     }
 
 
@@ -300,7 +299,6 @@ public class EditProfileActivity extends AppCompatActivity {
         String city = cityEdit.getText().toString().trim();
         String barangay = barangayEdit.getText().toString().trim();
         String streetAddress = streetAddressEdit.getText().toString().trim();
-        String newPassword = passwordEdit.getText().toString().trim();
 
         // Save to SharedPreferences immediately for instant local updates
         ProfileDataManager profileManager = ProfileDataManager.getInstance(this);
@@ -308,16 +306,8 @@ public class EditProfileActivity extends AppCompatActivity {
         
         Log.d(TAG, "Profile data saved locally, now syncing to Firestore...");
 
-        // Handle password change if provided
-        if (!newPassword.isEmpty()) {
-            updatePassword(newPassword, () -> {
-                // After password is updated, proceed with profile sync
-                proceedWithProfileSync(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
-            });
-        } else {
-            // No password change, proceed with profile sync
-            proceedWithProfileSync(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
-        }
+        // Proceed with profile sync
+        proceedWithProfileSync(firstName, lastName, mobileNumber, email, province, city, barangay, streetAddress);
     }
 
     private void proceedWithProfileSync(String firstName, String lastName, String mobileNumber,
@@ -331,51 +321,6 @@ public class EditProfileActivity extends AppCompatActivity {
         }
     }
 
-    private void updatePassword(String newPassword, Runnable onComplete) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
-            Toast.makeText(this, "User not signed in", Toast.LENGTH_SHORT).show();
-            if (onComplete != null) onComplete.run();
-            return;
-        }
-
-        // Validate password strength
-        if (!isStrongPassword(newPassword)) {
-            passwordEdit.setError("Password must be at least 8 characters long");
-            Toast.makeText(this, "Password must be at least 8 characters long", Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        user.updatePassword(newPassword)
-            .addOnSuccessListener(aVoid -> {
-                Log.d(TAG, "Password updated successfully");
-                runOnUiThread(() -> {
-                    Toast.makeText(EditProfileActivity.this, "Password updated successfully", Toast.LENGTH_SHORT).show();
-                    passwordEdit.setText(""); // Clear password field
-                    if (onComplete != null) onComplete.run();
-                });
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "Error updating password: " + e.getMessage(), e);
-                runOnUiThread(() -> {
-                    String errorMsg = "Failed to update password";
-                    if (e.getMessage() != null) {
-                        if (e.getMessage().contains("requires-recent-login")) {
-                            errorMsg = "Please log out and log back in before changing password";
-                        } else {
-                            errorMsg = "Error: " + e.getMessage();
-                        }
-                    }
-                    Toast.makeText(EditProfileActivity.this, errorMsg, Toast.LENGTH_LONG).show();
-                    if (onComplete != null) onComplete.run();
-                });
-            });
-    }
-
-    private boolean isStrongPassword(String password) {
-        // Only require password to be at least 8 characters long
-        return password.length() >= 8;
-    }
 
     private void syncProfileToFirestore(String firstName, String lastName, String mobileNumber,
                                        String email, String province, String city, String barangay, String streetAddress) {
@@ -481,13 +426,6 @@ public class EditProfileActivity extends AppCompatActivity {
         String city = cityEdit.getText().toString().trim();
         if (!city.isEmpty() && TextUtils.isEmpty(province)) {
             provinceEdit.setError("Province is required when City/Town is provided");
-            isValid = false;
-        }
-
-        // Validate password (if provided, must meet strength requirements)
-        String password = passwordEdit.getText().toString().trim();
-        if (!password.isEmpty() && !isStrongPassword(password)) {
-            passwordEdit.setError("Password must be at least 8 characters long");
             isValid = false;
         }
 

@@ -33,6 +33,7 @@ public class Facilities extends AppCompatActivity {
     // Emergency Support section views
     private LinearLayout emergencySupportHeader;
     private LinearLayout emergencySupportContent;
+    private LinearLayout emergencySupportSection;
     private ImageView emergencySupportArrow;
 
     // Switches and radio buttons
@@ -41,6 +42,7 @@ public class Facilities extends AppCompatActivity {
     private RadioButton volcanicActivityCheck, landslideCheck, earthquakeCheck, civilDisturbanceCheck;
     private RadioButton armedConflictCheck, infectiousDiseaseCheck;
     private RadioButton poorInfrastructureCheck, obstructionsCheck, electricalHazardCheck, environmentalHazardCheck;
+    private RadioButton animalConcernsCheck;
     private final List<RadioButton> incidentCheckboxes = new ArrayList<>();
     private boolean isUpdatingIncidentChecks = false;
     private boolean isUpdatingFacilityChecks = false;
@@ -66,6 +68,9 @@ public class Facilities extends AppCompatActivity {
     private Button deselectAllIncidentsButton;
     private Button selectAllFacilitiesButton;
     private Button deselectAllFacilitiesButton;
+    
+    // ScrollView for scrolling content
+    private android.widget.ScrollView scrollView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -137,6 +142,7 @@ public class Facilities extends AppCompatActivity {
         // Emergency Support section
         emergencySupportHeader = findViewById(R.id.emergencySupportHeader);
         emergencySupportContent = findViewById(R.id.emergencySupportContent);
+        emergencySupportSection = findViewById(R.id.emergencySupportSection);
         emergencySupportArrow = findViewById(R.id.emergencySupportArrow);
 
         // Switches and radio buttons
@@ -155,6 +161,7 @@ public class Facilities extends AppCompatActivity {
         obstructionsCheck = findViewById(R.id.obstructionsCheck);
         electricalHazardCheck = findViewById(R.id.electricalHazardCheck);
         environmentalHazardCheck = findViewById(R.id.environmentalHazardCheck);
+        animalConcernsCheck = findViewById(R.id.animalConcernsCheck);
 
         // Verify new checkboxes are found
         if (poorInfrastructureCheck == null) {
@@ -168,6 +175,9 @@ public class Facilities extends AppCompatActivity {
         }
         if (environmentalHazardCheck == null) {
             android.util.Log.e("Facilities", "environmentalHazardCheck is NULL!");
+        }
+        if (animalConcernsCheck == null) {
+            android.util.Log.e("Facilities", "animalConcernsCheck is NULL!");
         }
 
         incidentCheckboxes.clear();
@@ -185,6 +195,7 @@ public class Facilities extends AppCompatActivity {
         registerIncidentCheckbox(obstructionsCheck);
         registerIncidentCheckbox(electricalHazardCheck);
         registerIncidentCheckbox(environmentalHazardCheck);
+        registerIncidentCheckbox(animalConcernsCheck);
         evacuationCentersCheck = findViewById(R.id.evacuationCentersCheck);
         healthFacilitiesCheck = findViewById(R.id.healthFacilitiesCheck);
         policeStationsCheck = findViewById(R.id.policeStationsCheck);
@@ -197,6 +208,9 @@ public class Facilities extends AppCompatActivity {
         // Buttons
         applyFiltersButton = findViewById(R.id.applyFiltersButton);
         cancelButton = findViewById(R.id.cancelButton);
+        
+        // ScrollView
+        scrollView = findViewById(R.id.mainScrollView);
 
         // Select All / Deselect All buttons
 
@@ -222,6 +236,100 @@ public class Facilities extends AppCompatActivity {
         
         // Ensure all checkboxes are enabled and clickable from the start
         ensureAllCheckboxesEnabled();
+        
+        // Log layout measurements for debugging
+        logLayoutMeasurements();
+        
+        // Ensure all content is visible after layout is complete
+        scrollView.post(new Runnable() {
+            @Override
+            public void run() {
+                // Force layout pass to ensure proper measurements
+                scrollView.requestLayout();
+                View scrollContent = scrollView.getChildAt(0);
+                if (scrollContent != null) {
+                    scrollContent.requestLayout();
+                }
+                
+                logLayoutMeasurements();
+                if (emergencySupportContent != null && 
+                    emergencySupportContent.getVisibility() == View.VISIBLE) {
+                    ensureAllContentVisible();
+                }
+            }
+        });
+        
+        // Also check after a longer delay to ensure layout is fully complete
+        scrollView.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                logLayoutMeasurements();
+                if (emergencySupportContent != null && 
+                    emergencySupportContent.getVisibility() == View.VISIBLE) {
+                    forceScrollToAbsoluteBottom();
+                }
+            }
+        }, 1000);
+    }
+    
+    /**
+     * Log layout measurements for debugging scroll issues
+     * Search for "FacilitiesScrollDebug" in Logcat
+     */
+    private void logLayoutMeasurements() {
+        if (scrollView != null) {
+            scrollView.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        View child = scrollView.getChildAt(0);
+                        if (child != null) {
+                            int scrollViewHeight = scrollView.getHeight();
+                            int scrollViewMeasuredHeight = scrollView.getMeasuredHeight();
+                            int contentHeight = child.getHeight();
+                            int contentMeasuredHeight = child.getMeasuredHeight();
+                            int scrollY = scrollView.getScrollY();
+                            int maxScrollY = Math.max(0, contentHeight - scrollViewHeight);
+                            
+                            android.util.Log.d("FacilitiesScrollDebug", "=== SCROLLVIEW MEASUREMENTS ===");
+                            android.util.Log.d("FacilitiesScrollDebug", "ScrollView height: " + scrollViewHeight);
+                            android.util.Log.d("FacilitiesScrollDebug", "ScrollView measuredHeight: " + scrollViewMeasuredHeight);
+                            android.util.Log.d("FacilitiesScrollDebug", "Content height: " + contentHeight);
+                            android.util.Log.d("FacilitiesScrollDebug", "Content measuredHeight: " + contentMeasuredHeight);
+                            android.util.Log.d("FacilitiesScrollDebug", "Current scrollY: " + scrollY);
+                            android.util.Log.d("FacilitiesScrollDebug", "Max scrollY: " + maxScrollY);
+                            android.util.Log.d("FacilitiesScrollDebug", "Can scroll: " + (maxScrollY > 0));
+                            
+                            if (emergencySupportSection != null) {
+                                int sectionTop = emergencySupportSection.getTop();
+                                int sectionBottom = emergencySupportSection.getBottom();
+                                int sectionHeight = emergencySupportSection.getHeight();
+                                android.util.Log.d("FacilitiesScrollDebug", "Emergency Support Section:");
+                                android.util.Log.d("FacilitiesScrollDebug", "  Top: " + sectionTop);
+                                android.util.Log.d("FacilitiesScrollDebug", "  Bottom: " + sectionBottom);
+                                android.util.Log.d("FacilitiesScrollDebug", "  Height: " + sectionHeight);
+                                android.util.Log.d("FacilitiesScrollDebug", "  Visible: " + (emergencySupportContent != null ? 
+                                    (emergencySupportContent.getVisibility() == View.VISIBLE) : "null"));
+                            }
+                            
+                            if (governmentOfficesCheck != null) {
+                                int govTop = governmentOfficesCheck.getTop();
+                                int govBottom = governmentOfficesCheck.getBottom();
+                                android.util.Log.d("FacilitiesScrollDebug", "Government Offices:");
+                                android.util.Log.d("FacilitiesScrollDebug", "  Top: " + govTop);
+                                android.util.Log.d("FacilitiesScrollDebug", "  Bottom: " + govBottom);
+                                android.util.Log.d("FacilitiesScrollDebug", "  Visible in viewport: " + 
+                                    (govBottom <= scrollViewHeight + scrollY));
+                            }
+                            
+                            android.util.Log.d("FacilitiesScrollDebug", "==============================");
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.e("FacilitiesScrollDebug", "Error logging measurements: " + e.getMessage(), e);
+                    }
+                }
+            });
+        }
     }
     
     /**
@@ -328,6 +436,9 @@ public class Facilities extends AppCompatActivity {
         if (environmentalHazardCheck != null) {
             environmentalHazardCheck.setChecked(intent.getBooleanExtra("environmentalHazard", true));
         }
+        if (animalConcernsCheck != null) {
+            animalConcernsCheck.setChecked(intent.getBooleanExtra("animalConcerns", true));
+        }
 
         enforceSingleIncidentSelection();
 
@@ -422,6 +533,7 @@ public class Facilities extends AppCompatActivity {
         setupExclusiveIncidentCheckbox(obstructionsCheck);
         setupExclusiveIncidentCheckbox(electricalHazardCheck);
         setupExclusiveIncidentCheckbox(environmentalHazardCheck);
+        setupExclusiveIncidentCheckbox(animalConcernsCheck);
         
         // Facility checkboxes
         RadioButton[] facilityCheckboxes = {
@@ -996,6 +1108,229 @@ public class Facilities extends AppCompatActivity {
         rotateAnimation.setDuration(300);
         rotateAnimation.setFillAfter(true);
         arrow.startAnimation(rotateAnimation);
+        
+        // If Emergency Support section is expanded, force remeasurement and scroll
+        if (expand && content == emergencySupportContent && scrollView != null) {
+            android.util.Log.d("FacilitiesScrollDebug", "Emergency Support section expanded - forcing remeasurement");
+            
+            // Force remeasurement of ScrollView and its content
+            View scrollContent = scrollView.getChildAt(0);
+            if (scrollContent != null) {
+                scrollContent.requestLayout();
+                scrollView.requestLayout();
+            }
+            
+            // Wait for layout to complete, then scroll
+            scrollView.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    // Force another layout pass
+                    scrollView.requestLayout();
+                    scrollView.invalidate();
+                    View scrollContent = scrollView.getChildAt(0);
+                    if (scrollContent != null) {
+                        scrollContent.requestLayout();
+                        scrollContent.invalidate();
+                    }
+                    
+                    logLayoutMeasurements();
+                    scrollToBottom();
+                    
+                    // Multiple scroll attempts with increasing delays
+                    scrollView.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            logLayoutMeasurements();
+                            ensureAllContentVisible();
+                            scrollView.fullScroll(android.view.View.FOCUS_DOWN);
+                            
+                            scrollView.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    scrollView.fullScroll(android.view.View.FOCUS_DOWN);
+                                    logLayoutMeasurements();
+                                    
+                                    // Final aggressive scroll
+                                    scrollView.postDelayed(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            forceScrollToAbsoluteBottom();
+                                        }
+                                    }, 200);
+                                }
+                            }, 200);
+                        }
+                    }, 300);
+                }
+            }, 400); // Wait for animation and layout to complete
+        }
+    }
+    
+    /**
+     * Force scroll to absolute bottom of content
+     */
+    private void forceScrollToAbsoluteBottom() {
+        if (scrollView != null) {
+            scrollView.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        View child = scrollView.getChildAt(0);
+                        if (child != null) {
+                            // Force measure
+                            int widthSpec = android.view.View.MeasureSpec.makeMeasureSpec(
+                                scrollView.getWidth(), android.view.View.MeasureSpec.EXACTLY);
+                            int heightSpec = android.view.View.MeasureSpec.makeMeasureSpec(
+                                0, android.view.View.MeasureSpec.UNSPECIFIED);
+                            child.measure(widthSpec, heightSpec);
+                            child.layout(0, 0, child.getMeasuredWidth(), child.getMeasuredHeight());
+                            
+                            int contentBottom = child.getBottom();
+                            int scrollViewHeight = scrollView.getHeight();
+                            int maxScroll = Math.max(0, contentBottom - scrollViewHeight);
+                            
+                            android.util.Log.d("FacilitiesScrollDebug", "forceScrollToAbsoluteBottom: contentBottom=" + 
+                                contentBottom + ", scrollViewHeight=" + scrollViewHeight + ", maxScroll=" + maxScroll);
+                            
+                            if (maxScroll > 0) {
+                                scrollView.scrollTo(0, maxScroll);
+                                // One more check
+                                scrollView.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        scrollView.scrollTo(0, maxScroll);
+                                        logLayoutMeasurements();
+                                    }
+                                }, 50);
+                            }
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.e("FacilitiesScrollDebug", "Error in forceScrollToAbsoluteBottom: " + e.getMessage(), e);
+                    }
+                }
+            });
+        }
+    }
+    
+    /**
+     * Scroll to the bottom of the ScrollView to ensure all content is visible
+     */
+    private void scrollToBottom() {
+        if (scrollView != null) {
+            scrollView.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        View child = scrollView.getChildAt(0);
+                        if (child != null) {
+                            // Force measure and layout first to get accurate measurements
+                            child.measure(
+                                android.view.View.MeasureSpec.makeMeasureSpec(scrollView.getWidth(), android.view.View.MeasureSpec.EXACTLY),
+                                android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
+                            );
+                            child.layout(0, 0, child.getMeasuredWidth(), child.getMeasuredHeight());
+                            
+                            // Get the full height of the content
+                            int contentHeight = child.getMeasuredHeight();
+                            // Get the visible height of the ScrollView
+                            int scrollViewHeight = scrollView.getHeight();
+                            // Calculate how much we need to scroll (add extra 150dp for safety)
+                            int extraPadding = (int)(150 * getResources().getDisplayMetrics().density);
+                            int scrollY = Math.max(0, contentHeight - scrollViewHeight + extraPadding);
+                            
+                            android.util.Log.d("FacilitiesScrollDebug", "ScrollToBottom: contentHeight=" + contentHeight + 
+                                ", scrollViewHeight=" + scrollViewHeight + ", scrollY=" + scrollY + ", extraPadding=" + extraPadding);
+                            
+                            if (scrollY > 0) {
+                                // Scroll to the bottom with extra margin to ensure visibility
+                                scrollView.smoothScrollTo(0, scrollY);
+                            }
+                            
+                            // Force multiple scroll attempts to ensure we reach the bottom
+                            scrollView.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    scrollView.fullScroll(android.view.View.FOCUS_DOWN);
+                                    // One more attempt after a delay
+                                    scrollView.postDelayed(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            scrollView.fullScroll(android.view.View.FOCUS_DOWN);
+                                            // Final check - scroll to absolute bottom
+                                            scrollView.postDelayed(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    try {
+                                                        View finalChild = scrollView.getChildAt(0);
+                                                        if (finalChild != null) {
+                                                            int maxScroll = finalChild.getBottom() - scrollView.getHeight();
+                                                            if (maxScroll > 0) {
+                                                                scrollView.scrollTo(0, maxScroll);
+                                                                android.util.Log.d("FacilitiesScrollDebug", "Final scroll to: " + maxScroll);
+                                                            }
+                                                        }
+                                                    } catch (Exception e) {
+                                                        android.util.Log.e("FacilitiesScrollDebug", "Error in final scroll: " + e.getMessage());
+                                                    }
+                                                }
+                                            }, 100);
+                                        }
+                                    }, 150);
+                                }
+                            }, 200);
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.e("FacilitiesScrollDebug", "Error scrolling to bottom: " + e.getMessage());
+                        // Fallback: use fullScroll multiple times
+                        scrollView.fullScroll(android.view.View.FOCUS_DOWN);
+                        scrollView.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                scrollView.fullScroll(android.view.View.FOCUS_DOWN);
+                            }
+                        }, 100);
+                    }
+                }
+            });
+        }
+    }
+    
+    /**
+     * Ensure all expanded content is visible by scrolling if needed
+     */
+    private void ensureAllContentVisible() {
+        if (scrollView != null && emergencySupportContent != null && 
+            emergencySupportContent.getVisibility() == View.VISIBLE) {
+            android.util.Log.d("FacilitiesScrollDebug", "ensureAllContentVisible called");
+            
+            // Force full layout pass
+            View rootView = getWindow().getDecorView().findViewById(android.R.id.content);
+            if (rootView != null) {
+                rootView.requestLayout();
+            }
+            scrollView.requestLayout();
+            View scrollContent = scrollView.getChildAt(0);
+            if (scrollContent != null) {
+                scrollContent.requestLayout();
+            }
+            
+            // If Emergency Support is visible, scroll to show it fully
+            scrollView.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    logLayoutMeasurements();
+                    scrollToBottom();
+                    // Force scroll again after measurements
+                    scrollView.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            logLayoutMeasurements();
+                            forceScrollToAbsoluteBottom();
+                        }
+                    }, 300);
+                }
+            }, 100);
+        }
     }
 
     private void selectTimelineOption(String timeRange, TextView selectedOption) {
@@ -1145,6 +1480,7 @@ public class Facilities extends AppCompatActivity {
         resultIntent.putExtra("obstructions", obstructionsCheck != null ? obstructionsCheck.isChecked() : true);
         resultIntent.putExtra("electricalHazard", electricalHazardCheck != null ? electricalHazardCheck.isChecked() : true);
         resultIntent.putExtra("environmentalHazard", environmentalHazardCheck != null ? environmentalHazardCheck.isChecked() : true);
+        resultIntent.putExtra("animalConcerns", animalConcernsCheck != null ? animalConcernsCheck.isChecked() : true);
 
         // Add facility filter states
         resultIntent.putExtra("evacuationCenters", evacuationCentersCheck != null ? evacuationCentersCheck.isChecked() : true);

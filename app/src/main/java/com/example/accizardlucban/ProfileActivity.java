@@ -21,6 +21,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -63,6 +64,9 @@ public class ProfileActivity extends AppCompatActivity {
     private LinearLayout navHome, navChat, navReport, navMap, navAlerts, navProfile;
     private TextView alertsBadgeProfile;
     private SharedPreferences alertsSharedPreferences;
+    
+    // Refresh layout
+    private SwipeRefreshLayout swipeRefreshLayout;
 
     private static final String PREFS_NAME = "user_profile_prefs";
     private static final String KEY_FIRST_NAME = "first_name";
@@ -138,6 +142,28 @@ public class ProfileActivity extends AppCompatActivity {
         if (alertsBadgeProfile != null) {
             AnnouncementNotificationManager.getInstance().registerBadge("ProfileActivity", alertsBadgeProfile);
             Log.d(TAG, "✅ ProfileActivity badge registered with AnnouncementNotificationManager");
+        }
+        
+        // Initialize SwipeRefreshLayout
+        swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
+        if (swipeRefreshLayout != null) {
+            // Set refresh colors
+            swipeRefreshLayout.setColorSchemeResources(
+                android.R.color.holo_orange_dark,
+                android.R.color.holo_orange_light,
+                android.R.color.holo_red_dark,
+                android.R.color.holo_red_light
+            );
+            
+            // Set refresh listener
+            swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+                @Override
+                public void onRefresh() {
+                    refreshProfileData();
+                }
+            });
+            
+            Log.d(TAG, "✅ SwipeRefreshLayout initialized");
         }
     }
 
@@ -1438,6 +1464,73 @@ public class ProfileActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             android.util.Log.e("Referral", "Error handling referral link", e);
+        }
+    }
+
+    /**
+     * Refresh all profile data with loading indicator
+     */
+    private void refreshProfileData() {
+        if (swipeRefreshLayout == null) {
+            return;
+        }
+        
+        Log.d(TAG, "🔄 Starting profile data refresh...");
+        
+        // Show loading indicator
+        swipeRefreshLayout.setRefreshing(true);
+        
+        // Force sync from Firestore first
+        ProfileDataManager profileManager = ProfileDataManager.getInstance(this);
+        profileManager.loadFromFirestoreAndUpdateLocal(new ProfileDataManager.LoadCallback() {
+            @Override
+            public void onComplete(boolean success, String message) {
+                if (success) {
+                    Log.d(TAG, "✅ Profile data synced from Firestore: " + message);
+                } else {
+                    Log.w(TAG, "⚠️ Failed to sync profile from Firestore: " + message);
+                }
+                
+                // Refresh all UI components
+                refreshAllProfileData();
+            }
+        });
+    }
+    
+    /**
+     * Refresh all profile data components
+     */
+    private void refreshAllProfileData() {
+        try {
+            // Refresh user data
+            loadUserData();
+            
+            // Refresh profile picture
+            loadProfilePicture();
+            
+            // Refresh verified status
+            loadVerifiedStatus();
+            
+            // Update notification badge
+            updateNotificationBadge();
+            
+            // Stop refresh indicator after a short delay to ensure all data is loaded
+            if (swipeRefreshLayout != null) {
+                swipeRefreshLayout.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (swipeRefreshLayout != null) {
+                            swipeRefreshLayout.setRefreshing(false);
+                            Log.d(TAG, "✅ Profile refresh completed");
+                        }
+                    }
+                }, 500); // Small delay to ensure smooth UI update
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error refreshing profile data: " + e.getMessage(), e);
+            if (swipeRefreshLayout != null) {
+                swipeRefreshLayout.setRefreshing(false);
+            }
         }
     }
 

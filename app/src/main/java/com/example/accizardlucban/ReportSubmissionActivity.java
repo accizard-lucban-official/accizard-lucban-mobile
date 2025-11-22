@@ -339,25 +339,25 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     }
 
     private void setupReportTypeSpinner() {
-        // Create array of report types
+        // Create array of report types with emojis (matching MapViewActivity filter panel)
         String[] reportTypes = {
                 "Select Report Type",
-                "Road Crash",
-                "Medical Emergency",
-                "Volcanic Activity",
-                "Earthquake",
-                "Armed Conflict",
-                "Fire",
-                "Flooding",
-                "Landslide",
-                "Civil Disturbance",
-                "Infectious Disease",
-                "Poor Infrastructure",
-                "Obstructions",
-                "Electrical Hazard",
-                "Environmental Hazard",
-                "Animal Concern",
-                "Others"
+                "🚗 Road Crash",
+                "🏥 Medical Emergency",
+                "🌋 Volcanic Activity",
+                "🏚️ Earthquake",
+                "🔴 Armed Conflict",
+                "🔥 Fire",
+                "🌊 Flooding",
+                "⛰️ Landslide",
+                "⚠️ Civil Disturbance",
+                "🦠 Infectious Disease",
+                "🏗️ Poor Infrastructure",
+                "🚧 Obstructions",
+                "⚡ Electrical Hazard",
+                "🌿 Environmental Hazard",
+                "🐾 Animal Concern",
+                "➕ Others"
         };
 
         // Create adapter and set to spinner
@@ -368,6 +368,45 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         );
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         reportTypeSpinner.setAdapter(adapter);
+    }
+    
+    /**
+     * Helper method to remove emoji from report type string
+     * This ensures the stored value doesn't include emojis
+     */
+    private String getReportTypeWithoutEmoji(String reportTypeWithEmoji) {
+        if (reportTypeWithEmoji == null || reportTypeWithEmoji.isEmpty()) {
+            return reportTypeWithEmoji;
+        }
+        
+        // Remove emoji characters using regex pattern that matches emojis
+        // This pattern matches most emoji characters including variations
+        String withoutEmoji = reportTypeWithEmoji.replaceAll("[\uD83C-\uDBFF\uDC00-\uDFFF]+", "").trim();
+        
+        // Fallback: if regex didn't work, try removing common emoji patterns
+        if (withoutEmoji.equals(reportTypeWithEmoji)) {
+            // Remove specific emojis we know we're using
+            withoutEmoji = reportTypeWithEmoji
+                .replace("🚗", "")
+                .replace("🏥", "")
+                .replace("🌋", "")
+                .replace("🏚️", "")
+                .replace("🔴", "")
+                .replace("🔥", "")
+                .replace("🌊", "")
+                .replace("⛰️", "")
+                .replace("⚠️", "")
+                .replace("🦠", "")
+                .replace("🏗️", "")
+                .replace("🚧", "")
+                .replace("⚡", "")
+                .replace("🌿", "")
+                .replace("🐾", "")
+                .replace("➕", "")
+                .trim();
+        }
+        
+        return withoutEmoji;
     }
 
     private void setupReportLogRecyclerView() {
@@ -1512,7 +1551,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         submitReportButton.setText("Submitting...");
 
         // Get form data
-        String reportType = reportTypeSpinner.getSelectedItem().toString();
+        String reportTypeWithEmoji = reportTypeSpinner.getSelectedItem().toString();
+        // Strip emoji for storage in Firestore
+        String reportType = getReportTypeWithoutEmoji(reportTypeWithEmoji);
         String description = descriptionEditText.getText().toString().trim();
         
         // Use selected location name from map picker, or default
