@@ -3,6 +3,7 @@ package com.example.accizardlucban;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.Button;
@@ -252,24 +253,13 @@ public class Facilities extends AppCompatActivity {
                 }
                 
                 logLayoutMeasurements();
+                // If Emergency Support section is already expanded on create, scroll to it
                 if (emergencySupportContent != null && 
                     emergencySupportContent.getVisibility() == View.VISIBLE) {
-                    ensureAllContentVisible();
+                    scrollToEmergencySupportSection();
                 }
             }
         });
-        
-        // Also check after a longer delay to ensure layout is fully complete
-        scrollView.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                logLayoutMeasurements();
-                if (emergencySupportContent != null && 
-                    emergencySupportContent.getVisibility() == View.VISIBLE) {
-                    forceScrollToAbsoluteBottom();
-                }
-            }
-        }, 1000);
     }
     
     /**
@@ -1109,227 +1099,169 @@ public class Facilities extends AppCompatActivity {
         rotateAnimation.setFillAfter(true);
         arrow.startAnimation(rotateAnimation);
         
-        // If Emergency Support section is expanded, force remeasurement and scroll
-        if (expand && content == emergencySupportContent && scrollView != null) {
-            android.util.Log.d("FacilitiesScrollDebug", "Emergency Support section expanded - forcing remeasurement");
+        // If Emergency Support section is expanded, scroll to show it fully
+        if (expand && content == emergencySupportContent && scrollView != null && emergencySupportSection != null) {
+            android.util.Log.d("FacilitiesScrollDebug", "Emergency Support section expanded - scheduling scroll");
             
-            // Force remeasurement of ScrollView and its content
-            View scrollContent = scrollView.getChildAt(0);
-            if (scrollContent != null) {
-                scrollContent.requestLayout();
-                scrollView.requestLayout();
-            }
+            // Wait for animation to complete and layout to be measured
+            // Use ViewTreeObserver to ensure layout is complete
+            final ViewTreeObserver observer = emergencySupportSection.getViewTreeObserver();
+            observer.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() {
+                    // Remove listener to avoid multiple calls
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                        emergencySupportSection.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                    } else {
+                        emergencySupportSection.getViewTreeObserver().removeGlobalOnLayoutListener(this);
+                    }
+                    
+                    // Scroll to show the Emergency Support section fully
+                    scrollToEmergencySupportSection();
+                }
+            });
             
-            // Wait for layout to complete, then scroll
+            // Fallback: also try after animation duration
             scrollView.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    // Force another layout pass
-                    scrollView.requestLayout();
-                    scrollView.invalidate();
-                    View scrollContent = scrollView.getChildAt(0);
-                    if (scrollContent != null) {
-                        scrollContent.requestLayout();
-                        scrollContent.invalidate();
-                    }
-                    
-                    logLayoutMeasurements();
-                    scrollToBottom();
-                    
-                    // Multiple scroll attempts with increasing delays
-                    scrollView.postDelayed(new Runnable() {
+                    scrollToEmergencySupportSection();
+                }
+            }, 350); // Slightly longer than animation duration
+        }
+    }
+    
+    /**
+     * Scroll to show the Emergency Support section fully when expanded
+     * This method calculates the position of the section and scrolls to ensure all content is visible
+     */
+    private void scrollToEmergencySupportSection() {
+        if (scrollView == null || emergencySupportSection == null || emergencySupportContent == null) {
+            return;
+        }
+        
+        if (emergencySupportContent.getVisibility() != View.VISIBLE) {
+            return; // Section is not expanded
+        }
+        
+        scrollView.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // Use ViewTreeObserver to ensure layout is complete
+                    ViewTreeObserver observer = emergencySupportSection.getViewTreeObserver();
+                    observer.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
                         @Override
-                        public void run() {
-                            logLayoutMeasurements();
-                            ensureAllContentVisible();
-                            scrollView.fullScroll(android.view.View.FOCUS_DOWN);
-                            
-                            scrollView.postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    scrollView.fullScroll(android.view.View.FOCUS_DOWN);
-                                    logLayoutMeasurements();
-                                    
-                                    // Final aggressive scroll
-                                    scrollView.postDelayed(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            forceScrollToAbsoluteBottom();
-                                        }
-                                    }, 200);
-                                }
-                            }, 200);
-                        }
-                    }, 300);
-                }
-            }, 400); // Wait for animation and layout to complete
-        }
-    }
-    
-    /**
-     * Force scroll to absolute bottom of content
-     */
-    private void forceScrollToAbsoluteBottom() {
-        if (scrollView != null) {
-            scrollView.post(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        View child = scrollView.getChildAt(0);
-                        if (child != null) {
-                            // Force measure
-                            int widthSpec = android.view.View.MeasureSpec.makeMeasureSpec(
-                                scrollView.getWidth(), android.view.View.MeasureSpec.EXACTLY);
-                            int heightSpec = android.view.View.MeasureSpec.makeMeasureSpec(
-                                0, android.view.View.MeasureSpec.UNSPECIFIED);
-                            child.measure(widthSpec, heightSpec);
-                            child.layout(0, 0, child.getMeasuredWidth(), child.getMeasuredHeight());
-                            
-                            int contentBottom = child.getBottom();
-                            int scrollViewHeight = scrollView.getHeight();
-                            int maxScroll = Math.max(0, contentBottom - scrollViewHeight);
-                            
-                            android.util.Log.d("FacilitiesScrollDebug", "forceScrollToAbsoluteBottom: contentBottom=" + 
-                                contentBottom + ", scrollViewHeight=" + scrollViewHeight + ", maxScroll=" + maxScroll);
-                            
-                            if (maxScroll > 0) {
-                                scrollView.scrollTo(0, maxScroll);
-                                // One more check
-                                scrollView.postDelayed(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        scrollView.scrollTo(0, maxScroll);
-                                        logLayoutMeasurements();
-                                    }
-                                }, 50);
-                            }
-                        }
-                    } catch (Exception e) {
-                        android.util.Log.e("FacilitiesScrollDebug", "Error in forceScrollToAbsoluteBottom: " + e.getMessage(), e);
-                    }
-                }
-            });
-        }
-    }
-    
-    /**
-     * Scroll to the bottom of the ScrollView to ensure all content is visible
-     */
-    private void scrollToBottom() {
-        if (scrollView != null) {
-            scrollView.post(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        View child = scrollView.getChildAt(0);
-                        if (child != null) {
-                            // Force measure and layout first to get accurate measurements
-                            child.measure(
-                                android.view.View.MeasureSpec.makeMeasureSpec(scrollView.getWidth(), android.view.View.MeasureSpec.EXACTLY),
-                                android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
-                            );
-                            child.layout(0, 0, child.getMeasuredWidth(), child.getMeasuredHeight());
-                            
-                            // Get the full height of the content
-                            int contentHeight = child.getMeasuredHeight();
-                            // Get the visible height of the ScrollView
-                            int scrollViewHeight = scrollView.getHeight();
-                            // Calculate how much we need to scroll (add extra 150dp for safety)
-                            int extraPadding = (int)(150 * getResources().getDisplayMetrics().density);
-                            int scrollY = Math.max(0, contentHeight - scrollViewHeight + extraPadding);
-                            
-                            android.util.Log.d("FacilitiesScrollDebug", "ScrollToBottom: contentHeight=" + contentHeight + 
-                                ", scrollViewHeight=" + scrollViewHeight + ", scrollY=" + scrollY + ", extraPadding=" + extraPadding);
-                            
-                            if (scrollY > 0) {
-                                // Scroll to the bottom with extra margin to ensure visibility
-                                scrollView.smoothScrollTo(0, scrollY);
+                        public void onGlobalLayout() {
+                            // Remove listener to avoid multiple calls
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+                                emergencySupportSection.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                            } else {
+                                emergencySupportSection.getViewTreeObserver().removeGlobalOnLayoutListener(this);
                             }
                             
-                            // Force multiple scroll attempts to ensure we reach the bottom
-                            scrollView.postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    scrollView.fullScroll(android.view.View.FOCUS_DOWN);
-                                    // One more attempt after a delay
-                                    scrollView.postDelayed(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            scrollView.fullScroll(android.view.View.FOCUS_DOWN);
-                                            // Final check - scroll to absolute bottom
-                                            scrollView.postDelayed(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    try {
-                                                        View finalChild = scrollView.getChildAt(0);
-                                                        if (finalChild != null) {
-                                                            int maxScroll = finalChild.getBottom() - scrollView.getHeight();
-                                                            if (maxScroll > 0) {
-                                                                scrollView.scrollTo(0, maxScroll);
-                                                                android.util.Log.d("FacilitiesScrollDebug", "Final scroll to: " + maxScroll);
-                                                            }
-                                                        }
-                                                    } catch (Exception e) {
-                                                        android.util.Log.e("FacilitiesScrollDebug", "Error in final scroll: " + e.getMessage());
-                                                    }
-                                                }
-                                            }, 100);
-                                        }
-                                    }, 150);
-                                }
-                            }, 200);
+                            performScrollToSection();
                         }
-                    } catch (Exception e) {
-                        android.util.Log.e("FacilitiesScrollDebug", "Error scrolling to bottom: " + e.getMessage());
-                        // Fallback: use fullScroll multiple times
-                        scrollView.fullScroll(android.view.View.FOCUS_DOWN);
-                        scrollView.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                scrollView.fullScroll(android.view.View.FOCUS_DOWN);
-                            }
-                        }, 100);
-                    }
+                    });
+                    
+                    // Also perform scroll immediately in case layout is already complete
+                    performScrollToSection();
+                } catch (Exception e) {
+                    android.util.Log.e("FacilitiesScrollDebug", "Error in scrollToEmergencySupportSection: " + e.getMessage(), e);
+                    // Fallback: just scroll to bottom
+                    scrollView.fullScroll(android.view.View.FOCUS_DOWN);
                 }
-            });
-        }
-    }
-    
-    /**
-     * Ensure all expanded content is visible by scrolling if needed
-     */
-    private void ensureAllContentVisible() {
-        if (scrollView != null && emergencySupportContent != null && 
-            emergencySupportContent.getVisibility() == View.VISIBLE) {
-            android.util.Log.d("FacilitiesScrollDebug", "ensureAllContentVisible called");
-            
-            // Force full layout pass
-            View rootView = getWindow().getDecorView().findViewById(android.R.id.content);
-            if (rootView != null) {
-                rootView.requestLayout();
             }
-            scrollView.requestLayout();
+        });
+    }
+    
+    /**
+     * Helper method to actually perform the scroll calculation and execution
+     */
+    private void performScrollToSection() {
+        try {
+            // Get the ScrollView's child container
             View scrollContent = scrollView.getChildAt(0);
-            if (scrollContent != null) {
-                scrollContent.requestLayout();
+            if (scrollContent == null || emergencySupportSection == null) {
+                return;
             }
             
-            // If Emergency Support is visible, scroll to show it fully
-            scrollView.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    logLayoutMeasurements();
-                    scrollToBottom();
-                    // Force scroll again after measurements
-                    scrollView.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            logLayoutMeasurements();
-                            forceScrollToAbsoluteBottom();
+            // Get screen positions to calculate relative position
+            int[] sectionLocation = new int[2];
+            int[] scrollViewLocation = new int[2];
+            int[] contentLocation = new int[2];
+            
+            emergencySupportSection.getLocationOnScreen(sectionLocation);
+            scrollView.getLocationOnScreen(scrollViewLocation);
+            scrollContent.getLocationOnScreen(contentLocation);
+            
+            // Calculate section position relative to scrollContent
+            int sectionTopRelative = sectionLocation[1] - contentLocation[1];
+            int sectionBottomRelative = sectionTopRelative + emergencySupportSection.getHeight();
+            
+            // Get ScrollView dimensions and current scroll position
+            int scrollViewHeight = scrollView.getHeight();
+            int currentScrollY = scrollView.getScrollY();
+            int maxScrollY = Math.max(0, scrollContent.getHeight() - scrollViewHeight);
+            
+            // Add padding to ensure full visibility (accounts for bottom buttons and spacing)
+            int bottomPadding = (int)(80 * getResources().getDisplayMetrics().density); // 80dp for buttons + margin
+            int targetScrollY = Math.max(0, Math.min(sectionBottomRelative - scrollViewHeight + bottomPadding, maxScrollY));
+            
+            android.util.Log.d("FacilitiesScrollDebug", "Scrolling to Emergency Support: " +
+                "sectionTop=" + sectionTopRelative + 
+                ", sectionBottom=" + sectionBottomRelative +
+                ", scrollViewHeight=" + scrollViewHeight +
+                ", currentScrollY=" + currentScrollY +
+                ", targetScrollY=" + targetScrollY +
+                ", maxScrollY=" + maxScrollY);
+            
+            // Scroll if the section is not fully visible
+            // Store values that need to be accessed in the delayed runnable
+            final int finalScrollViewHeight = scrollViewHeight;
+            final int finalBottomPadding = bottomPadding;
+            final int finalMaxScrollY = maxScrollY;
+            
+            if (targetScrollY > currentScrollY || sectionBottomRelative > (currentScrollY + scrollViewHeight)) {
+                // Use smooth scroll for better UX
+                scrollView.smoothScrollTo(0, targetScrollY);
+                
+                // Double-check after animation completes (smoothScrollTo takes ~250ms)
+                scrollView.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            int finalScrollY = scrollView.getScrollY();
+                            int finalVisibleBottom = finalScrollY + finalScrollViewHeight;
+                            
+                            // Recalculate section bottom with current scroll
+                            int[] finalSectionLocation = new int[2];
+                            int[] finalContentLocation = new int[2];
+                            emergencySupportSection.getLocationOnScreen(finalSectionLocation);
+                            scrollContent.getLocationOnScreen(finalContentLocation);
+                            int finalSectionTopRelative = finalSectionLocation[1] - finalContentLocation[1];
+                            int finalSectionBottomRelative = finalSectionTopRelative + emergencySupportSection.getHeight();
+                            
+                            if (finalSectionBottomRelative > finalVisibleBottom - (int)(20 * getResources().getDisplayMetrics().density)) {
+                                // Need to scroll more - use instant scroll for final adjustment
+                                int finalTargetScrollY = Math.max(0, Math.min(
+                                    finalSectionBottomRelative - finalScrollViewHeight + finalBottomPadding,
+                                    finalMaxScrollY));
+                                scrollView.scrollTo(0, finalTargetScrollY);
+                                android.util.Log.d("FacilitiesScrollDebug", "Final adjustment scroll to: " + finalTargetScrollY);
+                            }
+                        } catch (Exception e) {
+                            android.util.Log.e("FacilitiesScrollDebug", "Error in delayed scroll check: " + e.getMessage(), e);
                         }
-                    }, 300);
-                }
-            }, 100);
+                    }
+                }, 400); // Wait for smoothScroll animation to complete
+            } else {
+                android.util.Log.d("FacilitiesScrollDebug", "Emergency Support section already fully visible");
+            }
+        } catch (Exception e) {
+            android.util.Log.e("FacilitiesScrollDebug", "Error in performScrollToSection: " + e.getMessage(), e);
+            // Fallback: just scroll to bottom
+            scrollView.fullScroll(android.view.View.FOCUS_DOWN);
         }
     }
 

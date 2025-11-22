@@ -1547,6 +1547,7 @@
             android:elevation="8dp"
             android:clipChildren="false">
 
+            <!-- Home Tab -->
             <LinearLayout
                 android:id="@+id/homeTab"
                 android:layout_width="0dp"
@@ -1554,13 +1555,23 @@
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:background="?android:attr/selectableItemBackground">
+                android:background="?android:attr/selectableItemBackground"
+                android:minHeight="@dimen/dashboard_bottom_nav_height"
+                android:minWidth="0dp">
 
-                <ImageView
+                <!-- Icon Container (consistent size for all tabs) -->
+                <FrameLayout
                     android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
                     android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
-                    android:src="@drawable/ic_home_selected"
-                    android:contentDescription="Home Icon" />
+                    android:layout_gravity="center">
+
+                    <ImageView
+                        android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
+                        android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_home_selected"
+                        android:contentDescription="Home Icon" />
+                </FrameLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -1571,6 +1582,7 @@
                     android:layout_marginTop="@dimen/margin_xxsmall" />
             </LinearLayout>
 
+            <!-- Chat Tab -->
             <LinearLayout
                 android:id="@+id/chatTab"
                 android:layout_width="0dp"
@@ -1578,12 +1590,15 @@
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:background="?android:attr/selectableItemBackground">
+                android:background="?android:attr/selectableItemBackground"
+                android:minHeight="@dimen/dashboard_bottom_nav_height"
+                android:minWidth="0dp">
 
+                <!-- Icon Container (consistent size for all tabs) -->
                 <FrameLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="@dimen/spacing_small">
+                    android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
+                    android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
+                    android:layout_gravity="center">
 
                     <ImageView
                         android:id="@+id/chat_icon_dashboard"
@@ -1609,7 +1624,6 @@
                         android:minWidth="20dp"
                         android:minHeight="20dp"
                         android:visibility="gone" />
-
                 </FrameLayout>
 
                 <TextView
@@ -1625,8 +1639,11 @@
             <View
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="1"/>
+                android:layout_weight="1"
+                android:minHeight="@dimen/dashboard_bottom_nav_height"
+                android:minWidth="0dp"/>
 
+            <!-- Map Tab -->
             <LinearLayout
                 android:id="@+id/mapTab"
                 android:layout_width="0dp"
@@ -1634,13 +1651,23 @@
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:background="?android:attr/selectableItemBackground">
+                android:background="?android:attr/selectableItemBackground"
+                android:minHeight="@dimen/dashboard_bottom_nav_height"
+                android:minWidth="0dp">
 
-                <ImageView
+                <!-- Icon Container (consistent size for all tabs) -->
+                <FrameLayout
                     android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
                     android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
-                    android:src="@drawable/frame__8_"
-                    android:contentDescription="Map Icon" />
+                    android:layout_gravity="center">
+
+                    <ImageView
+                        android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
+                        android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
+                        android:layout_gravity="center"
+                        android:src="@drawable/frame__8_"
+                        android:contentDescription="Map Icon" />
+                </FrameLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -1651,6 +1678,7 @@
                     android:layout_marginTop="@dimen/margin_xxsmall" />
             </LinearLayout>
 
+            <!-- Alerts Tab -->
             <LinearLayout
                 android:id="@+id/alertsTab"
                 android:layout_width="0dp"
@@ -1658,12 +1686,15 @@
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:background="?android:attr/selectableItemBackground">
+                android:background="?android:attr/selectableItemBackground"
+                android:minHeight="@dimen/dashboard_bottom_nav_height"
+                android:minWidth="0dp">
 
+                <!-- Icon Container (consistent size for all tabs) -->
                 <FrameLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="@dimen/spacing_small">
+                    android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
+                    android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
+                    android:layout_gravity="center">
 
                     <ImageView
                         android:id="@+id/alerts_icon_dashboard"
@@ -1689,7 +1720,6 @@
                         android:minWidth="20dp"
                         android:minHeight="20dp"
                         android:visibility="gone" />
-
                 </FrameLayout>
 
                 <TextView
