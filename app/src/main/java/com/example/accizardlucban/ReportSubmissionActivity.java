@@ -1497,7 +1497,6 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             TextView tvConfirmDescription = dialogView.findViewById(R.id.tvConfirmDescription);
             TextView tvConfirmLocationName = dialogView.findViewById(R.id.tvConfirmLocationName);
             TextView tvConfirmCoordinates = dialogView.findViewById(R.id.tvConfirmCoordinates);
-            TextView tvConfirmAttachments = dialogView.findViewById(R.id.tvConfirmAttachments);
             RecyclerView rvConfirmImagePreviews = dialogView.findViewById(R.id.rvConfirmImagePreviews);
             Button btnCancelReport = dialogView.findViewById(R.id.btnCancelReport);
             Button btnConfirmSubmit = dialogView.findViewById(R.id.btnConfirmSubmit);
@@ -1523,72 +1522,6 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 } else {
                     tvConfirmCoordinates.setText("Coordinates not available");
                     tvConfirmCoordinates.setTextColor(0xFF999999);
-                }
-            }
-            
-            // Set attachments
-            if (tvConfirmAttachments != null && rvConfirmImagePreviews != null) {
-                int imageCount = 0;
-                int videoCount = 0;
-                for (MediaItem item : selectedMediaItems) {
-                    if (item.isImage()) imageCount++;
-                    else if (item.isVideo()) videoCount++;
-                }
-                // Also count from legacy selectedImageUris
-                imageCount += selectedImageUris.size();
-                
-                int totalCount = imageCount + videoCount;
-                if (totalCount > 0) {
-                    StringBuilder attachmentText = new StringBuilder();
-                    if (imageCount > 0) {
-                        attachmentText.append(imageCount).append(" image").append(imageCount > 1 ? "s" : "");
-                    }
-                    if (videoCount > 0) {
-                        if (attachmentText.length() > 0) attachmentText.append(", ");
-                        attachmentText.append(videoCount).append(" video").append(videoCount > 1 ? "s" : "");
-                    }
-                    attachmentText.append(" attached");
-                    tvConfirmAttachments.setText(attachmentText.toString());
-                    
-                    // Show media previews in horizontal RecyclerView
-                    rvConfirmImagePreviews.setVisibility(View.VISIBLE);
-                    LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
-                    rvConfirmImagePreviews.setLayoutManager(layoutManager);
-                    
-                    // Combine MediaItems for preview adapter
-                    List<MediaItem> previewMediaItems = new ArrayList<>(selectedMediaItems);
-                    // Add legacy selectedImageUris as MediaItems if not already present
-                    for (Uri uri : selectedImageUris) {
-                        boolean exists = false;
-                        for (MediaItem item : previewMediaItems) {
-                            if (item.getUri().equals(uri)) {
-                                exists = true;
-                                break;
-                            }
-                        }
-                        if (!exists) {
-                            previewMediaItems.add(new MediaItem(uri, MediaItem.TYPE_IMAGE));
-                        }
-                    }
-                    
-                    MediaGalleryAdapter previewAdapter = new MediaGalleryAdapter(this, previewMediaItems);
-                    previewAdapter.setOnMediaRemoveListener(null); // Disable remove in preview
-                    previewAdapter.setOnMediaClickListener(new MediaGalleryAdapter.OnMediaClickListener() {
-                        @Override
-                        public void onMediaClick(int position, MediaItem mediaItem) {
-                            if (mediaItem.isImage()) {
-                                // Show full screen image when clicked
-                                showFullScreenImage(mediaItem.getUri());
-                            } else if (mediaItem.isVideo()) {
-                                // Show video player when clicked
-                                showVideoInDialog(mediaItem.getUri());
-                            }
-                        }
-                    });
-                    rvConfirmImagePreviews.setAdapter(previewAdapter);
-                } else {
-                    tvConfirmAttachments.setText("No attachments");
-                    rvConfirmImagePreviews.setVisibility(View.GONE);
                 }
             }
             

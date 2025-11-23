@@ -103,22 +103,11 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Attachments"
+            android:text="Reminders"
             android:textSize="12sp"
             android:textColor="#666666"
             android:textStyle="bold"
             android:layout_marginBottom="4dp" />
-
-        <TextView
-            android:id="@+id/tvConfirmAttachments"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="No attachments"
-            android:textSize="14sp"
-            android:textColor="#333333"
-            android:padding="12dp"
-            android:background="#F5F5F5"
-            android:layout_marginBottom="20dp" />
 
         <!-- Horizontal RecyclerView for image previews -->
         <androidx.recyclerview.widget.RecyclerView

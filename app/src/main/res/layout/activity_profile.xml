@@ -609,7 +609,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/ic_shield"
+                            android:src="@drawable/religion"
                             android:tint="#FF5722"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Religion icon" />
@@ -655,7 +655,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/ic_medical"
+                            android:src="@drawable/blood"
                             android:tint="#FF5722"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Blood type icon" />
