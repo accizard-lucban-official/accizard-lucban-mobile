@@ -1319,9 +1319,6 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             // Make coordinates EditText clickable to view/change on map
             makeCoordinatesEditTextReadOnly();
             
-            // Show success message
-            Toast.makeText(this, "✅ Current location obtained! Click pin button to view on map.", Toast.LENGTH_LONG).show();
-            
             Log.d(TAG, "✅ Current location obtained:");
             Log.d(TAG, "   Latitude: " + selectedLatitude);
             Log.d(TAG, "   Longitude: " + selectedLongitude);
@@ -1413,7 +1410,6 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                         coordinatesEditText.setText(selectedLocationName);
                         coordinatesEditText.setEnabled(true);
                     }
-                    Toast.makeText(this, "Location obtained: " + selectedLocationName, Toast.LENGTH_SHORT).show();
                 });
                 
             } else {

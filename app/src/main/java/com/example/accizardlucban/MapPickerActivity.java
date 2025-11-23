@@ -415,13 +415,12 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
         etSearchLocation = findViewById(R.id.etSearchLocation);
         btnBack = findViewById(R.id.btnBack);
         
-        // If in view-only mode, hide search functionality
-        if (isViewOnlyMode) {
-            if (etSearchLocation != null) etSearchLocation.setVisibility(View.GONE);
-            Log.d(TAG, "✅ View-only mode: Search UI hidden");
-        } else {
-            // Setup autocomplete functionality only if not in view-only mode
+        // Always show search bar and setup autocomplete functionality
+        // Search bar will display the current pinned location name
+        if (etSearchLocation != null) {
+            etSearchLocation.setVisibility(View.VISIBLE);
             setupAutocompleteSearch();
+            Log.d(TAG, "✅ Search bar visible and autocomplete setup");
         }
         
         // Initialize popup components
@@ -558,19 +557,20 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
                     if (tvPopupLocationName != null) {
                         tvPopupLocationName.setText("📍 " + currentLocationName);
                     }
+                    
+                    // Update search bar with the location name
+                    if (etSearchLocation != null) {
+                        etSearchLocation.setText(locationName);
+                        Log.d(TAG, "✅ Search bar updated with previous location name: " + locationName);
+                    }
                 } else {
-                    // Get location details for the previous location
+                    // Get location details for the previous location - search bar will be updated automatically
                     getEnhancedLocationDetails(previousPoint);
-                }
-                
-                // Set search text to show the previous location (only if not in view-only mode)
-                if (!isViewOnlyMode && etSearchLocation != null && locationName != null) {
-                    etSearchLocation.setText(locationName);
-                }
-                
-                // In view-only mode, show a helpful message
-                if (isViewOnlyMode) {
-                    Toast.makeText(this, "📍 Viewing your current location. Tap outside to close.", Toast.LENGTH_LONG).show();
+                    
+                    // Show loading text while geocoding
+                    if (etSearchLocation != null) {
+                        etSearchLocation.setText("Getting location name...");
+                    }
                 }
             } else {
                 // No previous location, set default camera position to Lucban center
@@ -706,12 +706,12 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
                             // Show popup with precise coordinates
                             showLocationPopup(point);
 
-                            // Get detailed location information
+                            // Get detailed location information - search bar will be updated with actual location name
                             getEnhancedLocationDetails(point);
                             
-                            // Update the search field to show the found location
+                            // Show loading text while geocoding
                             if (etSearchLocation != null) {
-                                etSearchLocation.setText(locationName);
+                                etSearchLocation.setText("Getting location name...");
                             }
                             
                             // Log coordinates for debugging
@@ -863,14 +863,17 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
             showLocationPopup(point);
             Log.d("MapPicker", "Popup shown");
 
+            // Show loading text in search bar while geocoding
+            if (etSearchLocation != null) {
+                etSearchLocation.setText("Getting location name...");
+                Log.d("MapPicker", "✅ Search bar set to 'Getting location name...' for map tap");
+            }
+
             // Get detailed location information in background with enhanced geocoding
+            // The search bar will be updated automatically when location details are retrieved
             getEnhancedLocationDetails(point);
             Log.d("MapPicker", "Getting location details...");
-
-            // Clear search field to indicate a new manual pin
-            if (etSearchLocation != null) {
-                etSearchLocation.setText("");
-            }
+            Log.d("MapPicker", "✅ Map tapped - waiting for geocoding to update search bar");
             
             // Show feedback to user
             Toast.makeText(this, "Location pinned!", Toast.LENGTH_SHORT).show();
@@ -885,18 +888,14 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
 
     /**
      * Setup map click listener
+     * Always enabled so users can tap map to change pinned location
      */
     private void setupMapClickListener() {
         try {
-            // Don't add click listener if in view-only mode
-            if (isViewOnlyMode) {
-                Log.d("MapPicker", "✅ View-only mode: Map click listener NOT added (map is view-only)");
-                return;
-            }
-            
+            // Always add click listener - users should be able to tap map to change location
             if (gesturesPlugin != null) {
                 gesturesPlugin.addOnMapClickListener(this);
-                Log.d("MapPicker", "Map click listener registered successfully");
+                Log.d("MapPicker", "✅ Map click listener registered successfully - users can tap to pin locations");
             } else {
                 Log.e("MapPicker", "GesturesPlugin is null - click listener NOT registered");
                 Toast.makeText(this, "Warning: Map gestures not initialized", Toast.LENGTH_SHORT).show();
@@ -1148,27 +1147,22 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
                 tvPopupLocationName.setText("🔍 Getting location details...");
             }
             
-            // Modify buttons for view-only mode
-            if (isViewOnlyMode) {
-                // In view-only mode: Hide Select button, change Cancel to Close
-                if (btnSelectLocationPopup != null) {
-                    btnSelectLocationPopup.setVisibility(View.GONE);
-                }
-                if (btnCancelLocation != null) {
-                    btnCancelLocation.setText("Close");
-                    btnCancelLocation.setOnClickListener(v -> finish()); // Close activity instead of just hiding popup
-                }
-                Log.d("MapPicker", "✅ View-only mode: Popup buttons configured (Close only, no Select)");
-            } else {
-                // Normal mode: Show both buttons
-                if (btnSelectLocationPopup != null) {
-                    btnSelectLocationPopup.setVisibility(View.VISIBLE);
-                }
-                if (btnCancelLocation != null) {
-                    btnCancelLocation.setText("Cancel");
-                    btnCancelLocation.setOnClickListener(v -> hideLocationPopup());
-                }
+            // Always show both buttons - users can select or cancel
+            // View-only mode is now just for button text, but interaction is always enabled
+            if (btnSelectLocationPopup != null) {
+                btnSelectLocationPopup.setVisibility(View.VISIBLE);
             }
+            if (btnCancelLocation != null) {
+                btnCancelLocation.setText(isViewOnlyMode ? "Close" : "Cancel");
+                btnCancelLocation.setOnClickListener(v -> {
+                    if (isViewOnlyMode) {
+                        finish(); // Close activity in view-only mode
+                    } else {
+                        hideLocationPopup(); // Just hide popup in normal mode
+                    }
+                });
+            }
+            Log.d("MapPicker", "✅ Popup buttons configured - users can always select or cancel");
             
             // Show popup with enhanced Google Maps-style animation
             locationPopup.setVisibility(View.VISIBLE);
@@ -1274,17 +1268,32 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
                         // Log the enhanced location details
                         Log.d("MapPicker", "Enhanced location: " + currentLocationName);
                         
-                        // Update search field to show the current location name
-                        if (etSearchLocation != null && !currentLocationName.isEmpty() && !currentLocationName.equals("Dropped Pin")) {
-                            runOnUiThread(() -> {
+                        // Always update search field with location name (or coordinates if no name available)
+                        // This ensures the search bar shows the current pinned location name
+                        if (etSearchLocation != null) {
+                            if (!currentLocationName.isEmpty() && !currentLocationName.equals("Dropped Pin")) {
+                                // Update with actual location name
                                 etSearchLocation.setText(currentLocationName);
-                            });
+                                Log.d("MapPicker", "✅ Search bar updated with location name: " + currentLocationName);
+                            } else {
+                                // If no name available, show coordinates as fallback
+                                String coordinatesText = String.format("%.6f, %.6f", point.longitude(), point.latitude());
+                                etSearchLocation.setText(coordinatesText);
+                                Log.d("MapPicker", "✅ Search bar updated with coordinates (no name): " + coordinatesText);
+                            }
                         }
                         
                     } else {
                         currentLocationName = "Dropped Pin";
                         if (tvPopupLocationName != null) {
                             tvPopupLocationName.setText("📍 " + currentLocationName);
+                        }
+                        
+                        // Update search bar with coordinates if no address found
+                        if (etSearchLocation != null) {
+                            String coordinatesText = String.format("%.6f, %.6f", point.longitude(), point.latitude());
+                            etSearchLocation.setText(coordinatesText);
+                            Log.d("MapPicker", "✅ Search bar updated with coordinates (no address): " + coordinatesText);
                         }
                     }
                 });
@@ -1295,6 +1304,13 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
                     currentLocationName = "Dropped Pin";
                     if (tvPopupLocationName != null) {
                         tvPopupLocationName.setText("📍 " + currentLocationName);
+                    }
+                    
+                    // Update search bar with coordinates on error
+                    if (etSearchLocation != null) {
+                        String coordinatesText = String.format("%.6f, %.6f", point.longitude(), point.latitude());
+                        etSearchLocation.setText(coordinatesText);
+                        Log.d("MapPicker", "✅ Search bar updated with coordinates (error): " + coordinatesText);
                     }
                 });
             }
@@ -1590,18 +1606,20 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
             // Show popup with current location
             showLocationPopup(currentPoint);
             
-            // Get location details
-            getEnhancedLocationDetails(currentPoint);
-            
-            // Update search field to show current location
+            // Show loading text in search bar while geocoding
             if (etSearchLocation != null) {
-                etSearchLocation.setText("My Current Location");
+                etSearchLocation.setText("Getting location name...");
+                Log.d("MapPicker", "✅ Search bar set to 'Getting location name...' for current location");
             }
+            
+            // Get location details - search bar will be updated automatically when location name is retrieved
+            getEnhancedLocationDetails(currentPoint);
             
             // Show success message
             Toast.makeText(this, "Current location obtained!", Toast.LENGTH_SHORT).show();
             
             Log.d("MapPicker", "Current location: " + location.getLatitude() + ", " + location.getLongitude());
+            Log.d("MapPicker", "✅ Current location pinned - waiting for geocoding to update search bar");
         } else {
             Toast.makeText(this, "Unable to get current location", Toast.LENGTH_SHORT).show();
         }

@@ -287,7 +287,7 @@ public class ProfileActivity extends AppCompatActivity {
             inviteFriendsLayout.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    shareApp();
+                    openAppWebsite();
                 }
             });
         }
@@ -1770,6 +1770,68 @@ public class ProfileActivity extends AppCompatActivity {
         }
     }
     
+    /**
+     * Open the app website in browser where users can download the app
+     */
+    private void openAppWebsite() {
+        try {
+            // Website URL where users can download the app
+            String websiteUrl = "https://accizard-lucban-official.github.io/accizard-lucban-landing-page/";
+            
+            // Parse the URI
+            android.net.Uri uri = android.net.Uri.parse(websiteUrl);
+            
+            // Create intent to open URL in browser with proper categories
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
+            browserIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+            browserIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            
+            // Try to start the activity
+            try {
+                startActivity(browserIntent);
+                Log.d(TAG, "Opening website: " + websiteUrl);
+            } catch (android.content.ActivityNotFoundException e) {
+                // If no browser is found, try alternative approach
+                Log.w(TAG, "No browser found, trying alternative method", e);
+                
+                // Try with explicit browser package names
+                String[] browserPackages = {
+                    "com.android.chrome",
+                    "com.chrome.browser",
+                    "com.browser",
+                    "com.opera.browser",
+                    "org.mozilla.firefox",
+                    "com.microsoft.emmx"
+                };
+                
+                boolean opened = false;
+                for (String packageName : browserPackages) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                        intent.setPackage(packageName);
+                        intent.addCategory(Intent.CATEGORY_BROWSABLE);
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                        opened = true;
+                        Log.d(TAG, "Opened website using browser: " + packageName);
+                        break;
+                    } catch (Exception ex) {
+                        // Continue to next browser
+                    }
+                }
+                
+                if (!opened) {
+                    // Last resort: show error message
+                    Toast.makeText(this, "Please install a web browser to view the website", Toast.LENGTH_LONG).show();
+                    Log.e(TAG, "No browser available to open website");
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error opening app website", e);
+            Toast.makeText(this, "Error opening website: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+    
     private void shareApp() {
         try {
             // Create share intent
@@ -1780,14 +1842,14 @@ public class ProfileActivity extends AppCompatActivity {
             String appName = getString(R.string.app_name);
             String packageName = getPackageName();
             
-            // Create shareable link with referral code
-            String shareUrl = generateReferralLink(packageName);
+            // Website URL where users can download the app
+            String websiteUrl = "https://accizard-lucban-official.github.io/accizard-lucban-landing-page/";
             
-            // Create share message
+            // Create share message with website link
             String shareMessage = "Join me on " + appName + "! 🏘️\n\n" +
                     "Download the app to stay connected with your community and get important updates from MDRRMO. " +
                     "Perfect for residents of Lucban, Quezon!\n\n" +
-                    "Download here: " + shareUrl + "\n\n" +
+                    "Visit our website to download: " + websiteUrl + "\n\n" +
                     "#Accizard #Lucban #Community #MDRRMO";
             
             // Set share content

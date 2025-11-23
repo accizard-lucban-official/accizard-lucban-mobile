@@ -29,6 +29,12 @@ import com.mapbox.maps.MapboxMap;
 import com.mapbox.maps.MapView;
 import com.mapbox.maps.plugin.animation.CameraAnimationsPlugin;
 import com.mapbox.maps.plugin.animation.MapAnimationOptions;
+import com.mapbox.maps.plugin.gestures.GesturesPlugin;
+import com.mapbox.maps.plugin.gestures.GesturesUtils;
+import com.mapbox.maps.plugin.gestures.OnMapClickListener;
+import androidx.annotation.NonNull;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonElement;
 
 import com.example.accizardlucban.HeatmapHelper;
 import android.widget.FrameLayout;
@@ -138,6 +144,7 @@ public class MapViewActivity extends AppCompatActivity {
     private MapView mapView;
     private MapboxMap mapboxMap;
     private CameraAnimationsPlugin cameraAnimationsPlugin;
+    private GesturesPlugin gesturesPlugin;
 
     // Search functionality
     private SimpleSearchAdapter simpleSearchAdapter;
@@ -2052,6 +2059,9 @@ public class MapViewActivity extends AppCompatActivity {
     }
 
     private void pinCurrentLocation() {
+        // Show loading message immediately when user clicks the button
+        Toast.makeText(this, "Getting current location...", Toast.LENGTH_SHORT).show();
+        
         // First check if user has enabled location access in settings
         if (!LocationPermissionHelper.isLocationAccessEnabledWithLog(this, "MapViewActivity")) {
             Toast.makeText(this, "Location access is disabled in settings. Please enable it in Profile settings.", Toast.LENGTH_LONG).show();
@@ -2062,9 +2072,6 @@ public class MapViewActivity extends AppCompatActivity {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 return;
             }
-            
-            // Show loading message
-            // Getting current location (toast removed)
             
             fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(this, new OnSuccessListener<Location>() {
@@ -2642,6 +2649,14 @@ public class MapViewActivity extends AppCompatActivity {
             if (chatBadgeMap != null) {
                 ChatBadgeManager.getInstance().updateChatBadge(this, chatBadgeMap);
                 Log.d(TAG, "✅ Chat badge updated in MapViewActivity onResume");
+            }
+            
+            // CRITICAL: Ensure evacuation-centers layer is hidden (health-facilities controlled by toggle)
+            Style style = mapboxMap != null ? mapboxMap.getStyle() : null;
+            if (style != null) {
+                ensureFacilityLayersHidden(style);
+                // Apply health facilities visibility based on current toggle state
+                setLayerVisibility(style, "health-facilities", healthFacilitiesVisible);
             }
         } catch (Exception e) {
             Log.e(TAG, "Error in onResume: " + e.getMessage(), e);
@@ -3460,6 +3475,14 @@ public class MapViewActivity extends AppCompatActivity {
                     cameraAnimationsPlugin = mapView.getPlugin("com.mapbox.maps.plugin.animation.camera");
                 }
                 
+                // Initialize gestures plugin for map click handling
+                if (gesturesPlugin == null) {
+                    gesturesPlugin = GesturesUtils.getGestures(mapView);
+                }
+                
+                // Setup map click listener for Health Facilities
+                setupMapClickListener();
+                
                 // Set initial camera position to Lucban center (same as MapPickerActivity)
                 Point lucbanCenter = Point.fromLngLat(121.5564, 14.1136);
                 CameraOptions initialCamera = new CameraOptions.Builder()
@@ -3499,12 +3522,26 @@ public class MapViewActivity extends AppCompatActivity {
                 // Ensure satellite raster base exists but keep it HIDDEN for initial street view
                 ensureSatelliteLayer(loadedStyle);
                 setSatelliteVisibility(loadedStyle, false); // Explicitly hide satellite for street view
+                
+            // CRITICAL: Hide evacuation-centers layer (Firestore only)
+            // Health facilities layer will be controlled by toggle
+            ensureFacilityLayersHidden(loadedStyle);
+            // Health facilities layer starts hidden, will be shown when toggle is enabled
+            setLayerVisibility(loadedStyle, "health-facilities", false);
+                
                 Log.d(TAG, "Initial map view set to: Street View (satellite layer hidden) - Same as MapPickerActivity");
                 
                 // Re-apply current layer states after style loads
                 // Use multiple delays to ensure the style is fully loaded and layers are accessible
                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
                     reapplyLayerStates();
+                    // Double-check facility layers state after reapply
+                    Style currentStyle = mapboxMap.getStyle();
+                    if (currentStyle != null) {
+                        ensureFacilityLayersHidden(currentStyle);
+                        // Apply health facilities visibility based on current toggle state
+                        setLayerVisibility(currentStyle, "health-facilities", healthFacilitiesVisible);
+                    }
                 }, 1500); // Final retry after 1.5 seconds
                 
                 // Reload Firestore pins after style change
@@ -3537,7 +3574,7 @@ public class MapViewActivity extends AppCompatActivity {
             barangayBoundariesVisible = false;
             roadNetworkVisible = false;
             waterwaysVisible = false;
-            healthFacilitiesVisible = false;
+            healthFacilitiesVisible = false; // Hidden by default, can be toggled
             evacuationCentersVisible = false;
             
             // Apply initial visibility states to existing layers in the style
@@ -3546,8 +3583,8 @@ public class MapViewActivity extends AppCompatActivity {
             setLayerVisibility(style, "lucban-brgy-names", false);
             setLayerVisibility(style, "road", false);
             setLayerVisibility(style, "waterway", false);
-            setLayerVisibility(style, "health-facilities", false);
-            setLayerVisibility(style, "evacuation-centers", false);
+            setLayerVisibility(style, "health-facilities", false); // Hidden by default
+            setLayerVisibility(style, "evacuation-centers", false); // Always hidden (Firestore only)
             
             // Hide pins by default when layers are initialized
             // Pins will only show when NO layers are active
@@ -3632,16 +3669,26 @@ public class MapViewActivity extends AppCompatActivity {
             applyBarangayBoundariesVisibility();
             applyRoadNetworkVisibility();
             applyWaterwaysVisibility();
-            // Always hide health-facilities and evacuation-centers layers - 
-            // they come from Firestore pins only, not Mapbox layers
-            setLayerVisibility(style, "health-facilities", false);
-            setLayerVisibility(style, "evacuation-centers", false);
+            
+            // Apply health facilities visibility based on toggle state
+            setLayerVisibility(style, "health-facilities", healthFacilitiesVisible);
+            
+            // CRITICAL: Always hide evacuation-centers layer - it comes from Firestore only
+            ensureFacilityLayersHidden(style);
             
             // Ensure lucban-boundary is always visible
             setLayerVisibility(style, "lucban-boundary", true);
             
             // Update pins visibility
             updatePinsVisibilityBasedOnLayers();
+            
+            // Retry ensuring facility layers are hidden after a delay (in case style wasn't fully ready)
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                Style retryStyle = mapboxMap != null ? mapboxMap.getStyle() : null;
+                if (retryStyle != null) {
+                    ensureFacilityLayersHidden(retryStyle);
+                }
+            }, 500);
             
             Log.d(TAG, "Layer states re-applied successfully for style: " + (satelliteMapVisible ? "satellite" : "street"));
         } catch (Exception e) {
@@ -3664,6 +3711,27 @@ public class MapViewActivity extends AppCompatActivity {
         } catch (Exception e) {
             // Layer might not exist in the style, log for debugging
             Log.w(TAG, "Layer '" + layerId + "' visibility not set in style '" + (satelliteMapVisible ? "satellite" : "street") + "' (may not exist): " + e.getMessage());
+        }
+    }
+    
+    /**
+     * CRITICAL: Ensure evacuation-centers Mapbox layer is ALWAYS hidden
+     * Evacuation centers come from Firestore only
+     * Health facilities come from Mapbox and should be shown when toggle is enabled
+     */
+    private void ensureFacilityLayersHidden(Style style) {
+        if (style == null) return;
+        
+        try {
+            // Always hide evacuation-centers Mapbox layer - we only use Firestore pins
+            setLayerVisibility(style, "evacuation-centers", false);
+            
+            // Health facilities layer visibility is controlled by toggleHealthFacilities()
+            // Don't hide it here - let the toggle method control it
+            
+            Log.d(TAG, "✅ Evacuation centers Mapbox layer ensured as hidden (using Firestore pins only)");
+        } catch (Exception e) {
+            Log.e(TAG, "Error ensuring facility layers are hidden: " + e.getMessage(), e);
         }
     }
 
@@ -4078,6 +4146,11 @@ public class MapViewActivity extends AppCompatActivity {
                         if (visible) {
                             verifySatelliteLayerProperties(currentStyle);
                         }
+                        
+                        // CRITICAL: Ensure evacuation-centers layer is hidden (health-facilities controlled by toggle)
+                        ensureFacilityLayersHidden(currentStyle);
+                        // Apply health facilities visibility based on current toggle state
+                        setLayerVisibility(currentStyle, "health-facilities", healthFacilitiesVisible);
                     }
                 }, 300);
                 
@@ -4094,6 +4167,14 @@ public class MapViewActivity extends AppCompatActivity {
             // Update pins visibility based on all layers
             updatePinsVisibilityBasedOnLayers();
             
+            // CRITICAL: Ensure evacuation-centers layer is hidden (health-facilities controlled by toggle)
+            Style finalStyle = mapboxMap != null ? mapboxMap.getStyle() : null;
+            if (finalStyle != null) {
+                ensureFacilityLayersHidden(finalStyle);
+                // Apply health facilities visibility based on current toggle state
+                setLayerVisibility(finalStyle, "health-facilities", healthFacilitiesVisible);
+            }
+            
         } catch (Exception e) {
             Log.e(TAG, "Error toggling satellite map: " + e.getMessage(), e);
             // Retry on error
@@ -4109,6 +4190,12 @@ public class MapViewActivity extends AppCompatActivity {
                             setSatelliteVisibility(style, false);
                             toggleBackgroundLayerForSatellite(style, false);
                         }
+                        
+                        // CRITICAL: Ensure evacuation-centers layer is hidden (health-facilities controlled by toggle)
+                        ensureFacilityLayersHidden(style);
+                        // Apply health facilities visibility based on current toggle state
+                        setLayerVisibility(style, "health-facilities", healthFacilitiesVisible);
+                        
                         forceMapRefresh();
                     }
                 } catch (Exception retryException) {
@@ -4284,6 +4371,10 @@ public class MapViewActivity extends AppCompatActivity {
                 Log.d(TAG, "Could not toggle background layer: " + e.getMessage());
             }
             
+            // CRITICAL: Always hide health-facilities and evacuation-centers Mapbox layers
+            // These layers contain pins that should NOT be shown - only Firestore pins should be visible
+            ensureFacilityLayersHidden(style);
+            
             // Get all layers in the style
             List<StyleObjectInfo> allLayers = style.getStyleLayers();
             int hiddenCount = 0;
@@ -4295,6 +4386,20 @@ public class MapViewActivity extends AppCompatActivity {
             
             for (StyleObjectInfo layerInfo : allLayers) {
                 String layerId = layerInfo.getId();
+                
+                // CRITICAL: Skip and hide evacuation-centers layer - it comes from Firestore only
+                // Health facilities layer visibility is controlled by toggle
+                if (layerId.equals("evacuation-centers")) {
+                    setLayerVisibility(style, layerId, false);
+                    layersSkipped.add(layerId + " (Mapbox layer - hidden, using Firestore pins)");
+                    continue;
+                }
+                
+                // Skip health-facilities layer - its visibility is controlled by toggleHealthFacilities()
+                if (layerId.equals("health-facilities")) {
+                    layersSkipped.add(layerId + " (Mapbox layer - visibility controlled by toggle)");
+                    continue;
+                }
                 
                 // Skip our custom layers - they should remain visible
                 if (customLayers.contains(layerId)) {
@@ -4344,15 +4449,22 @@ public class MapViewActivity extends AppCompatActivity {
     
     /**
      * Toggle Health Facilities visibility
-     * Health Facilities come from Firestore pins only, not from Mapbox layers
+     * Health Facilities come from Mapbox layer - show/hide the layer based on toggle
+     * Also show/hide Firestore pins for health facilities
      */
     private void toggleHealthFacilities(boolean visible) {
         try {
             healthFacilitiesVisible = visible;
-            // Health Facilities come from Firestore pins only, not Mapbox layers
-            // No need to toggle Mapbox layer - just apply filters to Firestore pins
-            Log.d(TAG, "Health facilities filter toggled: " + visible);
-            // Apply filters to show/hide Firestore pins based on facility type
+            
+            // Toggle Mapbox health-facilities layer visibility
+            Style style = mapboxMap != null ? mapboxMap.getStyle() : null;
+            if (style != null) {
+                setLayerVisibility(style, "health-facilities", visible);
+                Log.d(TAG, "Health facilities Mapbox layer toggled: " + (visible ? "VISIBLE" : "HIDDEN"));
+            }
+            
+            // Also apply filters to show/hide Firestore pins based on facility type
+            Log.d(TAG, "Health facilities filter toggled: " + visible + " (Mapbox layer + Firestore pins)");
             applyFiltersToFirestorePins(false);
         } catch (Exception e) {
             Log.e(TAG, "Error toggling health facilities: " + e.getMessage(), e);
@@ -4362,16 +4474,16 @@ public class MapViewActivity extends AppCompatActivity {
     /**
      * Toggle Evacuation Centers visibility
      * Evacuation Centers are now fetched ONLY from Firestore "pins" collection, not from Mapbox layers
+     * CRITICAL: Always ensure Mapbox layer is hidden - only Firestore pins should be shown
      */
     private void toggleEvacuationCenters(boolean visible) {
         try {
             evacuationCentersVisible = visible;
             
-            // Hide Mapbox layer if it exists (we don't want to use it)
-            Style style = mapboxMap.getStyle();
+            // CRITICAL: Always hide Mapbox evacuation-centers layer - we only use Firestore pins
+            Style style = mapboxMap != null ? mapboxMap.getStyle() : null;
             if (style != null) {
-                setLayerVisibility(style, "evacuation-centers", false);
-                Log.d(TAG, "Evacuation centers Mapbox layer hidden (using Firestore pins only)");
+                ensureFacilityLayersHidden(style);
             }
             
             // Apply filters to Firestore pins to show/hide evacuation centers from Firestore
@@ -5813,7 +5925,7 @@ public class MapViewActivity extends AppCompatActivity {
         }
         if (typeLower.contains("health facility") || typeLower.contains("health") || 
             typeLower.contains("hospital") || typeLower.contains("clinic")) {
-            return R.drawable.health_facility__1_;
+            return R.drawable.health; // Use custom health.xml drawable for database pins
         }
         if (typeLower.contains("police station") || typeLower.contains("police") || 
             typeLower.contains("pulisya")) {
@@ -5901,7 +6013,7 @@ public class MapViewActivity extends AppCompatActivity {
                 return R.drawable.government_office;
             case "health facility":
             case "health":
-                return R.drawable.health_facility__1_;
+                return R.drawable.health; // Use custom health.xml drawable for database pins
             case "emergency":
             case "emergency response":
                 return R.drawable.medical_emergency__1_;
@@ -7090,6 +7202,168 @@ public class MapViewActivity extends AppCompatActivity {
     /**
      * Disable compass on the map view
      */
+    /**
+     * Setup map click listener to handle clicks on Health Facilities from Mapbox layer
+     */
+    private void setupMapClickListener() {
+        try {
+            if (gesturesPlugin == null) {
+                gesturesPlugin = GesturesUtils.getGestures(mapView);
+            }
+            
+            if (gesturesPlugin != null) {
+                gesturesPlugin.addOnMapClickListener(new OnMapClickListener() {
+                    @Override
+                    public boolean onMapClick(@NonNull Point point) {
+                        handleMapClick(point);
+                        return true;
+                    }
+                });
+                Log.d(TAG, "✅ Map click listener registered for Health Facilities");
+            } else {
+                Log.e(TAG, "GesturesPlugin is null - map click listener NOT registered");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up map click listener: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Handle map click - query for Health Facilities features and show info window
+     */
+    private void handleMapClick(Point point) {
+        try {
+            if (mapboxMap == null) return;
+            
+            Style style = mapboxMap.getStyle();
+            if (style == null) return;
+            
+            // Convert point to screen coordinate for potential future use
+            ScreenCoordinate screenCoord = mapboxMap.pixelForCoordinate(point);
+            
+            // Use helper class to get health facility info from location
+            // Since we can't directly query Mapbox layer features, we use reverse geocoding
+            getHealthFacilityInfoFromLocation(point);
+        } catch (Exception e) {
+            Log.e(TAG, "Error handling map click: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Get health facility info from location using helper class
+     */
+    private void getHealthFacilityInfoFromLocation(Point point) {
+        try {
+            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+            
+            HealthFacilityHelper.getHealthFacilityInfo(geocoder, point, 
+                new HealthFacilityHelper.HealthFacilityCallback() {
+                    @Override
+                    public void onResult(String facilityName, String facilityType) {
+                        runOnUiThread(() -> {
+                            Log.d(TAG, "📍 Health facility - Name: " + facilityName + ", Type: " + facilityType);
+                            showHealthFacilityInfoWindow(facilityName, facilityType, point);
+                        });
+                    }
+                });
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting health facility info: " + e.getMessage(), e);
+            showHealthFacilityInfoWindow("Health Facility", "Health Facility", point);
+        }
+    }
+    
+    /**
+     * Show info window for Health Facility from Mapbox layer
+     * Displays facility name and type (amenity)
+     */
+    private void showHealthFacilityInfoWindow(String facilityName, String facilityType, Point location) {
+        try {
+            // Create dialog for health facility info
+            Dialog dialog = new Dialog(this);
+            dialog.setContentView(R.layout.dialog_pin_details);
+            dialog.setCancelable(true);
+            dialog.setCanceledOnTouchOutside(true);
+            
+            // Set dialog size and position
+            android.view.Window window = dialog.getWindow();
+            if (window != null) {
+                window.setLayout(
+                    (int) (getResources().getDisplayMetrics().widthPixels * 0.85),
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+                window.setGravity(android.view.Gravity.CENTER);
+                window.setBackgroundDrawableResource(android.R.color.transparent);
+            }
+            
+            // Get views from custom layout
+            ImageView pinIcon = dialog.findViewById(R.id.pinIcon);
+            TextView pinCategory = dialog.findViewById(R.id.pinCategory);
+            TextView pinTitle = dialog.findViewById(R.id.pinTitle);
+            TextView pinLocation = dialog.findViewById(R.id.pinLocation);
+            TextView pinDate = dialog.findViewById(R.id.pinDate);
+            TextView pinDescription = dialog.findViewById(R.id.pinDescription);
+            LinearLayout dateRow = dialog.findViewById(R.id.dateRow);
+            LinearLayout descriptionRow = dialog.findViewById(R.id.descriptionRow);
+            Button btnClose = dialog.findViewById(R.id.btnClose);
+            
+            // Set health facility icon - use custom health.xml drawable
+            if (pinIcon != null) {
+                pinIcon.setImageResource(R.drawable.health); // Use custom health.xml drawable
+                pinIcon.setColorFilter(null);
+            }
+            
+            // Show category label with facility type (amenity)
+            if (pinCategory != null) {
+                String categoryText = "Health Facility";
+                if (facilityType != null && !facilityType.trim().isEmpty() && !facilityType.equals("Health Facility")) {
+                    // Use the detected facility type directly (Pharmacy, Hospital, Clinic, etc.)
+                    categoryText = facilityType;
+                }
+                pinCategory.setText(categoryText);
+                pinCategory.setVisibility(View.VISIBLE);
+                Log.d(TAG, "✅ Health facility category displayed: " + categoryText);
+            }
+            
+            // Show facility name (large, bold)
+            if (pinTitle != null) {
+                String nameText = facilityName != null && !facilityName.trim().isEmpty() 
+                    ? facilityName.trim() 
+                    : "Unknown Health Facility";
+                pinTitle.setText(nameText);
+                pinTitle.setGravity(android.view.Gravity.START);
+            }
+            
+            // Show location coordinates
+            if (pinLocation != null) {
+                String locationText = String.format("📍 %.6f, %.6f", location.longitude(), location.latitude());
+                pinLocation.setText(locationText);
+                pinLocation.setVisibility(View.VISIBLE);
+            }
+            
+            // Hide date row (not applicable for Mapbox facilities)
+            if (dateRow != null) {
+                dateRow.setVisibility(View.GONE);
+            }
+            
+            // Hide description row (not applicable for Mapbox facilities)
+            if (descriptionRow != null) {
+                descriptionRow.setVisibility(View.GONE);
+            }
+            
+            // Setup close button
+            if (btnClose != null) {
+                btnClose.setOnClickListener(v -> dialog.dismiss());
+            }
+            
+            dialog.show();
+            Log.d(TAG, "✅ Health facility info window shown - Name: " + facilityName + ", Type: " + facilityType);
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing health facility info window: " + e.getMessage(), e);
+            Toast.makeText(this, "Error displaying facility information", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
     private void disableCompass() {
         if (mapView == null) return;
         
