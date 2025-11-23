@@ -240,4 +240,8 @@
     
     <!-- Legend -->
     <dimen name="legend_dot_size">10dp</dimen>
+    
+    <!-- Dialog image dimensions (responsive) -->
+    <dimen name="dialog_image_min_height">200dp</dimen>
+    <dimen name="dialog_image_max_height">400dp</dimen>
 </resources>

@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp"
+        android:padding="@dimen/padding_xxlarge"
         android:background="@android:color/white">
 
         <!-- Header with Icon -->
@@ -19,22 +19,22 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginBottom="20dp">
+            android:layout_marginBottom="@dimen/margin_xlarge">
 
             <ImageView
                 android:id="@+id/ivAnnouncementIcon"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="@dimen/icon_size_large"
+                android:layout_height="@dimen/icon_size_large"
                 android:src="@drawable/ic_megaphone"
                 android:tint="#FF5722"
-                android:layout_marginEnd="12dp" />
+                android:layout_marginEnd="@dimen/spacing_medium" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Announcement Details"
-                android:textSize="20sp"
+                android:textSize="@dimen/text_size_xxlarge"
                 android:textStyle="bold"
                 android:textColor="#333333" />
         </LinearLayout>
@@ -44,90 +44,90 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Type"
-            android:textSize="12sp"
+            android:textSize="@dimen/text_size_small"
             android:textColor="#666666"
             android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="@dimen/spacing_tiny" />
 
         <TextView
             android:id="@+id/tvPreviewType"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Announcement Type"
-            android:textSize="18sp"
+            android:textSize="@dimen/text_size_xlarge"
             android:textStyle="bold"
             android:textColor="#333333"
-            android:padding="12dp"
+            android:padding="@dimen/spacing_medium"
             android:background="#F5F5F5"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="@dimen/padding_large" />
 
         <!-- Priority -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Priority"
-            android:textSize="12sp"
+            android:textSize="@dimen/text_size_small"
             android:textColor="#666666"
             android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="@dimen/spacing_tiny" />
 
         <TextView
             android:id="@+id/tvPreviewPriority"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Medium"
-            android:textSize="12sp"
+            android:textSize="@dimen/text_size_small"
             android:textStyle="bold"
             android:textColor="#FF9800"
             android:background="@drawable/medium_priority_bg"
-            android:padding="6dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:layout_marginBottom="16dp" />
+            android:padding="@dimen/margin_xxsmall"
+            android:paddingStart="@dimen/spacing_medium"
+            android:paddingEnd="@dimen/spacing_medium"
+            android:layout_marginBottom="@dimen/padding_large" />
 
         <!-- Date -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Date &amp; Time"
-            android:textSize="12sp"
+            android:textSize="@dimen/text_size_small"
             android:textColor="#666666"
             android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="@dimen/spacing_tiny" />
 
         <TextView
             android:id="@+id/tvPreviewDate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Date"
-            android:textSize="14sp"
+            android:textSize="@dimen/text_size_medium"
             android:textColor="#333333"
-            android:padding="12dp"
+            android:padding="@dimen/spacing_medium"
             android:background="#F5F5F5"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="@dimen/padding_large" />
 
         <!-- Message/Description -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Details"
-            android:textSize="12sp"
+            android:textSize="@dimen/text_size_small"
             android:textColor="#666666"
             android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            android:layout_marginBottom="@dimen/spacing_tiny" />
 
         <TextView
             android:id="@+id/tvPreviewMessage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Announcement message details..."
-            android:textSize="14sp"
+            android:textSize="@dimen/text_size_medium"
             android:textColor="#333333"
-            android:padding="12dp"
+            android:padding="@dimen/spacing_medium"
             android:background="#F5F5F5"
             android:minHeight="80dp"
-            android:lineSpacingExtra="4dp"
-            android:layout_marginBottom="16dp"
+            android:lineSpacingExtra="@dimen/spacing_tiny"
+            android:layout_marginBottom="@dimen/padding_large"
             android:linksClickable="true"
             android:autoLink="web|email" />
 
@@ -152,7 +152,9 @@
             <ImageView
                 android:id="@+id/ivAnnouncementImage"
                 android:layout_width="match_parent"
-                android:layout_height="250dp"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/dialog_image_min_height"
+                android:maxHeight="@dimen/dialog_image_max_height"
                 android:scaleType="centerInside"
                 android:adjustViewBounds="true"
                 android:background="#F5F5F5"
@@ -168,35 +170,35 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:background="#FFF3E0"
-            android:padding="12dp"
-            android:layout_marginBottom="20dp"
+            android:padding="@dimen/spacing_medium"
+            android:layout_marginBottom="@dimen/margin_xlarge"
             android:gravity="center_vertical">
 
             <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
+                android:layout_width="@dimen/icon_size_small"
+                android:layout_height="@dimen/icon_size_small"
                 android:src="@drawable/ic_info"
                 android:tint="#FF5722"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="@dimen/margin_tiny" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Please take appropriate action based on the priority level of this announcement."
-                android:textSize="12sp"
+                android:textSize="@dimen/text_size_small"
                 android:textColor="#E65100"
-                android:lineSpacingExtra="2dp" />
+                android:lineSpacingExtra="@dimen/spacing_tiny" />
         </LinearLayout>
 
         <!-- Close Button -->
         <Button
             android:id="@+id/btnClosePreview"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="@dimen/button_height_medium"
             android:text="Close"
             android:textColor="@android:color/white"
-            android:textSize="14sp"
+            android:textSize="@dimen/text_size_medium"
             android:textStyle="bold"
             android:background="@drawable/button_take_photo_background"
             android:backgroundTint="@null" />

@@ -920,12 +920,69 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     
     /**
      * Pick video from gallery
+     * Uses ACTION_OPEN_DOCUMENT for better permission handling on Android 5.0+
      */
     private void pickVideoFromGallery() {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("video/*");
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        Intent intent;
+        
+        // Use ACTION_OPEN_DOCUMENT for Android 5.0+ (better for persistent permissions)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+            intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("video/*");
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            // These flags are important for persistent access
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        } else {
+            // Fallback to ACTION_GET_CONTENT for older Android versions
+            intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("video/*");
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
+        
         startActivityForResult(Intent.createChooser(intent, "Select Videos"), VIDEO_PICK_REQUEST);
+    }
+    
+    /**
+     * Take persistent URI permission for content URIs
+     * This is required to access the file later when uploading
+     */
+    private void takePersistableUriPermission(Uri uri) {
+        try {
+            if (uri != null && android.content.ContentResolver.SCHEME_CONTENT.equals(uri.getScheme())) {
+                int flags = Intent.FLAG_GRANT_READ_URI_PERMISSION;
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+                    flags |= Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION;
+                }
+                
+                try {
+                    getContentResolver().takePersistableUriPermission(uri, flags);
+                    Log.d(TAG, "✅ Persistent URI permission granted for: " + uri.toString());
+                } catch (SecurityException e) {
+                    // Some URIs don't support persistable permissions, but we can still use them
+                    Log.w(TAG, "URI doesn't support persistable permissions (this is OK): " + uri.toString());
+                    // Grant regular read permission instead
+                    grantUriPermission(getPackageName(), uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                }
+            } else {
+                Log.d(TAG, "URI is not a content URI, no permission needed: " + (uri != null ? uri.toString() : "null"));
+            }
+        } catch (SecurityException e) {
+            Log.e(TAG, "Failed to take persistent URI permission: " + e.getMessage(), e);
+            // Try to grant regular permission as fallback
+            try {
+                if (uri != null) {
+                    grantUriPermission(getPackageName(), uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    Log.d(TAG, "Granted regular read permission as fallback");
+                }
+            } catch (Exception ex) {
+                Log.e(TAG, "Failed to grant fallback permission: " + ex.getMessage(), ex);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error taking persistent URI permission: " + e.getMessage(), e);
+        }
     }
 
     @Override
@@ -1027,6 +1084,14 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         if (requestCode == VIDEO_PICK_REQUEST && resultCode == RESULT_OK && data != null) {
             Log.d(TAG, "Processing video selection result");
             
+            // Ensure the returned Intent has the necessary flags
+            if (data.getFlags() == 0) {
+                data.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+                    data.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+                }
+            }
+            
             List<Uri> selectedVideoUris = new ArrayList<>();
             
             if (data.getClipData() != null) {
@@ -1034,12 +1099,20 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 Log.d(TAG, "Multiple videos selected: " + count);
                 for (int i = 0; i < count; i++) {
                     Uri videoUri = data.getClipData().getItemAt(i).getUri();
+                    // Grant read permission immediately
+                    grantUriPermission(getPackageName(), videoUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    // Take persistent URI permission for content URIs
+                    takePersistableUriPermission(videoUri);
                     selectedVideoUris.add(videoUri);
                     selectedMediaItems.add(new MediaItem(videoUri, MediaItem.TYPE_VIDEO));
                     Log.d(TAG, "Added video " + (i + 1) + ": " + videoUri.toString());
                 }
             } else if (data.getData() != null) {
                 Uri videoUri = data.getData();
+                // Grant read permission immediately
+                grantUriPermission(getPackageName(), videoUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                // Take persistent URI permission for content URIs
+                takePersistableUriPermission(videoUri);
                 selectedVideoUris.add(videoUri);
                 selectedMediaItems.add(new MediaItem(videoUri, MediaItem.TYPE_VIDEO));
                 Log.d(TAG, "Single video selected: " + videoUri.toString());
@@ -1653,35 +1726,47 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                         
                         // Upload videos after images
                         if (!videoUris.isEmpty()) {
-                            StorageHelper.uploadReportVideos(tempReportId, videoUris,
+                            Log.d(TAG, "📹 Uploading " + videoUris.size() + " video(s) after images...");
+                            StorageHelper.uploadReportVideos(ReportSubmissionActivity.this, tempReportId, videoUris,
                                 new OnSuccessListener<List<String>>() {
                                     @Override
                                     public void onSuccess(List<String> videoUrls) {
+                                        Log.d(TAG, "✅ Videos uploaded successfully: " + videoUrls.size() + " video(s)");
                                         allMediaUrls.addAll(videoUrls);
                                         uploadCount[0] += videoUrls.size();
                                         
                                         // All media uploaded
                                         if (uploadCount[0] == totalMedia) {
+                                            Log.d(TAG, "✅ All media uploaded (" + uploadCount[0] + "/" + totalMedia + "), submitting report...");
                                             reportData.put("imageUrls", allMediaUrls);
-                                            if (!videoUris.isEmpty()) {
-                                                reportData.put("videoUrls", videoUrls);
-                                            }
+                                            reportData.put("videoUrls", videoUrls);
                                             submitReportToFirestore(reportData);
+                                        } else {
+                                            Log.w(TAG, "⚠️ Upload count mismatch: " + uploadCount[0] + "/" + totalMedia);
                                         }
                                     }
                                 },
                                 new OnFailureListener() {
                                     @Override
                                     public void onFailure(@NonNull Exception e) {
-                                        Log.w(TAG, "Error uploading videos", e);
-                                        Toast.makeText(ReportSubmissionActivity.this, 
-                                            "Error uploading videos: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                        Log.e(TAG, "❌ Error uploading videos: " + e.getMessage(), e);
+                                        // Only show toast for critical errors that prevent submission
+                                        // Check if it's a permission error that might be recoverable
+                                        String errorMsg = e.getMessage();
+                                        if (errorMsg != null && errorMsg.contains("Permission denied")) {
+                                            Toast.makeText(ReportSubmissionActivity.this, 
+                                                "Video permission error. Please try selecting the video again.", Toast.LENGTH_LONG).show();
+                                        } else {
+                                            Toast.makeText(ReportSubmissionActivity.this, 
+                                                "Error uploading videos: " + errorMsg, Toast.LENGTH_LONG).show();
+                                        }
                                         submitReportButton.setEnabled(true);
                                         submitReportButton.setText("Submit Report");
                                     }
                                 });
                         } else {
                             // No videos, just submit with images
+                            Log.d(TAG, "✅ Images uploaded successfully, submitting report with " + allMediaUrls.size() + " image(s)...");
                             reportData.put("imageUrls", allMediaUrls);
                             submitReportToFirestore(reportData);
                         }
@@ -1699,20 +1784,66 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 });
         } else {
             // Only videos, no images
-            StorageHelper.uploadReportVideos(tempReportId, videoUris,
+            Log.d(TAG, "📹 Starting upload of " + videoUris.size() + " video(s) only (no images)");
+            Log.d(TAG, "📹 Video URIs: " + videoUris.toString());
+            
+            // Show progress to user
+            submitReportButton.setText("Uploading " + videoUris.size() + " video(s)...");
+            
+            StorageHelper.uploadReportVideos(this, tempReportId, videoUris,
                 new OnSuccessListener<List<String>>() {
                     @Override
                     public void onSuccess(List<String> videoUrls) {
+                        Log.d(TAG, "✅ Video upload success callback received with " + videoUrls.size() + " video URL(s)");
+                        if (videoUrls == null || videoUrls.isEmpty()) {
+                            Log.e(TAG, "❌ Video URLs list is null or empty!");
+                            Toast.makeText(ReportSubmissionActivity.this, 
+                                "Video upload completed but no URLs received. Please try again.", Toast.LENGTH_LONG).show();
+                            submitReportButton.setEnabled(true);
+                            submitReportButton.setText("Submit Report");
+                            return;
+                        }
+                        
+                        // Ensure imageUrls is set (even if empty) for consistency
+                        if (!reportData.containsKey("imageUrls")) {
+                            reportData.put("imageUrls", new ArrayList<String>());
+                        }
                         reportData.put("videoUrls", videoUrls);
+                        Log.d(TAG, "✅ All videos uploaded successfully, submitting report with " + videoUrls.size() + " video(s)");
                         submitReportToFirestore(reportData);
                     }
                 },
                 new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        Log.w(TAG, "Error uploading videos", e);
-                        Toast.makeText(ReportSubmissionActivity.this, 
-                            "Error uploading videos: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        Log.e(TAG, "❌ Error uploading videos: " + e.getMessage(), e);
+                        Log.e(TAG, "❌ Error class: " + e.getClass().getName());
+                        if (e.getCause() != null) {
+                            Log.e(TAG, "❌ Error cause: " + e.getCause().getMessage());
+                        }
+                        
+                        // Only show toast for critical errors that prevent submission
+                        String errorMsg = e.getMessage();
+                        if (errorMsg == null) {
+                            errorMsg = "Unknown error";
+                        }
+                        
+                        // Check error type and show appropriate message
+                        if (errorMsg.contains("Permission denied") || errorMsg.contains("permission")) {
+                            Toast.makeText(ReportSubmissionActivity.this, 
+                                "Video permission error. Please try selecting the video again.", Toast.LENGTH_LONG).show();
+                        } else if (errorMsg.contains("Unable to access") || errorMsg.contains("Cannot access")) {
+                            Toast.makeText(ReportSubmissionActivity.this, 
+                                "Cannot access video file. Please try selecting the video again.", Toast.LENGTH_LONG).show();
+                        } else if (errorMsg.contains("network") || errorMsg.contains("Network")) {
+                            Toast.makeText(ReportSubmissionActivity.this, 
+                                "Network error uploading videos. Please check your connection and try again.", Toast.LENGTH_LONG).show();
+                        } else {
+                            // Generic error message
+                            Log.e(TAG, "❌ Video upload failed with error: " + errorMsg);
+                            Toast.makeText(ReportSubmissionActivity.this, 
+                                "Error uploading videos: " + errorMsg, Toast.LENGTH_LONG).show();
+                        }
                         submitReportButton.setEnabled(true);
                         submitReportButton.setText("Submit Report");
                     }
@@ -1753,16 +1884,31 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     }
 
     private void submitReportToFirestore(Map<String, Object> reportData) {
+        // Ensure imageUrls and videoUrls are always present (even if empty)
+        if (!reportData.containsKey("imageUrls")) {
+            reportData.put("imageUrls", new ArrayList<String>());
+        }
+        if (!reportData.containsKey("videoUrls")) {
+            reportData.put("videoUrls", new ArrayList<String>());
+        }
+        
+        // Log report data for debugging
+        Log.d(TAG, "📤 Submitting report to Firestore:");
+        Log.d(TAG, "   - Has imageUrls: " + (reportData.containsKey("imageUrls") ? "Yes (" + ((List<?>) reportData.get("imageUrls")).size() + " items)" : "No"));
+        Log.d(TAG, "   - Has videoUrls: " + (reportData.containsKey("videoUrls") ? "Yes (" + ((List<?>) reportData.get("videoUrls")).size() + " items)" : "No"));
+        
         FirestoreHelper.createReportWithAutoId(reportData,
                 new OnSuccessListener<DocumentReference>() {
                     @Override
                     public void onSuccess(DocumentReference documentReference) {
-                        Log.d(TAG, "Report submitted successfully with ID: " + documentReference.getId());
+                        Log.d(TAG, "✅ Report submitted successfully with ID: " + documentReference.getId());
                         
                         // If report has images, reorganize them with the actual report ID
                         if (reportData.containsKey("imageUrls")) {
-                            reorganizeImagesWithReportId(documentReference.getId(), 
-                                    (List<String>) reportData.get("imageUrls"));
+                            List<String> imageUrls = (List<String>) reportData.get("imageUrls");
+                            if (imageUrls != null && !imageUrls.isEmpty()) {
+                                reorganizeImagesWithReportId(documentReference.getId(), imageUrls);
+                            }
                         }
                         
                         Toast.makeText(ReportSubmissionActivity.this, 
@@ -1782,7 +1928,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        Log.w(TAG, "Error submitting report", e);
+                        Log.e(TAG, "❌ Error submitting report to Firestore: " + e.getMessage(), e);
                         Toast.makeText(ReportSubmissionActivity.this, 
                             "Error submitting report: " + e.getMessage(), Toast.LENGTH_LONG).show();
                         submitReportButton.setEnabled(true);

@@ -5911,7 +5911,11 @@ public class MapViewActivity extends AppCompatActivity {
             (typeLower.contains("animal") && typeLower.contains("concern"))) {
             return R.drawable.animal_concern;
         }
-        if (typeLower.contains("others") || typeLower.contains("other")) {
+        // Check for "Others" - must be exact match or specific "others" keyword to avoid false matches
+        // This should only match types that are explicitly "Others" or "Other", not types containing "other" as part of another word
+        if (typeLower.equals("others") || typeLower.equals("other") || 
+            typeLower.equals("➕ others") || typeLower.trim().equals("others") ||
+            (typeLower.contains("others") && !typeLower.contains("road") && !typeLower.contains("crash") && !typeLower.contains("accident"))) {
             return R.drawable.accizard_pin; // Use same pin as current location marker
         }
         
@@ -6246,8 +6250,12 @@ public class MapViewActivity extends AppCompatActivity {
             if (hasActiveIncidentFilters && !isFacilityType) {
                 // Map type to Incident Type filter names
                 // "Road Crash" from Firestore matches "Road Accident" filter
+                // Check for Road Accident/Road Crash with comprehensive matching - must be FIRST to avoid false matches
                 if (typeLower.contains("road crash") || typeLower.contains("road accident") || 
-                    typeLower.contains("accident") || typeLower.contains("traffic")) {
+                    typeLower.contains("road_accident") || typeLower.contains("road-crash") ||
+                    (typeLower.contains("road") && (typeLower.contains("crash") || typeLower.contains("accident"))) ||
+                    typeLower.contains("traffic accident") || typeLower.contains("traffic crash") ||
+                    typeLower.contains("crash") || typeLower.contains("accident") || typeLower.contains("traffic")) {
                     return incidentFilters.getOrDefault("Road Accident", false);
                 }
                 if (typeLower.contains("fire") && !typeLower.contains("station")) {
@@ -6292,6 +6300,15 @@ public class MapViewActivity extends AppCompatActivity {
                 if (typeLower.contains("animal concerns") || typeLower.contains("animal concern") || 
                     (typeLower.contains("animal") && typeLower.contains("concern"))) {
                     return incidentFilters.getOrDefault("Animal Concerns", false);
+                }
+                
+                // Check for "Others" - must be exact match or specific "others" keyword to avoid false matches
+                // This should only match types that are explicitly "Others" or "Other", not types containing "other" as part of another word
+                // IMPORTANT: This check must come AFTER Road Accident check to avoid false matches
+                if (typeTrimmed.equalsIgnoreCase("Others") || typeTrimmed.equalsIgnoreCase("Other") ||
+                    typeTrimmed.equalsIgnoreCase("➕ Others") || typeLower.equals("others") || 
+                    typeLower.equals("other") || typeLower.trim().equals("others")) {
+                    return incidentFilters.getOrDefault("Others", false);
                 }
                 
                 // Try exact match with filter names (case-insensitive)
@@ -6425,7 +6442,11 @@ public class MapViewActivity extends AppCompatActivity {
                 return false; // Hide all incident pins when no incident filters are active
             }
             
-            if (categoryLower.contains("accident") || categoryLower.contains("traffic")) {
+            // Check for Road Accident/Road Crash - must check this BEFORE "Others" to avoid false matches
+            if (categoryLower.contains("road crash") || categoryLower.contains("road accident") || 
+                categoryLower.contains("road_accident") || categoryLower.contains("road-crash") ||
+                (categoryLower.contains("road") && (categoryLower.contains("crash") || categoryLower.contains("accident"))) ||
+                categoryLower.contains("traffic accident") || categoryLower.contains("traffic crash")) {
                 return incidentFilters.getOrDefault("Road Accident", false);
             }
             if (categoryLower.contains("fire") || categoryLower.contains("sunog")) {
@@ -6478,7 +6499,10 @@ public class MapViewActivity extends AppCompatActivity {
             if (categoryLower.contains("report")) {
                 return incidentFilters.getOrDefault("Report", false);
             }
-            if (categoryLower.contains("other")) {
+            // Check for "Others" - must be exact match or specific "others" keyword to avoid false matches
+            // This should only match categories that are explicitly "Others" or "Other", not categories containing "other" as part of another word
+            if (categoryLower.equals("others") || categoryLower.equals("other") || 
+                categoryLower.equals("➕ others") || categoryLower.trim().equals("others")) {
                 return incidentFilters.getOrDefault("Others", false);
             }
             

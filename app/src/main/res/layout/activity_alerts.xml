@@ -7,43 +7,71 @@
     android:clipChildren="false"
     android:clipToPadding="false">
 
-    <!-- Header -->
+    <!-- Header with Announcements Text and Profile Icon -->
     <LinearLayout
         android:id="@+id/header_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp"
+        android:paddingStart="@dimen/padding_large"
+        android:paddingEnd="@dimen/padding_large"
+        android:paddingTop="@dimen/padding_large"
+        android:paddingBottom="@dimen/padding_large"
         android:background="@android:color/white"
-        android:elevation="4dp"
-        android:gravity="center_vertical">
+        android:elevation="@dimen/card_elevation_medium"
+        android:gravity="center_vertical"
+        android:minHeight="70dp">
 
         <TextView
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Announcements"
-            android:textSize="24sp"
+            android:textSize="@dimen/text_size_title"
             android:textColor="#333333"
-            android:textStyle="bold" />
-
-        <Spinner
-            android:id="@+id/filter_spinner"
-            android:layout_width="95dp"
-            android:layout_height="40dp"
-            android:minWidth="80dp" />
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="none"
+            android:gravity="center_vertical|start"
+            android:singleLine="true"
+            android:minWidth="0dp" />
 
         <ImageView
             android:id="@+id/profile_icon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="16dp"
+            android:layout_width="@dimen/profile_picture_small"
+            android:layout_height="@dimen/profile_picture_small"
+            android:layout_marginStart="@dimen/margin_small"
             android:background="@null"
             android:src="@drawable/ic_person"
             android:padding="0dp"
             android:clickable="true"
             android:focusable="true"
             android:scaleType="fitCenter" />
+
+    </LinearLayout>
+
+    <!-- Filter Dropdown Row -->
+    <LinearLayout
+        android:id="@+id/announcements_header_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/header_layout"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/padding_medium"
+        android:paddingEnd="@dimen/padding_medium"
+        android:paddingTop="@dimen/padding_medium"
+        android:paddingBottom="@dimen/padding_medium"
+        android:background="@android:color/white"
+        android:gravity="center_vertical|end"
+        android:minHeight="50dp">
+
+        <Spinner
+            android:id="@+id/filter_spinner"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/button_height_medium"
+            android:minWidth="50dp"
+            android:maxWidth="80dp"
+            android:background="@drawable/spinner_with_outline" />
 
     </LinearLayout>
 
@@ -55,16 +83,16 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/bottomNavigationContainer"
-        android:layout_below="@id/header_layout"
-        android:layout_marginTop="18dp"
-        android:layout_marginBottom="-18dp">
+        android:layout_below="@id/announcements_header_row"
+        android:layout_marginTop="@dimen/margin_medium"
+        android:layout_marginBottom="0dp">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/announcementsRecyclerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:padding="16dp" />
+            android:padding="@dimen/padding_large" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <FrameLayout

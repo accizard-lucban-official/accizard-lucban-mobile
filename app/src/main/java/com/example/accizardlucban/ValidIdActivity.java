@@ -2,6 +2,7 @@ package com.example.accizardlucban;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -22,6 +23,8 @@ import android.widget.Toast;
 import android.widget.LinearLayout;
 import android.content.SharedPreferences;
 import androidx.cardview.widget.CardView;
+import android.view.LayoutInflater;
+import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -84,6 +87,7 @@ public class ValidIdActivity extends AppCompatActivity {
     private Button btnNext;
     private ImageButton btnBack;
     private Spinner spinnerValidIdType;
+    private TextView spinnerHintOverlay; // Hint overlay TextView
     private ImageView ivValidId;
     private LinearLayout placeholderContainer;
     
@@ -92,6 +96,8 @@ public class ValidIdActivity extends AppCompatActivity {
     private Uri validIdUri;
     private boolean hasValidId = false;
     private String selectedValidIdType = null; // e.g., Passport, Driver's License, etc.
+    private boolean hasUserSelectedIdType = false; // Track if user has explicitly selected an ID type
+    private boolean isRestoringSelection = false; // Flag to prevent listener from firing during restore
     
     // Profile picture data
     private boolean hasProfilePicture = false;
@@ -118,8 +124,8 @@ public class ValidIdActivity extends AppCompatActivity {
             initializeViews();
             getIntentData();
             setupSpinner();
-            restoreValidIdData(); // Restore previously saved valid ID
             setupClickListeners();
+            restoreValidIdData(); // Restore previously saved valid ID (after spinner is set up)
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error loading Valid ID activity: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -132,6 +138,12 @@ public class ValidIdActivity extends AppCompatActivity {
             btnNext = findViewById(R.id.btn_next);
             btnBack = findViewById(R.id.btn_back);
             spinnerValidIdType = findViewById(R.id.spinnerValidIdType);
+            spinnerHintOverlay = findViewById(R.id.spinnerHintOverlay); // Hint overlay
+            
+            // Ensure hint overlay is visible initially (will be shown/hidden based on selection)
+            if (spinnerHintOverlay != null) {
+                spinnerHintOverlay.setVisibility(View.VISIBLE);
+            }
             
             // Initialize upload button
             btnUpload = findViewById(R.id.btn_upload);
@@ -270,7 +282,9 @@ public class ValidIdActivity extends AppCompatActivity {
                     public void onClick(View v) {
                         try {
                             // Validate valid ID type selection
-                            if (spinnerValidIdType == null || spinnerValidIdType.getSelectedItemPosition() == 0) {
+                            // Check if user has explicitly selected an ID type
+                            int selectedPosition = spinnerValidIdType != null ? spinnerValidIdType.getSelectedItemPosition() : -1;
+                            if (spinnerValidIdType == null || selectedPosition < 0 || !hasUserSelectedIdType || selectedValidIdType == null) {
                                 Toast.makeText(ValidIdActivity.this, "Please select a valid ID type", Toast.LENGTH_SHORT).show();
                                 if (spinnerValidIdType != null) {
                                     spinnerValidIdType.requestFocus();
@@ -371,12 +385,13 @@ public class ValidIdActivity extends AppCompatActivity {
 
     /**
      * Setup spinner for valid ID type selection
+     * Uses a TextView overlay to show "Select Valid ID Type" hint when nothing is selected
+     * The spinner itself only contains actual ID types (no hint in dropdown)
      */
     private void setupSpinner() {
         try {
-            // Add a placeholder as first item to indicate selection is required
+            // Create array WITHOUT hint - hint is shown via TextView overlay
             String[] idTypes = new String[]{
-                    "Select Valid ID Type", // Placeholder - position 0
                     "National ID (PhilID)",
                     "Driver's License",
                     "Passport",
@@ -389,11 +404,25 @@ public class ValidIdActivity extends AppCompatActivity {
                     "Others"
             };
 
-            ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, idTypes);
+            // Use standard adapter (no hint in items)
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                idTypes
+            );
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             spinnerValidIdType.setAdapter(adapter);
             
-            // Set default selection to placeholder (position 0)
-            spinnerValidIdType.setSelection(0);
+            // Initially show hint overlay (no selection) - overlay will cover spinner text
+            // The spinner will show first item by default, but overlay covers it
+            if (spinnerHintOverlay != null) {
+                spinnerHintOverlay.setVisibility(View.VISIBLE);
+            }
+            
+            // Don't set any selection initially - hint overlay will show
+            hasUserSelectedIdType = false;
+            selectedValidIdType = null;
+            Log.d(TAG, "✅ Spinner initialized with hint overlay visible (covering spinner text)");
 
             // Set selection listener to save when user selects an ID type
             setupSpinnerSelectionListener();
@@ -408,8 +437,8 @@ public class ValidIdActivity extends AppCompatActivity {
      */
     private void setupSpinnerSelectionListener() {
         try {
+            // ID types array (without hint)
             String[] idTypes = new String[]{
-                    "Select Valid ID Type", // Placeholder - position 0
                     "National ID (PhilID)",
                     "Driver's License",
                     "Passport",
@@ -425,18 +454,55 @@ public class ValidIdActivity extends AppCompatActivity {
             spinnerValidIdType.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                    // Only save if a valid selection is made (not placeholder)
-                    if (position > 0) {
+                    // Ignore if we're restoring selection (programmatic change)
+                    if (isRestoringSelection) {
+                        // Still handle overlay visibility during restore
+                        if (spinnerHintOverlay != null && position >= 0 && position < idTypes.length) {
+                            spinnerHintOverlay.setVisibility(View.GONE);
+                        } else if (spinnerHintOverlay != null) {
+                            spinnerHintOverlay.setVisibility(View.VISIBLE);
+                        }
+                        return;
+                    }
+                    
+                    // Valid selection (position >= 0 and within array bounds)
+                    if (position >= 0 && position < idTypes.length) {
+                        hasUserSelectedIdType = true;
                         selectedValidIdType = idTypes[position];
+                        
+                        // Hide hint overlay when something is selected
+                        if (spinnerHintOverlay != null) {
+                            spinnerHintOverlay.setVisibility(View.GONE);
+                        }
+                        
                         saveValidIdData(); // Save selection immediately
+                        Log.d(TAG, "Valid ID type selected: " + selectedValidIdType);
                     } else {
-                        selectedValidIdType = null; // Clear selection if placeholder is selected
+                        selectedValidIdType = null;
+                        hasUserSelectedIdType = false;
+                        
+                        // Show hint overlay when nothing is selected
+                        if (spinnerHintOverlay != null) {
+                            spinnerHintOverlay.setVisibility(View.VISIBLE);
+                        }
                     }
                 }
 
                 @Override
                 public void onNothingSelected(android.widget.AdapterView<?> parent) {
-                    // Do nothing
+                    // Ignore if we're restoring selection
+                    if (isRestoringSelection) {
+                        return;
+                    }
+                    
+                    // Clear selection if nothing is selected
+                    selectedValidIdType = null;
+                    hasUserSelectedIdType = false;
+                    
+                    // Show hint overlay
+                    if (spinnerHintOverlay != null) {
+                        spinnerHintOverlay.setVisibility(View.VISIBLE);
+                    }
                 }
             });
         } catch (Exception e) {
@@ -1312,7 +1378,11 @@ public class ValidIdActivity extends AppCompatActivity {
             String savedBitmapBase64 = prefs.getString("valid_id_bitmap", null);
             String savedValidIdType = prefs.getString("valid_id_type", null);
             
-            Log.d(TAG, "Attempting to restore valid ID data. Has saved: " + hasSavedValidId + ", URI: " + savedUriString);
+            Log.d(TAG, "=== RESTORING VALID ID DATA ===");
+            Log.d(TAG, "Has saved valid ID: " + hasSavedValidId);
+            Log.d(TAG, "Saved valid ID type: '" + savedValidIdType + "'");
+            Log.d(TAG, "Current spinner selection before restore: " + 
+                  (spinnerValidIdType != null ? spinnerValidIdType.getSelectedItemPosition() : "null"));
             
             if (hasSavedValidId && savedUriString != null && savedBitmapBase64 != null) {
                 // Clear existing data
@@ -1343,29 +1413,81 @@ public class ValidIdActivity extends AppCompatActivity {
             }
 
             // Restore selected valid ID type and reflect in UI
-            if (savedValidIdType != null && spinnerValidIdType != null) {
-                selectedValidIdType = savedValidIdType;
+            // Only restore if there's a valid saved selection (not the hint text)
+            Log.d(TAG, "Checking saved valid ID type for restore: '" + savedValidIdType + "'");
+            if (savedValidIdType != null && !savedValidIdType.isEmpty() && 
+                !savedValidIdType.equals("Select Valid ID Type") && 
+                !savedValidIdType.trim().isEmpty() &&
+                spinnerValidIdType != null) {
+                
                 ArrayAdapter<String> adapter = (ArrayAdapter<String>) spinnerValidIdType.getAdapter();
                 if (adapter != null) {
-                    int position = adapter.getPosition(savedValidIdType);
-                    if (position >= 0) {
-                        // Temporarily remove listener to prevent triggering save during restore
-                        spinnerValidIdType.setOnItemSelectedListener(null);
-                        spinnerValidIdType.setSelection(position);
-                        // Re-add listener after setting selection
-                        setupSpinnerSelectionListener();
-                        Log.d(TAG, "Valid ID type restored: " + savedValidIdType);
+                    // Find the position of the saved type
+                    int position = -1;
+                    for (int i = 0; i < adapter.getCount(); i++) {
+                        if (adapter.getItem(i).equals(savedValidIdType)) {
+                            position = i;
+                            break;
+                        }
+                    }
+                    
+                    if (position >= 0) { // Valid position found
+                        selectedValidIdType = savedValidIdType;
+                        hasUserSelectedIdType = true; // Mark as user-selected since it was saved
+                        // Set flag to prevent listener from firing during restore
+                        // Make position final for use in inner class
+                        final int finalPosition = position;
+                        isRestoringSelection = true;
+                        spinnerValidIdType.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                spinnerValidIdType.setSelection(finalPosition, false);
+                                // Hide hint overlay since we have a selection
+                                if (spinnerHintOverlay != null) {
+                                    spinnerHintOverlay.setVisibility(View.GONE);
+                                }
+                                isRestoringSelection = false;
+                            }
+                        });
+                        Log.d(TAG, "Valid ID type restored: " + savedValidIdType + " at position " + position);
                     } else {
-                        // If saved type not found, set to placeholder
-                        spinnerValidIdType.setSelection(0);
+                        // If saved type not found, show hint overlay
+                        isRestoringSelection = true;
+                        spinnerValidIdType.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                // Don't set selection - show hint overlay instead
+                                if (spinnerHintOverlay != null) {
+                                    spinnerHintOverlay.setVisibility(View.VISIBLE);
+                                }
+                                isRestoringSelection = false;
+                            }
+                        });
                         selectedValidIdType = null;
+                        hasUserSelectedIdType = false;
+                        Log.w(TAG, "Saved valid ID type not found in adapter: " + savedValidIdType + ", showing hint overlay");
                     }
                 }
             } else {
-                // No saved type, set to placeholder
+                // No saved type, show hint overlay (no selection)
+                isRestoringSelection = true;
                 if (spinnerValidIdType != null) {
-                    spinnerValidIdType.setSelection(0);
+                    spinnerValidIdType.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Don't set selection - show hint overlay
+                            if (spinnerHintOverlay != null) {
+                                spinnerHintOverlay.setVisibility(View.VISIBLE);
+                            }
+                            isRestoringSelection = false;
+                            Log.d(TAG, "✅ Showing hint overlay 'Select Valid ID Type' (no selection)");
+                        }
+                    });
+                } else {
+                    isRestoringSelection = false;
                 }
+                selectedValidIdType = null;
+                hasUserSelectedIdType = false;
             }
         } catch (Exception e) {
             Log.e(TAG, "Error restoring valid ID data", e);
@@ -1450,6 +1572,7 @@ public class ValidIdActivity extends AppCompatActivity {
             editor.remove("valid_id_count");
             editor.remove("valid_id_uri");
             editor.remove("valid_id_bitmap");
+            editor.remove("valid_id_type"); // Also clear the saved valid ID type
             
             editor.apply();
             Log.d(TAG, "✅ All registration data cleared from SharedPreferences");
@@ -1457,4 +1580,5 @@ public class ValidIdActivity extends AppCompatActivity {
             Log.e(TAG, "Error clearing registration data", e);
         }
     }
+    
 }

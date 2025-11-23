@@ -1,5 +1,6 @@
 package com.example.accizardlucban;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.util.Log;
@@ -12,6 +13,7 @@ import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -249,8 +251,9 @@ public class StorageHelper {
     /**
      * Upload report videos to Firebase Storage
      * Uses the same report_images path as images to work with existing Firebase Storage rules
+     * Handles content URIs by using InputStream as fallback when putFile fails
      */
-    public static void uploadReportVideos(String reportId, List<Uri> videoUris,
+    public static void uploadReportVideos(Context context, String reportId, List<Uri> videoUris,
                                         OnSuccessListener<List<String>> onSuccess,
                                         OnFailureListener onFailure) {
         try {
@@ -280,34 +283,155 @@ public class StorageHelper {
                         .child(videoId + ".mp4");
 
                 Log.d(TAG, "Uploading report video to: " + reportRef.getPath());
+                Log.d(TAG, "Video URI: " + videoUri.toString());
+                Log.d(TAG, "URI Scheme: " + videoUri.getScheme());
 
-                UploadTask uploadTask = reportRef.putFile(videoUri);
                 final int videoIndex = i;
                 
-                uploadTask.addOnSuccessListener(taskSnapshot -> {
-                    reportRef.getDownloadUrl().addOnSuccessListener(uri -> {
-                        Log.d(TAG, "Report video " + (videoIndex + 1) + " uploaded successfully: " + uri.toString());
-                        downloadUrls.add(uri.toString());
-                        uploadCount[0]++;
-                        
-                        if (uploadCount[0] == totalVideos) {
-                            Log.d(TAG, "All " + totalVideos + " report videos uploaded successfully");
-                            onSuccess.onSuccess(downloadUrls);
-                        }
+                // Try putFile first (works for file:// URIs and some content:// URIs)
+                // If it fails, we'll use InputStream as fallback
+                try {
+                    UploadTask uploadTask = reportRef.putFile(videoUri);
+                    
+                    uploadTask.addOnSuccessListener(taskSnapshot -> {
+                        reportRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                            Log.d(TAG, "Report video " + (videoIndex + 1) + " uploaded successfully: " + uri.toString());
+                            downloadUrls.add(uri.toString());
+                            uploadCount[0]++;
+                            
+                            if (uploadCount[0] == totalVideos) {
+                                Log.d(TAG, "All " + totalVideos + " report videos uploaded successfully");
+                                onSuccess.onSuccess(downloadUrls);
+                            }
+                        }).addOnFailureListener(e -> {
+                            Log.e(TAG, "Error getting download URL for video " + (videoIndex + 1) + ": " + e.getMessage(), e);
+                            onFailure.onFailure(e);
+                        });
                     }).addOnFailureListener(e -> {
-                        Log.e(TAG, "Error getting download URL for video " + (videoIndex + 1) + ": " + e.getMessage(), e);
-                        onFailure.onFailure(e);
+                        // If putFile fails, try using InputStream (for content URIs)
+                        // This is expected for content URIs, so we don't show an error - just try the fallback
+                        Log.d(TAG, "putFile failed for video " + (videoIndex + 1) + " (this is normal for content URIs), trying InputStream fallback...");
+                        uploadVideoUsingInputStream(context, reportRef, videoUri, videoIndex, downloadUrls, uploadCount, totalVideos, onSuccess, onFailure);
                     });
-                }).addOnFailureListener(e -> {
-                    Log.e(TAG, "Error uploading report video " + (videoIndex + 1) + ": " + e.getMessage(), e);
-                    Log.e(TAG, "Video URI: " + videoUri.toString());
-                    Log.e(TAG, "Storage path: " + reportRef.getPath());
-                    onFailure.onFailure(e);
-                });
+                } catch (Exception e) {
+                    // If putFile throws exception, try InputStream
+                    // This is expected for content URIs, so we don't show an error - just try the fallback
+                    Log.d(TAG, "putFile exception for video " + (videoIndex + 1) + " (this is normal for content URIs), trying InputStream fallback...");
+                    uploadVideoUsingInputStream(context, reportRef, videoUri, videoIndex, downloadUrls, uploadCount, totalVideos, onSuccess, onFailure);
+                }
             }
 
         } catch (Exception e) {
             Log.e(TAG, "Error in uploadReportVideos: " + e.getMessage(), e);
+            onFailure.onFailure(e);
+        }
+    }
+    
+    /**
+     * Upload video using InputStream (fallback for content URIs that don't work with putFile)
+     */
+    private static void uploadVideoUsingInputStream(Context context, StorageReference reportRef, Uri videoUri, 
+                                                   int videoIndex, List<String> downloadUrls, 
+                                                   int[] uploadCount, int totalVideos,
+                                                   OnSuccessListener<List<String>> onSuccess,
+                                                   OnFailureListener onFailure) {
+        final InputStream[] inputStream = {null}; // Use array to make it effectively final
+        try {
+            Log.d(TAG, "Attempting to upload video using InputStream: " + videoUri.toString());
+            
+            // Try to grant permission again if needed
+            try {
+                context.grantUriPermission(context.getPackageName(), videoUri, 
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                Log.d(TAG, "✅ URI permission granted for video: " + videoUri.toString());
+            } catch (Exception e) {
+                Log.w(TAG, "Could not grant URI permission (may already be granted): " + e.getMessage());
+            }
+            
+            // Open InputStream from content URI
+            try {
+                inputStream[0] = context.getContentResolver().openInputStream(videoUri);
+                if (inputStream[0] == null) {
+                    Log.e(TAG, "❌ Failed to open InputStream for video URI: " + videoUri.toString());
+                    onFailure.onFailure(new Exception("Unable to access video file. Please try selecting the video again."));
+                    return;
+                }
+                Log.d(TAG, "✅ InputStream opened successfully for video: " + videoUri.toString());
+            } catch (SecurityException e) {
+                Log.e(TAG, "❌ SecurityException opening InputStream: " + e.getMessage(), e);
+                // Only fail if we absolutely cannot access the file - don't show toast here, let the caller handle it
+                onFailure.onFailure(new Exception("Permission denied: Unable to access video file. Please try selecting the video again."));
+                return;
+            } catch (Exception e) {
+                Log.e(TAG, "❌ Exception opening InputStream: " + e.getMessage(), e);
+                // Only fail if we absolutely cannot access the file - don't show toast here, let the caller handle it
+                onFailure.onFailure(new Exception("Error accessing video file: " + e.getMessage()));
+                return;
+            }
+            
+            // Upload using InputStream
+            UploadTask uploadTask = reportRef.putStream(inputStream[0]);
+            
+            uploadTask.addOnSuccessListener(taskSnapshot -> {
+                try {
+                    if (inputStream[0] != null) {
+                        inputStream[0].close();
+                        Log.d(TAG, "✅ InputStream closed successfully after upload");
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "⚠️ Error closing InputStream: " + e.getMessage(), e);
+                }
+                
+                reportRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                    Log.d(TAG, "✅ Report video " + (videoIndex + 1) + " uploaded successfully via InputStream: " + uri.toString());
+                    downloadUrls.add(uri.toString());
+                    uploadCount[0]++;
+                    
+                    Log.d(TAG, "📊 Video upload progress: " + uploadCount[0] + "/" + totalVideos);
+                    
+                    if (uploadCount[0] == totalVideos) {
+                        Log.d(TAG, "✅ All " + totalVideos + " report videos uploaded successfully");
+                        onSuccess.onSuccess(downloadUrls);
+                    }
+                }).addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Error getting download URL for video " + (videoIndex + 1) + ": " + e.getMessage(), e);
+                    Log.e(TAG, "❌ Download URL error details - Video index: " + (videoIndex + 1) + ", Total videos: " + totalVideos);
+                    // Only fail if this is a critical error - don't fail for transient issues
+                    onFailure.onFailure(new Exception("Failed to get download URL for video: " + e.getMessage()));
+                });
+            }).addOnFailureListener(e -> {
+                try {
+                    if (inputStream[0] != null) {
+                        inputStream[0].close();
+                    }
+                } catch (Exception ex) {
+                    Log.w(TAG, "⚠️ Error closing InputStream on failure: " + ex.getMessage(), ex);
+                }
+                Log.e(TAG, "❌ Error uploading video via InputStream " + (videoIndex + 1) + ": " + e.getMessage(), e);
+                onFailure.onFailure(e);
+            });
+            
+        } catch (SecurityException e) {
+            Log.e(TAG, "❌ SecurityException: No permission to access video URI: " + videoUri.toString(), e);
+            try {
+                if (inputStream[0] != null) {
+                    inputStream[0].close();
+                }
+            } catch (Exception ex) {
+                Log.w(TAG, "⚠️ Error closing InputStream: " + ex.getMessage(), ex);
+            }
+            // Only fail if we absolutely cannot access the file
+            onFailure.onFailure(new Exception("Permission denied: Unable to access video file. Please try selecting the video again."));
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Error uploading video using InputStream: " + e.getMessage(), e);
+            try {
+                if (inputStream[0] != null) {
+                    inputStream[0].close();
+                }
+            } catch (Exception ex) {
+                Log.w(TAG, "⚠️ Error closing InputStream: " + ex.getMessage(), ex);
+            }
+            // Pass the error to the caller - they will decide whether to show a toast
             onFailure.onFailure(e);
         }
     }

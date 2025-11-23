@@ -213,13 +213,39 @@
                 android:textSize="@dimen/registration_label_text_size"
                 android:layout_marginBottom="@dimen/registration_label_margin_bottom" />
 
-            <Spinner
-                android:id="@+id/spinnerValidIdType"
+            <!-- Spinner with hint overlay -->
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/registration_field_height"
-                android:background="@drawable/spinner_with_dropdown"
-                android:layout_marginBottom="@dimen/margin_medium"
-                android:paddingEnd="40dp" />
+                android:layout_marginBottom="@dimen/margin_medium">
+                
+                <Spinner
+                    android:id="@+id/spinnerValidIdType"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/spinner_with_dropdown"
+                    android:paddingEnd="40dp"
+                    android:prompt="@null" />
+                
+                <!-- Hint TextView overlay (shown when nothing selected) -->
+                <TextView
+                    android:id="@+id/spinnerHintOverlay"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="Select Valid ID Type"
+                    android:textColor="#999999"
+                    android:textSize="16sp"
+                    android:gravity="center_vertical|start"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="40dp"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:focusableInTouchMode="false"
+                    android:alpha="0.7"
+                    android:visibility="visible"
+                    android:elevation="2dp"
+                    android:background="@android:color/transparent" />
+            </FrameLayout>
 
             <!-- Image Upload Area with Placeholder -->
             <FrameLayout

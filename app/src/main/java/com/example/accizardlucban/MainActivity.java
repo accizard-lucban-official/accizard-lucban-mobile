@@ -11,6 +11,8 @@ import android.widget.LinearLayout;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 import android.text.method.PasswordTransformationMethod;
+import android.text.TextWatcher;
+import android.text.Editable;
 import android.widget.ImageView;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
@@ -302,9 +304,70 @@ public class MainActivity extends AppCompatActivity {
             
             // Setup password visibility toggle
             setupPasswordToggle();
+            
+            // Setup TextWatchers to clear errors when fields are filled (including autofill)
+            setupFieldErrorClearing();
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Error initializing views: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
+     * Setup TextWatchers and focus listeners to clear error states when fields are filled
+     * This prevents yellow color when using autofill
+     */
+    private void setupFieldErrorClearing() {
+        if (emailEditText != null) {
+            // Clear error when text changes (including autofill)
+            emailEditText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    // Clear error immediately when text changes
+                    if (emailEditText != null) {
+                        emailEditText.setError(null);
+                    }
+                }
+                
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+            
+            // Clear error when field gains focus (autofill may trigger this)
+            emailEditText.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus && emailEditText != null) {
+                    emailEditText.setError(null);
+                }
+            });
+        }
+        
+        if (passwordEditText != null) {
+            // Clear error when text changes (including autofill)
+            passwordEditText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    // Clear error immediately when text changes
+                    if (passwordEditText != null) {
+                        passwordEditText.setError(null);
+                    }
+                }
+                
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+            
+            // Clear error when field gains focus (autofill may trigger this)
+            passwordEditText.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus && passwordEditText != null) {
+                    passwordEditText.setError(null);
+                }
+            });
         }
     }
 

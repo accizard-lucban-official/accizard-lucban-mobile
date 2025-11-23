@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="#FFFFFF"
-    android:padding="16dp"
+    android:padding="@dimen/padding_large"
     android:clickable="true"
     android:focusable="true">
 
@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="12dp">
+        android:layout_marginBottom="@dimen/spacing_medium">
 
         <!-- Title (Announcement Type) -->
         <TextView
@@ -23,10 +23,10 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Weather Warning"
-            android:textSize="16sp"
+            android:textSize="@dimen/text_size_large"
             android:textStyle="bold"
             android:textColor="#333333"
-            android:maxLines="1"
+            android:maxLines="2"
             android:ellipsize="end" />
 
         <!-- Priority Badge (oval with dot) -->
@@ -37,11 +37,11 @@
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@drawable/high_priority_bg"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:layout_marginStart="8dp">
+            android:paddingStart="@dimen/padding_small"
+            android:paddingEnd="@dimen/padding_small"
+            android:paddingTop="@dimen/padding_tiny"
+            android:paddingBottom="@dimen/padding_tiny"
+            android:layout_marginStart="@dimen/margin_tiny">
 
             <!-- Priority Dot -->
             <View
@@ -56,10 +56,10 @@
                 android:id="@+id/tvAnnouncementPriority"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="High"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:textColor="#E53935" />
+            android:text="High"
+            android:textSize="@dimen/text_size_small"
+            android:textStyle="bold"
+            android:textColor="#E53935" />
 
         </LinearLayout>
 
@@ -71,12 +71,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Description of the announcement goes here..."
-        android:textSize="14sp"
+        android:textSize="@dimen/text_size_medium"
         android:textColor="#666666"
-        android:lineSpacingExtra="4dp"
-        android:layout_marginBottom="12dp"
-        android:maxLines="3"
-        android:ellipsize="end"
+        android:lineSpacingExtra="@dimen/spacing_tiny"
+        android:layout_marginBottom="@dimen/spacing_medium"
         android:linksClickable="true"
         android:autoLink="web|email" />
 
@@ -90,11 +88,11 @@
         <!-- Clock Icon -->
         <ImageView
             android:id="@+id/timeIcon"
-            android:layout_width="14dp"
-            android:layout_height="14dp"
+            android:layout_width="@dimen/icon_size_small"
+            android:layout_height="@dimen/icon_size_small"
             android:src="@drawable/ic_time"
             android:tint="#999999"
-            android:layout_marginEnd="6dp" />
+            android:layout_marginEnd="@dimen/margin_xxsmall" />
 
         <!-- Timestamp -->
         <TextView
@@ -102,7 +100,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Jul 15, 2023"
-            android:textSize="12sp"
+            android:textSize="@dimen/text_size_small"
             android:textColor="#999999" />
 
     </LinearLayout>

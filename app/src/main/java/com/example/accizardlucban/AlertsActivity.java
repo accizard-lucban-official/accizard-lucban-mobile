@@ -741,6 +741,37 @@ public class AlertsActivity extends AppCompatActivity {
                     .setCancelable(true)
                     .create();
             
+            // Make dialog responsive - adjust width based on screen size
+            android.view.Window window = dialog.getWindow();
+            if (window != null) {
+                android.util.DisplayMetrics displayMetrics = new android.util.DisplayMetrics();
+                getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+                int screenWidth = displayMetrics.widthPixels;
+                
+                // Use 90% width for small screens, 85% for medium, 80% for large
+                int dialogWidth;
+                if (screenWidth < 480) {
+                    // Small screens (phones)
+                    dialogWidth = (int) (screenWidth * 0.95f);
+                } else if (screenWidth < 720) {
+                    // Medium screens
+                    dialogWidth = (int) (screenWidth * 0.90f);
+                } else {
+                    // Large screens (tablets)
+                    dialogWidth = (int) (screenWidth * 0.80f);
+                }
+                
+                // Set max width to prevent dialog from being too wide on tablets
+                int maxWidth = (int) getResources().getDimension(R.dimen.max_width_large);
+                if (dialogWidth > maxWidth) {
+                    dialogWidth = maxWidth;
+                }
+                
+                window.setLayout(dialogWidth, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+                window.setGravity(android.view.Gravity.CENTER);
+                window.setBackgroundDrawableResource(android.R.color.transparent);
+            }
+            
             // Close button
             if (btnClosePreview != null) {
                 btnClosePreview.setOnClickListener(new View.OnClickListener() {
@@ -2224,7 +2255,8 @@ public class AlertsActivity extends AppCompatActivity {
 
             android.graphics.Bitmap squareCropped = android.graphics.Bitmap.createBitmap(bitmap, xOffset, yOffset, squareSize, squareSize);
 
-            int targetSize = 150; // Size for profile icon
+            // Use responsive size from dimension resources
+            int targetSize = (int) getResources().getDimension(R.dimen.profile_picture_medium);
             android.graphics.Bitmap scaledSquare = squareSize == targetSize
                     ? squareCropped
                     : android.graphics.Bitmap.createScaledBitmap(squareCropped, targetSize, targetSize, true);
