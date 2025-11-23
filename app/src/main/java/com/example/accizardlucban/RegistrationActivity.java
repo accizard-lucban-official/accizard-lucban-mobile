@@ -252,6 +252,9 @@ public class RegistrationActivity extends AppCompatActivity {
             return false;
         }
         android.util.Log.d("RegistrationActivity", "✓ Mobile number: " + mobileNumber);
+        
+        // Check mobile number uniqueness (async check will be done before account creation)
+        // This is a format validation, uniqueness will be checked in ValidIdActivity before creating account
 
         // Email validation
         String email = etEmail.getText().toString().trim();

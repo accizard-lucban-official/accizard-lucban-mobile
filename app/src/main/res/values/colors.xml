@@ -2,10 +2,10 @@
 <resources>
 
     <color name="color">#c14d32</color>
-    <color name="colorPrimary">#FF5722</color>
+    <color name="colorPrimary">#f97316</color>
     <color name="colorPrimaryDark">#E64A19</color>
-    <color name="colorAccent">#FF5722</color>
-    <color name="primary_color">#FF5722</color>
+    <color name="colorAccent">#f97316</color>
+    <color name="primary_color">#f97316</color>
     <color name="Accent">#d6302c</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
@@ -29,7 +29,7 @@
     <color name="landslide_safety_orange">#FF6F00</color>
     <color name="earthquake_safety_red">#C62828</color>
     <color name="red_secondary">#B71C1C</color>
-    <color name="orange_primary">#FF5722</color>
+    <color name="orange_primary">#f97316</color>
     <color name="orange_dark">#E64A19</color>
 
     <color name="dark_gray">#2C2C2C</color>
@@ -46,7 +46,7 @@
     <color name="orange_secondary">#FF7043</color>
 
     <!-- Bottom Navigation Colors -->
-    <color name="bottom_nav_selected">#FF5722</color>
+    <color name="bottom_nav_selected">#f97316</color>
     <color name="bottom_nav_unselected">#999999</color>
 
     <!-- Text Colors -->

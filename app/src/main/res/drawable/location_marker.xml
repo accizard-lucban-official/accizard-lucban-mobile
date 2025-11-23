@@ -11,7 +11,7 @@
     <!-- Pin body -->
     <item android:bottom="10dp">
         <shape android:shape="oval">
-            <solid android:color="#FF5722" />
+            <solid android:color="#f97316" />
             <size android:width="30dp" android:height="30dp" />
         </shape>
     </item>
@@ -19,7 +19,7 @@
     <!-- Pin point -->
     <item android:top="25dp">
         <shape android:shape="oval">
-            <solid android:color="#FF5722" />
+            <solid android:color="#f97316" />
             <size android:width="8dp" android:height="8dp" />
         </shape>
     </item>
@@ -32,83 +32,3 @@
         </shape>
     </item>
 </layer-list>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,0 +1,36 @@
+In terms of data protection and collection practices, we collect your personal information (like your name, contact info, and location) to support emergency response and improvement of the system. The data collected will be handled in accordance with our Privacy Policy. Rest assured that we do not sell your data with third-party advertisers. Please make sure to read below our Privacy Policy.
+
+Privacy Policy
+
+Information We Collect
+
+We collect various types of data to support emergency response and improve system performance. This includes your personal information such as your name, email address or contact number, and the account type you register with (Resident, LDRRMO Admin, or Super Admin). When reporting an incident, the app may collect your real-time GPS location (if enabled), a description of the hazard or accident, any attached photos, and the date and time the report was submitted. Additionally, we collect technical information such as your device type, operating system, and app usage logs to help us troubleshoot problems and analyze usage trends.
+
+How We Use Your Information
+
+We use the information to process and display reports on the map, notify LDRRMO for appropriate response, send alerts or warnings to users, improve system performance and user experience, and to verify and respond to user-submitted incidents. We do not use your data for advertising or share it with any commercial third party.
+
+Data Sharing and Disclosure
+
+We may share information only with authorized personnel such as LDRRMO staff for incident response and decision-making and researchers (in summary form, with no personal identifiers) for system evaluation or academic reporting. Your information is not sold, traded, or given to advertisers or unauthorized parties.
+
+How We Protect Your Data
+
+We use Firebase Authentication and Firestore Security Rules to encrypt your data in transit and at rest, control who can access which parts of the system, and prevent unauthorized data access. We also perform regular security reviews and restrict admin access to verified staff only.
+
+Your Rights as a User
+
+Under the Data Privacy Act of 2012, you have the right to access your data, correct inaccurate information, withdraw consent or request deletion, and file a complaint with the National Privacy Commission if you believe your rights have been violated. To make a request, please contact us through the details below.
+
+Data Retention
+
+We keep your data as long as your account is active, also for system improvement and research (in anonymized form), and until you request deletion or account termination.
+
+Children's Privacy
+
+This app is not intended for users under the age of 18. If we discover that a child has registered without proper consent, their account will be removed.
+
+Changes to This Policy
+
+We may update this Privacy Policy to reflect system improvements or legal changes. Updates will be posted in the app and on our official page. Your continued use means you agree to the latest version.
+

@@ -5,8 +5,8 @@
     android:orientation="vertical"
     android:background="#FFFFFF"
     android:padding="@dimen/padding_large"
-    android:clickable="true"
-    android:focusable="true">
+    android:clickable="false"
+    android:focusable="false">
 
     <!-- Title and Priority Badge Row -->
     <LinearLayout
@@ -78,12 +78,13 @@
         android:linksClickable="true"
         android:autoLink="web|email" />
 
-    <!-- Timestamp Row -->
+    <!-- Timestamp and Attachments Row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:layout_marginTop="@dimen/margin_small">
 
         <!-- Clock Icon -->
         <ImageView
@@ -97,11 +98,30 @@
         <!-- Timestamp -->
         <TextView
             android:id="@+id/tvAnnouncementDate"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="Jul 15, 2023"
             android:textSize="@dimen/text_size_small"
             android:textColor="#999999" />
+
+        <!-- View Attachments Link (shown only if attachment exists) -->
+        <TextView
+            android:id="@+id/tvViewAttachments"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="View Attachments"
+            android:textSize="@dimen/text_size_small"
+            android:textColor="#FF5722"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone"
+            android:paddingStart="@dimen/padding_small"
+            android:paddingEnd="@dimen/padding_small"
+            android:paddingTop="@dimen/padding_tiny"
+            android:paddingBottom="@dimen/padding_tiny"
+            android:background="?android:attr/selectableItemBackground" />
 
     </LinearLayout>
 

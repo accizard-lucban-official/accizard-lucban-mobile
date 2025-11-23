@@ -897,7 +897,8 @@ public class ChatActivity extends AppCompatActivity {
                 menuTakePhoto.setOnClickListener(v -> {
                     dialog.dismiss();
                     if (checkCameraPermission()) {
-                        openCamera();
+                        // Open camera that supports both photo and video capture
+                        openCameraForPhotoAndVideo();
                     } else {
                         requestCameraPermission();
                     }
@@ -961,6 +962,27 @@ public class ChatActivity extends AppCompatActivity {
             Toast.makeText(this, "Camera not available", Toast.LENGTH_SHORT).show();
         }
     }
+    
+    /**
+     * Open camera that supports both photo and video capture
+     * Uses ACTION_VIDEO_CAPTURE which many camera apps allow switching to photo mode
+     */
+    private void openCameraForPhotoAndVideo() {
+        try {
+            // Try video capture first (many camera apps allow switching to photo mode)
+            Intent videoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+            if (videoIntent.resolveActivity(getPackageManager()) != null) {
+                startActivityForResult(videoIntent, CAMERA_REQUEST_CODE);
+            } else {
+                // Fallback to photo capture
+                openCamera();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error opening camera for photo/video", e);
+            // Fallback to regular camera
+            openCamera();
+        }
+    }
 
     private void openGallery() {
         Intent galleryIntent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
@@ -1011,12 +1033,20 @@ public class ChatActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK && data != null) {
             if (requestCode == CAMERA_REQUEST_CODE) {
-                // Handle camera photo
-                Bitmap photoBitmap = (Bitmap) data.getExtras().get("data");
-                if (photoBitmap != null) {
-                    // Only upload to Firebase - realtime listener will add it to UI (prevents duplicates)
-                    uploadImageToFirebase(photoBitmap, true);
-                    Toast.makeText(this, "Uploading image...", Toast.LENGTH_SHORT).show();
+                // Handle camera photo or video
+                if (data.getData() != null) {
+                    // Video URI from camera
+                    Uri videoUri = data.getData();
+                    uploadVideoToFirebase(videoUri);
+                    Toast.makeText(this, "Uploading video...", Toast.LENGTH_SHORT).show();
+                } else if (data.getExtras() != null && data.getExtras().get("data") != null) {
+                    // Photo bitmap from camera
+                    Bitmap photoBitmap = (Bitmap) data.getExtras().get("data");
+                    if (photoBitmap != null) {
+                        // Only upload to Firebase - realtime listener will add it to UI (prevents duplicates)
+                        uploadImageToFirebase(photoBitmap, true);
+                        Toast.makeText(this, "Uploading image...", Toast.LENGTH_SHORT).show();
+                    }
                 }
             } else if (requestCode == GALLERY_REQUEST_CODE) {
                 // Handle gallery image

@@ -210,7 +210,7 @@
     <!-- Forecast Section -->
     <dimen name="dashboard_forecast_title_size">18sp</dimen>
     <dimen name="dashboard_forecast_day_padding">16dp</dimen>
-    <dimen name="dashboard_forecast_icon_size">32dp</dimen>
+    <dimen name="dashboard_forecast_icon_size">48dp</dimen>
     <dimen name="dashboard_forecast_temp_size">16sp</dimen>
     <dimen name="dashboard_forecast_day_name_size">14sp</dimen>
     <dimen name="dashboard_forecast_description_size">10sp</dimen>

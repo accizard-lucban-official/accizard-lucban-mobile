@@ -27,16 +27,6 @@
             android:contentDescription="Back button"
             android:scaleType="centerInside" />
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="About the App"
-            android:textSize="22sp"
-            android:textColor="#1A1A1A"
-            android:textStyle="bold"
-            android:gravity="center" />
-
         <View
             android:layout_width="32dp"
             android:layout_height="32dp" />
@@ -70,6 +60,17 @@
                     android:layout_height="170dp"
                     android:src="@drawable/logotypelogomark"
                     android:contentDescription="AcciZard Lucban Logo"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- About the App Text (below logo) -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="About the App"
+                    android:textSize="22sp"
+                    android:textColor="#1A1A1A"
+                    android:textStyle="bold"
+                    android:gravity="center"
                     android:layout_marginBottom="16dp" />
 
             </LinearLayout>

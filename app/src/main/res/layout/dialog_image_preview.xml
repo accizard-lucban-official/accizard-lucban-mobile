@@ -3,12 +3,13 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:background="@drawable/dialog_rounded_background">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Image Attachments"
+        android:text="Report Attachments"
         android:textSize="18sp"
         android:textStyle="bold"
         android:gravity="center"

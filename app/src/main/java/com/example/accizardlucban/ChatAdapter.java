@@ -109,10 +109,10 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
                     adminProfilePicture.setVisibility(View.GONE);
                 }
             } else {
-                // Admin message - show admin profile picture
+                // Admin message - show admin profile picture (app icon)
                 if (adminProfilePicture != null) {
                     adminProfilePicture.setVisibility(View.VISIBLE);
-                    adminProfilePicture.setImageResource(R.drawable.accizard_logo_svg);
+                    adminProfilePicture.setImageResource(R.drawable.appiconsquareandroid);
                 }
                 if (userProfilePicture != null) {
                     userProfilePicture.setVisibility(View.GONE);

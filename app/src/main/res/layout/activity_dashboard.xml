@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools"
-    android:background="@color/colorPrimary"
+    android:background="@color/orange_primary"
     android:orientation="vertical"
     android:clipChildren="false"
     android:clipToPadding="false"
@@ -84,7 +84,7 @@
                 android:layout_width="@dimen/dashboard_profile_size"
                 android:layout_height="@dimen/dashboard_profile_size"
                 android:src="@drawable/ic_person"
-                android:background="@drawable/circle_white_bg"
+                android:background="@drawable/circle_white_bg_with_outline"
                 android:layout_marginEnd="@dimen/spacing_medium"
                 android:contentDescription="User Avatar" />
 
@@ -1589,7 +1589,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Home"
-                    android:textColor="#FF5722"
+                    android:textColor="#f97316"
                     android:textSize="@dimen/dashboard_bottom_nav_text_size"
                     android:layout_marginTop="@dimen/margin_xxsmall" />
             </LinearLayout>

@@ -69,15 +69,18 @@ public class ProfessionalImageGalleryAdapter extends RecyclerView.Adapter<Profes
             }
         });
         
-        // Set click listener for remove button
-        holder.removeButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (onImageRemoveListener != null) {
+        // Set click listener for remove button (hide if no listener set)
+        if (onImageRemoveListener != null) {
+            holder.removeButton.setVisibility(View.VISIBLE);
+            holder.removeButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
                     onImageRemoveListener.onImageRemove(position, imageUri);
                 }
-            }
-        });
+            });
+        } else {
+            holder.removeButton.setVisibility(View.GONE);
+        }
         
         // Show image count badge if there are multiple images
         if (imageUris.size() > 1) {

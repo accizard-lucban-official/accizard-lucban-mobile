@@ -113,10 +113,19 @@ public class MainActivity extends AppCompatActivity {
             Log.d(TAG, "User explicitly logged out. Showing login screen.");
             prefs.edit().putBoolean(KEY_USER_LOGGED_OUT, false).apply(); // Reset flag
             setupLoginScreen();
+            setupAuthStateListener();
+            authCheckHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (!hasCheckedAuth) {
+                        checkAndAutoLogin();
+                    }
+                }
+            });
             return;
         }
 
-        // Check if user is already authenticated immediately
+        // Check if user is already authenticated BEFORE showing login screen
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             try {
@@ -124,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception ignored) {}
 
             if (currentUser.isEmailVerified()) {
-                Log.d(TAG, "User already authenticated. Skipping MainActivity login screen.");
+                Log.d(TAG, "User already authenticated. Skipping MainActivity login screen - navigating directly.");
                 String email = currentUser.getEmail() != null ? currentUser.getEmail() : "";
                 checkUserSuspensionStatus(email, () -> {
                     // User not suspended, proceed with login
@@ -132,27 +141,41 @@ public class MainActivity extends AppCompatActivity {
                     initializeFCMToken();
                     navigateAfterLoginFast(email);
                 });
-                return;
+                return; // Don't show login screen, navigate directly
             } else {
                 Log.w(TAG, "Authenticated user found but email not verified. Showing login screen.");
             }
         }
 
         // Set up AuthStateListener to wait for Firebase Auth to restore session
+        // This will handle cases where Firebase Auth hasn't restored the session yet
         setupAuthStateListener();
         
-        // Also set up login screen in case auth doesn't restore
-        setupLoginScreen();
-        
-        // Wait a bit for Firebase Auth to restore session, then check for saved credentials
-        authCheckHandler.postDelayed(new Runnable() {
+        // Check for saved credentials immediately (no delay)
+        // Firebase Auth should already be ready by the time we reach here
+        authCheckHandler.post(new Runnable() {
             @Override
             public void run() {
                 if (!hasCheckedAuth) {
+                    // Check again if user is authenticated (Firebase might have restored session)
+                    FirebaseUser user = mAuth.getCurrentUser();
+                    if (user != null && user.isEmailVerified()) {
+                        hasCheckedAuth = true;
+                        Log.d(TAG, "User authenticated during check. Navigating directly without showing login screen.");
+                        String email = user.getEmail() != null ? user.getEmail() : "";
+                        checkUserSuspensionStatus(email, () -> {
+                            initializeNotificationChannels();
+                            initializeFCMToken();
+                            navigateAfterLoginFast(email);
+                        });
+                        return;
+                    }
+                    // User not authenticated, show login screen
                     checkAndAutoLogin();
+                    setupLoginScreen();
                 }
             }
-        }, 500); // Wait 500ms for Firebase Auth to restore
+        });
     }
     
     /**

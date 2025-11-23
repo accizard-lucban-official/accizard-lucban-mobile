@@ -3,7 +3,7 @@
     <!-- Checked state - filled circle -->
     <item android:state_checked="true">
         <shape android:shape="oval">
-            <solid android:color="#FF5722"/>
+            <solid android:color="#f97316"/>
             <size android:width="20dp" android:height="20dp"/>
         </shape>
     </item>
@@ -17,11 +17,3 @@
         </shape>
     </item>
 </selector>
-
-
-
-
-
-
-
-

@@ -659,8 +659,88 @@ public class ValidIdActivity extends AppCompatActivity {
     private void createUserAccount() {
         saveValidIdData(); // Save current data before creating account
         btnNext.setEnabled(false);
-        btnNext.setText("Creating Account...");
+        btnNext.setText("Checking mobile number...");
 
+        // First check if mobile number is already in use
+        checkMobileNumberUniqueness(new MobileNumberCheckCallback() {
+            @Override
+            public void onResult(boolean isUnique, String message) {
+                if (!isUnique) {
+                    btnNext.setEnabled(true);
+                    btnNext.setText("Next");
+                    Toast.makeText(ValidIdActivity.this, message, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                
+                // Mobile number is unique, proceed with account creation
+                btnNext.setText("Creating Account...");
+                createFirebaseAccount();
+            }
+        });
+    }
+    
+    private interface MobileNumberCheckCallback {
+        void onResult(boolean isUnique, String message);
+    }
+    
+    private void checkMobileNumberUniqueness(MobileNumberCheckCallback callback) {
+        // Normalize mobile number for comparison
+        String normalizedMobile = normalizeMobileNumber(mobileNumber);
+        
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        // Check both mobileNumber and phoneNumber fields
+        db.collection("users")
+            .whereEqualTo("mobileNumber", normalizedMobile)
+            .limit(1)
+            .get()
+            .addOnSuccessListener(queryDocumentSnapshots -> {
+                if (!queryDocumentSnapshots.isEmpty()) {
+                    callback.onResult(false, "This mobile number is already registered. Please use a different number.");
+                    return;
+                }
+                
+                // Also check phoneNumber field
+                db.collection("users")
+                    .whereEqualTo("phoneNumber", normalizedMobile)
+                    .limit(1)
+                    .get()
+                    .addOnSuccessListener(queryDocumentSnapshots2 -> {
+                        if (!queryDocumentSnapshots2.isEmpty()) {
+                            callback.onResult(false, "This mobile number is already registered. Please use a different number.");
+                        } else {
+                            callback.onResult(true, "Mobile number is available");
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error checking mobile number uniqueness", e);
+                        // On error, allow registration to proceed (fail open)
+                        callback.onResult(true, "Could not verify mobile number uniqueness, proceeding...");
+                    });
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error checking mobile number uniqueness", e);
+                // On error, allow registration to proceed (fail open)
+                callback.onResult(true, "Could not verify mobile number uniqueness, proceeding...");
+            });
+    }
+    
+    private String normalizeMobileNumber(String mobileNumber) {
+        // Remove spaces, dashes, and normalize format
+        String normalized = mobileNumber.replaceAll("[\\s-]", "");
+        
+        // Convert to standard format (09XXXXXXXXX)
+        if (normalized.startsWith("+63")) {
+            normalized = "0" + normalized.substring(3);
+        } else if (normalized.startsWith("63")) {
+            normalized = "0" + normalized.substring(2);
+        } else if (!normalized.startsWith("0")) {
+            normalized = "0" + normalized;
+        }
+        
+        return normalized;
+    }
+    
+    private void createFirebaseAccount() {
         // Create user with Firebase Auth
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {

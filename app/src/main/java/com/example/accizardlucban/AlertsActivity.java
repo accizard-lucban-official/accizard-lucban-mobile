@@ -63,7 +63,9 @@ public class AlertsActivity extends AppCompatActivity {
     private static final String KEY_LAST_VIEWED_ANNOUNCEMENT_COUNT = "last_viewed_announcement_count";
     
     private Spinner filterSpinner;
+    private Spinner priorityFilterSpinner;
     private ImageView profileIcon;
+    private String selectedPriorityFilter = "All";
     private LinearLayout navHome, navChat, navMap, navAlerts;
     private FrameLayout navReport; // Changed to FrameLayout for circular button design
     private RecyclerView announcementsRecyclerView;
@@ -107,6 +109,7 @@ public class AlertsActivity extends AppCompatActivity {
         }
         
         setupSpinner();
+        setupPrioritySpinner();
         setupClickListeners();
         setupAnnouncementsRecyclerView();
         setupRealtimeAnnouncementListener();
@@ -117,6 +120,7 @@ public class AlertsActivity extends AppCompatActivity {
 
     private void initViews() {
         filterSpinner = findViewById(R.id.filter_spinner);
+        priorityFilterSpinner = findViewById(R.id.priority_filter_spinner);
         profileIcon = findViewById(R.id.profile_icon);
         navHome = findViewById(R.id.nav_home);
         navChat = findViewById(R.id.nav_chat);
@@ -166,15 +170,57 @@ public class AlertsActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
                 String filterWithEmoji = filterOptions[position];
-                // Strip emoji for filtering (announcement types don't have emojis)
-                selectedFilter = getFilterWithoutEmoji(filterWithEmoji);
+                // For "All", keep it as "All" (don't process emoji removal)
+                if (position == 0 || filterWithEmoji.equals("All")) {
+                    selectedFilter = "All";
+                } else {
+                    // Strip emoji for filtering (announcement types don't have emojis)
+                    selectedFilter = getFilterWithoutEmoji(filterWithEmoji);
+                }
                 android.util.Log.d("AlertsActivity", "Filter selected: " + filterWithEmoji + " (filtering with: " + selectedFilter + ")");
-                filterAnnouncements(selectedFilter);
+                filterAnnouncements(selectedFilter, selectedPriorityFilter);
             }
             
             @Override
             public void onNothingSelected(android.widget.AdapterView<?> parent) {
                 android.util.Log.d("AlertsActivity", "Nothing selected in spinner");
+            }
+        });
+    }
+    
+    /**
+     * Setup priority filter spinner
+     */
+    private void setupPrioritySpinner() {
+        String[] priorityOptions = {
+                "All",
+                "High",
+                "Medium",
+                "Low"
+        };
+        
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                priorityOptions
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        priorityFilterSpinner.setAdapter(adapter);
+
+        // Set initial selection
+        priorityFilterSpinner.setSelection(0);
+
+        priorityFilterSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                selectedPriorityFilter = priorityOptions[position];
+                android.util.Log.d("AlertsActivity", "Priority filter selected: " + selectedPriorityFilter);
+                filterAnnouncements(selectedFilter, selectedPriorityFilter);
+            }
+            
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+                android.util.Log.d("AlertsActivity", "Nothing selected in priority spinner");
             }
         });
     }
@@ -209,28 +255,70 @@ public class AlertsActivity extends AppCompatActivity {
         return withoutEmoji;
     }
 
-    private void filterAnnouncements(String filter) {
-        android.util.Log.d("AlertsActivity", "Filtering announcements with: " + filter);
+    private void filterAnnouncements(String filter, String priorityFilter) {
+        android.util.Log.d("AlertsActivity", "=== FILTERING ANNOUNCEMENTS ===");
+        android.util.Log.d("AlertsActivity", "Type filter: '" + filter + "'");
+        android.util.Log.d("AlertsActivity", "Priority filter: '" + priorityFilter + "'");
+        android.util.Log.d("AlertsActivity", "Total announcements available: " + fullAnnouncementList.size());
         
         announcementList.clear();
         
-        if (filter == null || filter.equals("All")) {
-            // Add all announcements (already sorted with newest first)
+        // Determine if we need to filter by type
+        boolean filterByType = filter != null && !filter.equals("All") && !filter.trim().isEmpty();
+        // Determine if we need to filter by priority
+        boolean filterByPriority = priorityFilter != null && !priorityFilter.equals("All") && !priorityFilter.trim().isEmpty();
+        
+        android.util.Log.d("AlertsActivity", "Filter by type: " + filterByType);
+        android.util.Log.d("AlertsActivity", "Filter by priority: " + filterByPriority);
+        
+        if (!filterByType && !filterByPriority) {
+            // No filters - show ALL announcements
             announcementList.addAll(fullAnnouncementList);
-            android.util.Log.d("AlertsActivity", "Showing all " + fullAnnouncementList.size() + " announcements (newest first)");
+            android.util.Log.d("AlertsActivity", "✅ Showing ALL " + fullAnnouncementList.size() + " announcements (no filters applied)");
         } else {
-            // Filter and maintain newest-first order
+            // Apply filters
             int count = 0;
             for (Announcement ann : fullAnnouncementList) {
-                if (ann != null && ann.type != null && ann.type.equalsIgnoreCase(filter)) {
+                if (ann == null) {
+                    continue;
+                }
+                
+                // Check type filter - if "All" is selected, always match
+                boolean matchesType = true;
+                if (filterByType) {
+                    String annType = ann.type != null ? ann.type.trim() : "";
+                    String filterType = filter != null ? filter.trim() : "";
+                    matchesType = annType.equalsIgnoreCase(filterType);
+                    android.util.Log.d("AlertsActivity", "  Type check: '" + annType + "' == '" + filterType + "' = " + matchesType);
+                } else {
+                    android.util.Log.d("AlertsActivity", "  Type filter is 'All' - matching all types");
+                }
+                
+                // Check priority filter - if "All" is selected, always match
+                boolean matchesPriority = true;
+                if (filterByPriority) {
+                    String annPriority = ann.priority != null ? ann.priority.trim() : "Medium";
+                    String filterPriority = priorityFilter != null ? priorityFilter.trim() : "";
+                    matchesPriority = annPriority.equalsIgnoreCase(filterPriority);
+                    android.util.Log.d("AlertsActivity", "  Priority check: '" + annPriority + "' == '" + filterPriority + "' = " + matchesPriority);
+                } else {
+                    android.util.Log.d("AlertsActivity", "  Priority filter is 'All' - matching all priorities");
+                }
+                
+                // Add if both filters match (or if one filter is not active)
+                if (matchesType && matchesPriority) {
                     announcementList.add(ann);
                     count++;
+                    android.util.Log.d("AlertsActivity", "  ✅ Added announcement: " + ann.type + " (" + ann.priority + ")");
                 }
             }
-            android.util.Log.d("AlertsActivity", "Found " + count + " announcements matching filter: " + filter + " (newest first)");
+            android.util.Log.d("AlertsActivity", "✅ Found " + count + " announcements matching filters");
         }
         
+        // Update adapter with filtered list
         announcementAdapter.updateAnnouncements(announcementList);
+        android.util.Log.d("AlertsActivity", "✅ Updated adapter with " + announcementList.size() + " announcements");
+        android.util.Log.d("AlertsActivity", "=== END FILTERING ===");
     }
 
     private void setupClickListeners() {
@@ -304,13 +392,8 @@ public class AlertsActivity extends AppCompatActivity {
         
         announcementsRecyclerView.setAdapter(announcementAdapter);
         
-        // Set click listener to show preview dialog
-        announcementAdapter.setOnAnnouncementClickListener(new AnnouncementAdapter.OnAnnouncementClickListener() {
-            @Override
-            public void onAnnouncementClick(Announcement announcement) {
-                showAnnouncementPreview(announcement);
-            }
-        });
+        // Remove click listener - announcements are no longer clickable
+        // Only attachments will be clickable via text link
     }
     
     /**
@@ -372,7 +455,7 @@ public class AlertsActivity extends AppCompatActivity {
                     Log.e(TAG, "Error in real-time listener: " + error.getMessage());
                     // Load sample data on error
                     loadSampleAnnouncements();
-                    filterAnnouncements(selectedFilter);
+                    filterAnnouncements(selectedFilter, selectedPriorityFilter);
                     android.widget.Toast.makeText(this, "Connection error. Showing sample data.", android.widget.Toast.LENGTH_SHORT).show();
                     isInitialLoad = false; // Mark initial load as complete
                     return;
@@ -447,7 +530,7 @@ public class AlertsActivity extends AppCompatActivity {
                     isInitialLoad = false;
                     
                     // Apply filter after initial load
-                    filterAnnouncements(selectedFilter);
+                    filterAnnouncements(selectedFilter, selectedPriorityFilter);
                 } else {
                     // After initial load, handle incremental changes
                     boolean hasChanges = false;
@@ -470,7 +553,7 @@ public class AlertsActivity extends AppCompatActivity {
                     
                     // If there were changes, refresh the filtered list and update badge
                     if (hasChanges) {
-                        filterAnnouncements(selectedFilter);
+                        filterAnnouncements(selectedFilter, selectedPriorityFilter);
                         updateBadgeCount(); // Update badge when announcements change
                         Log.d(TAG, "Real-time update: Refreshed announcement list after changes");
                     }
@@ -480,7 +563,7 @@ public class AlertsActivity extends AppCompatActivity {
                 if (fullAnnouncementList.isEmpty()) {
                     Log.d(TAG, "No announcements found, loading sample data");
                     loadSampleAnnouncements();
-                    filterAnnouncements(selectedFilter);
+                    filterAnnouncements(selectedFilter, selectedPriorityFilter);
                 }
                 
                 // Update notification badge count for other activities
@@ -499,7 +582,7 @@ public class AlertsActivity extends AppCompatActivity {
             Log.e(TAG, "Error setting up real-time listener: " + e.getMessage(), e);
             // Fallback to sample data
             loadSampleAnnouncements();
-            filterAnnouncements(selectedFilter);
+            filterAnnouncements(selectedFilter, selectedPriorityFilter);
         }
     }
     
@@ -544,7 +627,7 @@ public class AlertsActivity extends AppCompatActivity {
                 Log.d(TAG, "Toast notification shown for new announcement: " + newAnnouncement.type);
                 
                 // Apply filter and scroll to top to show the new announcement
-                filterAnnouncements(selectedFilter);
+                filterAnnouncements(selectedFilter, selectedPriorityFilter);
                 scrollToTop();
             } else {
                 Log.d(TAG, "Skipping toast notification during initial load for: " + newAnnouncement.type);
@@ -1561,6 +1644,82 @@ public class AlertsActivity extends AppCompatActivity {
     }
     
     /**
+     * Show attachments dialog for alert (similar to reports log)
+     */
+    private void showAlertAttachmentsDialog(Announcement announcement) {
+        try {
+            if (announcement.imageUrl == null || announcement.imageUrl.trim().isEmpty()) {
+                android.widget.Toast.makeText(this, "No attachments available for this alert", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            Log.d(TAG, "Showing attachments dialog for alert: " + announcement.type);
+            Log.d(TAG, "Image URL: " + announcement.imageUrl);
+            
+            // Convert String URL to Uri list
+            List<Uri> imageUris = new ArrayList<>();
+            try {
+                Uri uri = Uri.parse(announcement.imageUrl);
+                imageUris.add(uri);
+                Log.d(TAG, "Added image URI: " + uri.toString());
+            } catch (Exception e) {
+                Log.e(TAG, "Invalid image URL: " + announcement.imageUrl, e);
+                android.widget.Toast.makeText(this, "Invalid attachment URL", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            if (imageUris.isEmpty()) {
+                android.widget.Toast.makeText(this, "No valid image attachments found", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+            android.view.LayoutInflater inflater = getLayoutInflater();
+            View dialogView = inflater.inflate(R.layout.dialog_image_preview, null);
+            
+            // Setup horizontal RecyclerView in dialog
+            RecyclerView dialogRecyclerView = dialogView.findViewById(R.id.dialogImagesRecyclerView);
+            if (dialogRecyclerView != null) {
+                LinearLayoutManager dialogLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+                dialogRecyclerView.setLayoutManager(dialogLayoutManager);
+                
+                // Create adapter for dialog
+                ProfessionalImageGalleryAdapter dialogAdapter = new ProfessionalImageGalleryAdapter(this, imageUris);
+                dialogAdapter.setOnImageClickListener(new ProfessionalImageGalleryAdapter.OnImageClickListener() {
+                    @Override
+                    public void onImageClick(int position, Uri clickedImageUri) {
+                        Log.d(TAG, "Image clicked: " + clickedImageUri.toString());
+                        // Show full screen image view
+                        showFullScreenAnnouncementImage(clickedImageUri.toString());
+                    }
+                });
+                
+                dialogRecyclerView.setAdapter(dialogAdapter);
+                Log.d(TAG, "Dialog RecyclerView setup complete with " + imageUris.size() + " images");
+            } else {
+                Log.e(TAG, "Dialog RecyclerView not found in layout");
+            }
+            
+            // Fallback vertical layout (hidden)
+            LinearLayout imagesContainer = dialogView.findViewById(R.id.imagesContainer);
+            if (imagesContainer != null) {
+                imagesContainer.setVisibility(View.GONE);
+            }
+            
+            builder.setView(dialogView)
+                    .setTitle("Alert Attachments (" + imageUris.size() + ")")
+                    .setPositiveButton("Close", null)
+                    .show();
+                    
+            Log.d(TAG, "Attachments dialog shown successfully");
+                    
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing attachments dialog", e);
+            android.widget.Toast.makeText(this, "Error showing attachments: " + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
      * Show fullscreen image preview for announcement image
      */
     private void showFullScreenAnnouncementImage(String imageUrl) {
@@ -1806,19 +1965,25 @@ public class AlertsActivity extends AppCompatActivity {
                     String priority = ann.priority != null ? ann.priority : "Medium";
                     setPriorityBadge(holder, priority);
                     
-                    // Set click listener on item view
-                    holder.itemView.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            if (onAnnouncementClickListener != null) {
-                                onAnnouncementClickListener.onAnnouncementClick(ann);
-                            }
-                        }
-                    });
+                    // Remove click listener - item is no longer clickable
+                    holder.itemView.setOnClickListener(null);
+                    holder.itemView.setClickable(false);
+                    holder.itemView.setFocusable(false);
                     
-                    // Make item view clickable
-                    holder.itemView.setClickable(true);
-                    holder.itemView.setFocusable(true);
+                    // Show/hide "View Attachments" link based on whether image exists
+                    if (holder.tvViewAttachments != null) {
+                        if (ann.imageUrl != null && !ann.imageUrl.trim().isEmpty()) {
+                            holder.tvViewAttachments.setVisibility(View.VISIBLE);
+                            holder.tvViewAttachments.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    showAlertAttachmentsDialog(ann);
+                                }
+                            });
+                        } else {
+                            holder.tvViewAttachments.setVisibility(View.GONE);
+                        }
+                    }
                 } else {
                     // Handle null announcement
                     holder.tvType.setText("Error");
@@ -2107,7 +2272,7 @@ public class AlertsActivity extends AppCompatActivity {
         }
         
         class AnnouncementViewHolder extends RecyclerView.ViewHolder {
-            TextView tvType, tvPriority, tvMessage, tvDate;
+            TextView tvType, tvPriority, tvMessage, tvDate, tvViewAttachments;
             View priorityDot;
             LinearLayout priorityBadgeContainer;
             ImageView timeIcon;
@@ -2118,6 +2283,7 @@ public class AlertsActivity extends AppCompatActivity {
                 tvPriority = itemView.findViewById(R.id.tvAnnouncementPriority);
                 tvMessage = itemView.findViewById(R.id.tvAnnouncementMessage);
                 tvDate = itemView.findViewById(R.id.tvAnnouncementDate);
+                tvViewAttachments = itemView.findViewById(R.id.tvViewAttachments);
                 priorityDot = itemView.findViewById(R.id.priorityDot);
                 priorityBadgeContainer = itemView.findViewById(R.id.priorityBadgeContainer);
                 timeIcon = itemView.findViewById(R.id.timeIcon);

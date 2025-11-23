@@ -48,13 +48,16 @@ public class EditProfileActivity extends AppCompatActivity {
     private static final int GALLERY_REQUEST_CODE = 1002;
     private static final int CAMERA_PERMISSION_CODE = 1003;
     private static final int STORAGE_PERMISSION_CODE = 1004;
+    private static final int VALID_ID_CAMERA_REQUEST_CODE = 1005;
+    private static final int VALID_ID_GALLERY_REQUEST_CODE = 1006;
 
     private ImageView backButton, profilePicture, editPictureButton;
-    private Button saveButton;
+    private ImageView validIdImage;
+    private Button saveButton, uploadValidIdButton;
     private EditText firstNameEdit, lastNameEdit, mobileNumberEdit,
-            provinceEdit, cityEdit, streetAddressEdit, birthdayEdit, religionEdit;
+            provinceEdit, cityEdit, streetAddressEdit, birthdayEdit;
     private AutoCompleteTextView barangayEdit;
-    private Spinner genderSpinner, civilStatusSpinner, bloodTypeSpinner, pwdStatusSpinner;
+    private Spinner genderSpinner, civilStatusSpinner, religionSpinner, bloodTypeSpinner, pwdStatusSpinner;
 
     private static final String PREFS_NAME = "user_profile_prefs";
     private static final String KEY_FIRST_NAME = "first_name";
@@ -68,6 +71,10 @@ public class EditProfileActivity extends AppCompatActivity {
     private Bitmap newProfileBitmap;
     private Uri newProfileImageUri;
     private boolean hasNewProfilePicture = false;
+    
+    private Bitmap newValidIdBitmap;
+    private Uri newValidIdImageUri;
+    private boolean hasNewValidId = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,6 +86,7 @@ public class EditProfileActivity extends AppCompatActivity {
         setupBarangayAdapter();
         loadUserData();
         loadProfilePicture();
+        loadValidId();
     }
 
     private void initViews() {
@@ -97,13 +105,18 @@ public class EditProfileActivity extends AppCompatActivity {
         birthdayEdit = findViewById(R.id.birthday_edit);
         genderSpinner = findViewById(R.id.gender_spinner);
         civilStatusSpinner = findViewById(R.id.civil_status_spinner);
-        religionEdit = findViewById(R.id.religion_edit);
+        religionSpinner = findViewById(R.id.religion_spinner);
         bloodTypeSpinner = findViewById(R.id.blood_type_spinner);
         pwdStatusSpinner = findViewById(R.id.pwd_status_spinner);
+        
+        // Valid ID views
+        validIdImage = findViewById(R.id.valid_id_image);
+        uploadValidIdButton = findViewById(R.id.upload_valid_id_button);
         
         // Setup spinners
         setupGenderSpinner();
         setupCivilStatusSpinner();
+        setupReligionSpinner();
         setupBloodTypeSpinner();
         setupPWDStatusSpinner();
     }
@@ -128,6 +141,13 @@ public class EditProfileActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 saveProfile();
+            }
+        });
+
+        uploadValidIdButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showValidIdImagePickerDialog();
             }
         });
 
@@ -180,6 +200,17 @@ public class EditProfileActivity extends AppCompatActivity {
         );
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         civilStatusSpinner.setAdapter(adapter);
+    }
+
+    private void setupReligionSpinner() {
+        String[] religions = {"Select Religion", "Roman Catholic", "Protestant", "Islam", "Iglesia ni Cristo", "Baptist", "Methodist", "Seventh-day Adventist", "Jehovah's Witnesses", "Buddhism", "Hinduism", "Other"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                religions
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        religionSpinner.setAdapter(adapter);
     }
 
     private void setupBloodTypeSpinner() {
@@ -261,11 +292,11 @@ public class EditProfileActivity extends AppCompatActivity {
             
             // Load new fields
             birthdayEdit.setText(prefs.getString("birthday", ""));
-            religionEdit.setText(prefs.getString("religion", ""));
             
             // Set spinner selections
             setSpinnerSelection(genderSpinner, prefs.getString("gender", ""));
             setSpinnerSelection(civilStatusSpinner, prefs.getString("civil_status", ""));
+            setSpinnerSelection(religionSpinner, prefs.getString("religion", ""));
             setSpinnerSelection(bloodTypeSpinner, prefs.getString("blood_type", ""));
             setSpinnerSelection(pwdStatusSpinner, prefs.getString("pwd_status", ""));
         }
@@ -355,8 +386,8 @@ public class EditProfileActivity extends AppCompatActivity {
                     if (civilStatus != null && civilStatusSpinner.getSelectedItemPosition() == 0) {
                         setSpinnerSelection(civilStatusSpinner, civilStatus);
                     }
-                    if (religion != null && religionEdit.getText().toString().trim().isEmpty()) {
-                        religionEdit.setText(religion);
+                    if (religion != null && religionSpinner.getSelectedItemPosition() == 0) {
+                        setSpinnerSelection(religionSpinner, religion);
                     }
                     if (bloodType != null && bloodTypeSpinner.getSelectedItemPosition() == 0) {
                         setSpinnerSelection(bloodTypeSpinner, bloodType);
@@ -412,10 +443,32 @@ public class EditProfileActivity extends AppCompatActivity {
         String birthday = birthdayEdit.getText().toString().trim();
         String gender = genderSpinner.getSelectedItemPosition() > 0 ? genderSpinner.getSelectedItem().toString() : "";
         String civilStatus = civilStatusSpinner.getSelectedItemPosition() > 0 ? civilStatusSpinner.getSelectedItem().toString() : "";
-        String religion = religionEdit.getText().toString().trim();
+        String religion = religionSpinner.getSelectedItemPosition() > 0 ? religionSpinner.getSelectedItem().toString() : "";
         String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
         String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
 
+        // Check mobile number uniqueness if it's being changed
+        if (!mobileNumber.isEmpty()) {
+            checkMobileNumberUniquenessForEdit(mobileNumber, () -> {
+                // Mobile number is unique or same as current, proceed with save
+                proceedWithSaveProfile(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
+                        birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+            }, () -> {
+                // Mobile number already in use
+                mobileNumberEdit.setError("This mobile number is already registered");
+                mobileNumberEdit.requestFocus();
+                Toast.makeText(EditProfileActivity.this, "This mobile number is already registered. Please use a different number.", Toast.LENGTH_LONG).show();
+            });
+        } else {
+            proceedWithSaveProfile(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
+                    birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+        }
+    }
+    
+    private void proceedWithSaveProfile(String firstName, String lastName, String mobileNumber,
+                                       String province, String city, String barangay, String streetAddress,
+                                       String birthday, String gender, String civilStatus, String religion,
+                                       String bloodType, String pwdStatus) {
         // Save to SharedPreferences immediately for instant local updates
         ProfileDataManager profileManager = ProfileDataManager.getInstance(this);
         profileManager.saveProfileLocally(firstName, lastName, mobileNumber, null, province, city, barangay, streetAddress);
@@ -441,6 +494,117 @@ public class EditProfileActivity extends AppCompatActivity {
         // Proceed with profile sync
         proceedWithProfileSync(firstName, lastName, mobileNumber, province, city, barangay, streetAddress, 
                 birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+        
+        // Upload Valid ID if there's a new one
+        if (hasNewValidId && newValidIdBitmap != null) {
+            uploadValidId();
+        }
+    }
+    
+    private void checkMobileNumberUniquenessForEdit(String mobileNumber, Runnable onUnique, Runnable onDuplicate) {
+        // Normalize mobile number
+        String normalizedMobile = normalizeMobileNumber(mobileNumber);
+        
+        // Get current user's mobile number to allow keeping the same number
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            onUnique.run();
+            return;
+        }
+        
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("users")
+            .whereEqualTo("firebaseUid", user.getUid())
+            .limit(1)
+            .get()
+            .addOnSuccessListener(queryDocumentSnapshots -> {
+                String currentMobileNumber = null;
+                String currentPhoneNumber = null;
+                
+                if (!queryDocumentSnapshots.isEmpty()) {
+                    QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
+                    currentMobileNumber = doc.getString("mobileNumber");
+                    currentPhoneNumber = doc.getString("phoneNumber");
+                }
+                
+                // Normalize current numbers for comparison
+                String normalizedCurrentMobile = currentMobileNumber != null ? normalizeMobileNumber(currentMobileNumber) : null;
+                String normalizedCurrentPhone = currentPhoneNumber != null ? normalizeMobileNumber(currentPhoneNumber) : null;
+                
+                // If the new number is the same as current, allow it
+                if (normalizedMobile.equals(normalizedCurrentMobile) || normalizedMobile.equals(normalizedCurrentPhone)) {
+                    onUnique.run();
+                    return;
+                }
+                
+                // Check if mobile number is already in use by another user
+                db.collection("users")
+                    .whereEqualTo("mobileNumber", normalizedMobile)
+                    .limit(1)
+                    .get()
+                    .addOnSuccessListener(queryDocumentSnapshots2 -> {
+                        if (!queryDocumentSnapshots2.isEmpty()) {
+                            // Check if it's the same user
+                            QueryDocumentSnapshot doc2 = (QueryDocumentSnapshot) queryDocumentSnapshots2.getDocuments().get(0);
+                            String docUid = doc2.getString("firebaseUid");
+                            if (docUid != null && docUid.equals(user.getUid())) {
+                                onUnique.run();
+                            } else {
+                                onDuplicate.run();
+                            }
+                        } else {
+                            // Also check phoneNumber field
+                            db.collection("users")
+                                .whereEqualTo("phoneNumber", normalizedMobile)
+                                .limit(1)
+                                .get()
+                                .addOnSuccessListener(queryDocumentSnapshots3 -> {
+                                    if (!queryDocumentSnapshots3.isEmpty()) {
+                                        QueryDocumentSnapshot doc3 = (QueryDocumentSnapshot) queryDocumentSnapshots3.getDocuments().get(0);
+                                        String docUid3 = doc3.getString("firebaseUid");
+                                        if (docUid3 != null && docUid3.equals(user.getUid())) {
+                                            onUnique.run();
+                                        } else {
+                                            onDuplicate.run();
+                                        }
+                                    } else {
+                                        onUnique.run();
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Error checking phoneNumber uniqueness", e);
+                                    // On error, allow update to proceed
+                                    onUnique.run();
+                                });
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error checking mobileNumber uniqueness", e);
+                        // On error, allow update to proceed
+                        onUnique.run();
+                    });
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error getting current user data", e);
+                // On error, allow update to proceed
+                onUnique.run();
+            });
+    }
+    
+    private String normalizeMobileNumber(String mobileNumber) {
+        // Remove spaces, dashes, and normalize format
+        String normalized = mobileNumber.replaceAll("[\\s-]", "");
+        
+        // Convert to standard format (09XXXXXXXXX)
+        if (normalized.startsWith("+63")) {
+            normalized = "0" + normalized.substring(3);
+        } else if (normalized.startsWith("63")) {
+            normalized = "0" + normalized.substring(2);
+        } else if (!normalized.startsWith("0")) {
+            normalized = "0" + normalized;
+        }
+        
+        return normalized;
     }
 
     private void proceedWithProfileSync(String firstName, String lastName, String mobileNumber,
@@ -637,6 +801,8 @@ public class EditProfileActivity extends AppCompatActivity {
             mobileNumberEdit.setError("Invalid mobile number format (should be 09XXXXXXXXX)");
             isValid = false;
         }
+        
+        // Mobile number uniqueness will be checked asynchronously before saving
 
         // Validate province (required if city is provided)
         String province = provinceEdit.getText().toString().trim();
@@ -665,6 +831,34 @@ public class EditProfileActivity extends AppCompatActivity {
                 case 1:
                     if (checkStoragePermission()) {
                         openGallery();
+                    } else {
+                        requestStoragePermission();
+                    }
+                    break;
+                case 2:
+                    dialog.dismiss();
+                    break;
+            }
+        });
+        builder.show();
+    }
+
+    private void showValidIdImagePickerDialog() {
+        String[] options = {"Take Photo", "Choose from Gallery", "Cancel"};
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Select Valid ID");
+        builder.setItems(options, (dialog, which) -> {
+            switch (which) {
+                case 0:
+                    if (checkCameraPermission()) {
+                        openValidIdCamera();
+                    } else {
+                        requestCameraPermission();
+                    }
+                    break;
+                case 1:
+                    if (checkStoragePermission()) {
+                        openValidIdGallery();
                     } else {
                         requestStoragePermission();
                     }
@@ -719,6 +913,24 @@ public class EditProfileActivity extends AppCompatActivity {
         }
     }
 
+    private void openValidIdCamera() {
+        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (cameraIntent.resolveActivity(getPackageManager()) != null) {
+            startActivityForResult(cameraIntent, VALID_ID_CAMERA_REQUEST_CODE);
+        } else {
+            Toast.makeText(this, "Camera not available", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void openValidIdGallery() {
+        Intent galleryIntent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        if (galleryIntent.resolveActivity(getPackageManager()) != null) {
+            startActivityForResult(galleryIntent, VALID_ID_GALLERY_REQUEST_CODE);
+        } else {
+            Toast.makeText(this, "Gallery not available", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -767,6 +979,33 @@ public class EditProfileActivity extends AppCompatActivity {
                         }
                     } catch (Exception e) {
                         Log.e(TAG, "Error loading image from gallery", e);
+                        Toast.makeText(this, "Error loading image", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            } else if (requestCode == VALID_ID_CAMERA_REQUEST_CODE) {
+                Bitmap bitmap = (Bitmap) data.getExtras().get("data");
+                if (bitmap != null) {
+                    validIdImage.setImageBitmap(bitmap);
+                    validIdImage.setVisibility(View.VISIBLE);
+                    newValidIdBitmap = bitmap;
+                    hasNewValidId = true;
+                    Toast.makeText(this, "Valid ID captured successfully", Toast.LENGTH_SHORT).show();
+                }
+            } else if (requestCode == VALID_ID_GALLERY_REQUEST_CODE) {
+                Uri selectedImageUri = data.getData();
+                if (selectedImageUri != null) {
+                    try {
+                        InputStream inputStream = getContentResolver().openInputStream(selectedImageUri);
+                        Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+                        if (bitmap != null) {
+                            validIdImage.setImageBitmap(bitmap);
+                            validIdImage.setVisibility(View.VISIBLE);
+                            newValidIdBitmap = bitmap;
+                            hasNewValidId = true;
+                            Toast.makeText(this, "Valid ID selected successfully", Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error loading Valid ID image from gallery", e);
                         Toast.makeText(this, "Error loading image", Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -901,7 +1140,7 @@ public class EditProfileActivity extends AppCompatActivity {
             String birthday = birthdayEdit.getText().toString().trim();
             String gender = genderSpinner.getSelectedItemPosition() > 0 ? genderSpinner.getSelectedItem().toString() : "";
             String civilStatus = civilStatusSpinner.getSelectedItemPosition() > 0 ? civilStatusSpinner.getSelectedItem().toString() : "";
-            String religion = religionEdit.getText().toString().trim();
+            String religion = religionSpinner.getSelectedItemPosition() > 0 ? religionSpinner.getSelectedItem().toString() : "";
             String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
             String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
             syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
@@ -944,7 +1183,7 @@ public class EditProfileActivity extends AppCompatActivity {
                                         String birthday = birthdayEdit.getText().toString().trim();
                                         String gender = genderSpinner.getSelectedItemPosition() > 0 ? genderSpinner.getSelectedItem().toString() : "";
                                         String civilStatus = civilStatusSpinner.getSelectedItemPosition() > 0 ? civilStatusSpinner.getSelectedItem().toString() : "";
-                                        String religion = religionEdit.getText().toString().trim();
+                                        String religion = religionSpinner.getSelectedItemPosition() > 0 ? religionSpinner.getSelectedItem().toString() : "";
                                         String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
                                         String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
                                         syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
@@ -965,7 +1204,7 @@ public class EditProfileActivity extends AppCompatActivity {
                                         String birthday = birthdayEdit.getText().toString().trim();
                                         String gender = genderSpinner.getSelectedItemPosition() > 0 ? genderSpinner.getSelectedItem().toString() : "";
                                         String civilStatus = civilStatusSpinner.getSelectedItemPosition() > 0 ? civilStatusSpinner.getSelectedItem().toString() : "";
-                                        String religion = religionEdit.getText().toString().trim();
+                                        String religion = religionSpinner.getSelectedItemPosition() > 0 ? religionSpinner.getSelectedItem().toString() : "";
                                         String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
                                         String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
                                         syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
@@ -991,7 +1230,7 @@ public class EditProfileActivity extends AppCompatActivity {
                             String birthday = birthdayEdit.getText().toString().trim();
                             String gender = genderSpinner.getSelectedItemPosition() > 0 ? genderSpinner.getSelectedItem().toString() : "";
                             String civilStatus = civilStatusSpinner.getSelectedItemPosition() > 0 ? civilStatusSpinner.getSelectedItem().toString() : "";
-                            String religion = religionEdit.getText().toString().trim();
+                            String religion = religionSpinner.getSelectedItemPosition() > 0 ? religionSpinner.getSelectedItem().toString() : "";
                             String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
                             String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
                             syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
@@ -1010,12 +1249,136 @@ public class EditProfileActivity extends AppCompatActivity {
             String birthday = birthdayEdit.getText().toString().trim();
             String gender = genderSpinner.getSelectedItemPosition() > 0 ? genderSpinner.getSelectedItem().toString() : "";
             String civilStatus = civilStatusSpinner.getSelectedItemPosition() > 0 ? civilStatusSpinner.getSelectedItem().toString() : "";
-            String religion = religionEdit.getText().toString().trim();
+            String religion = religionSpinner.getSelectedItemPosition() > 0 ? religionSpinner.getSelectedItem().toString() : "";
             String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
             String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
             syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
                     birthday, gender, civilStatus, religion, bloodType, pwdStatus);
         }
+    }
+
+    private void loadValidId() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null && validIdImage != null) {
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            db.collection("users")
+                .whereEqualTo("firebaseUid", user.getUid())
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
+                        String validIdUrl = doc.getString("validIdUrl");
+                        Log.d(TAG, "Found Valid ID URL: " + validIdUrl);
+                        
+                        if (validIdUrl != null && !validIdUrl.isEmpty()) {
+                            loadValidIdFromUrl(validIdUrl);
+                        } else {
+                            Log.d(TAG, "No Valid ID URL found in Firestore");
+                            // Try to check if Valid ID exists in Firebase Storage
+                            checkValidIdInStorage(user.getUid());
+                        }
+                    } else {
+                        Log.d(TAG, "No user document found for firebaseUid: " + user.getUid());
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading Valid ID", e);
+                });
+        }
+    }
+
+    private void checkValidIdInStorage(String firebaseUid) {
+        FirebaseStorage storage = FirebaseStorage.getInstance();
+        StorageReference validIdRef = storage.getReference().child("valid_ids/" + firebaseUid + "/id.jpg");
+        
+        validIdRef.getDownloadUrl().addOnSuccessListener(uri -> {
+            Log.d(TAG, "Found Valid ID in Storage: " + uri.toString());
+            loadValidIdFromUrl(uri.toString());
+            // Update Firestore with the found URL
+            updateValidIdUrlInFirestore(uri.toString());
+        }).addOnFailureListener(e -> {
+            Log.d(TAG, "No Valid ID found in Storage for UID: " + firebaseUid);
+        });
+    }
+
+    private void loadValidIdFromUrl(String imageUrl) {
+        new Thread(() -> {
+            try {
+                java.net.URL url = new java.net.URL(imageUrl);
+                final Bitmap bitmap = BitmapFactory.decodeStream(url.openConnection().getInputStream());
+                runOnUiThread(() -> {
+                    if (bitmap != null && validIdImage != null) {
+                        validIdImage.setImageBitmap(bitmap);
+                        validIdImage.setVisibility(View.VISIBLE);
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error loading Valid ID from URL", e);
+            }
+        }).start();
+    }
+
+    private void updateValidIdUrlInFirestore(String validIdUrl) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("users")
+            .whereEqualTo("firebaseUid", user.getUid())
+            .limit(1)
+            .get()
+            .addOnSuccessListener(queryDocumentSnapshots -> {
+                if (!queryDocumentSnapshots.isEmpty()) {
+                    QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
+                    String docId = doc.getId();
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("validIdUrl", validIdUrl);
+                    
+                    db.collection("users").document(docId)
+                        .update(updates)
+                        .addOnSuccessListener(aVoid -> {
+                            Log.d(TAG, "Valid ID URL updated in Firestore");
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e(TAG, "Error updating Valid ID URL in Firestore", e);
+                        });
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error querying user document for Valid ID update", e);
+            });
+    }
+
+    private void uploadValidId() {
+        if (!hasNewValidId || newValidIdBitmap == null) {
+            return;
+        }
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Toast.makeText(this, "User not signed in", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String userId = user.getUid();
+        StorageHelper.uploadValidIdImage(userId, newValidIdBitmap,
+                new OnSuccessListener<String>() {
+                    @Override
+                    public void onSuccess(String downloadUrl) {
+                        Log.d(TAG, "Valid ID uploaded successfully: " + downloadUrl);
+                        // Update Firestore with Valid ID URL
+                        updateValidIdUrlInFirestore(downloadUrl);
+                        Toast.makeText(EditProfileActivity.this, "Valid ID uploaded successfully", Toast.LENGTH_SHORT).show();
+                    }
+                },
+                new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.e(TAG, "Error uploading Valid ID", e);
+                        Toast.makeText(EditProfileActivity.this, "Failed to upload Valid ID: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     // Old methods removed - now using ProfileDataManager for all sync operations

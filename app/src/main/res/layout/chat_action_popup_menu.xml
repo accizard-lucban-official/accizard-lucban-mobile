@@ -34,7 +34,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Take a Photo"
+                android:text="Open Camera"
                 android:textColor="@android:color/white"
                 android:textSize="16sp"
                 android:fontFamily="@font/dmsans" />

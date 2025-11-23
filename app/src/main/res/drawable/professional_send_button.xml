@@ -3,11 +3,11 @@
     android:shape="oval">
     
     <!-- Background color -->
-    <solid android:color="#FF5722" />
+    <solid android:color="#f97316" />
     
     <!-- Gradient for professional look -->
     <gradient
-        android:startColor="#FF5722"
+        android:startColor="#f97316"
         android:endColor="#E64A19"
         android:angle="135" />
     
@@ -17,86 +17,3 @@
         android:color="#D84315" />
         
 </shape>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

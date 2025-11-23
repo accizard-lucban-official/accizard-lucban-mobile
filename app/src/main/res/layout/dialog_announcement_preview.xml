@@ -26,7 +26,7 @@
                 android:layout_width="@dimen/icon_size_large"
                 android:layout_height="@dimen/icon_size_large"
                 android:src="@drawable/ic_megaphone"
-                android:tint="#FF5722"
+                android:tint="#f97316"
                 android:layout_marginEnd="@dimen/spacing_medium" />
 
             <TextView
@@ -178,7 +178,7 @@
                 android:layout_width="@dimen/icon_size_small"
                 android:layout_height="@dimen/icon_size_small"
                 android:src="@drawable/ic_info"
-                android:tint="#FF5722"
+                android:tint="#f97316"
                 android:layout_marginEnd="@dimen/margin_tiny" />
 
             <TextView

@@ -26,14 +26,11 @@
             android:padding="4dp"
             android:contentDescription="Back button" />
 
-        <TextView
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Profile"
-            android:textSize="20sp"
-            android:textColor="#333333"
-            android:textStyle="bold"
+            android:orientation="horizontal"
             android:gravity="center" />
 
         <LinearLayout
@@ -51,14 +48,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Sign Out"
-                android:textColor="#FF5722"
+                android:textColor="#f97316"
                 android:textSize="16sp" />
 
             <ImageView
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/ic_arrow_right"
-                android:tint="#FF5722"
+                android:tint="#f97316"
                 android:layout_marginStart="4dp"
                 android:contentDescription="Arrow right" />
 
@@ -82,6 +79,18 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
+
+            <!-- Profile Text Header (Centered below top app bar) -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Profile"
+                android:textSize="20sp"
+                android:textColor="#333333"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:paddingTop="16dp"
+                android:paddingBottom="8dp" />
 
             <!-- Profile Picture Section -->
             <LinearLayout
@@ -116,6 +125,17 @@
                         
                 </FrameLayout>
 
+                <!-- Resident Name (Smaller text size) -->
+                <TextView
+                    android:id="@+id/resident_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Resident Name"
+                    android:textSize="16sp"
+                    android:textColor="#333333"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
+
                 <!-- Edit Profile Button -->
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -132,7 +152,7 @@
                         android:layout_width="16dp"
                         android:layout_height="16dp"
                         android:src="@drawable/ic_edit"
-                        android:tint="#FF5722"
+                        android:tint="#f97316"
                         android:layout_marginEnd="8dp"
                         android:contentDescription="Edit icon" />
 
@@ -141,22 +161,11 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Edit Profile"
-                        android:textColor="#FF5722"
+                        android:textColor="#f97316"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
                 </LinearLayout>
-
-                <!-- Resident Name -->
-                <TextView
-                    android:id="@+id/resident_name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Resident Name"
-                    android:textSize="24sp"
-                    android:textColor="#333333"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="8dp" />
 
                 <!-- Verified Status -->
                 <LinearLayout
@@ -211,7 +220,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/accizard_logo_svg"
-                    android:tint="#FF5722"
+                    android:tint="#f97316"
                     android:layout_marginEnd="16dp"
                     android:contentDescription="Shield icon" />
 
@@ -243,7 +252,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_share"
-                    android:tint="#FF5722"
+                    android:tint="#f97316"
                     android:contentDescription="Share icon" />
 
             </LinearLayout>
@@ -288,14 +297,14 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_person"
-                        android:tint="#FF5722"
+                        android:tint="#f97316"
                         android:layout_marginEnd="16dp"
                         android:contentDescription="Person icon" />
 
                     <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Resident Name:"
+                            android:text="Resident Name"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textStyle="bold" />
@@ -334,14 +343,14 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_phone"
-                        android:tint="#FF5722"
+                        android:tint="#f97316"
                         android:layout_marginEnd="16dp"
                         android:contentDescription="Phone icon" />
 
                     <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Mobile Number:"
+                            android:text="Mobile Number"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textStyle="bold" />
@@ -380,14 +389,14 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_email"
-                        android:tint="#FF5722"
+                        android:tint="#f97316"
                         android:layout_marginEnd="16dp"
                         android:contentDescription="Email icon" />
 
                     <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Email Address:"
+                            android:text="Email Address"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textStyle="bold" />
@@ -426,14 +435,14 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/vector"
-                        android:tint="#FF5722"
+                        android:tint="#f97316"
                         android:layout_marginEnd="16dp"
                         android:contentDescription="Location icon" />
 
                     <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Mailing Address:"
+                            android:text="Mailing Address"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textStyle="bold" />
@@ -472,14 +481,14 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/birthday"
-                            android:tint="#FF5722"
+                            android:tint="#f97316"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Calendar icon" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Birthday:"
+                            android:text="Birthday"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textStyle="bold" />
@@ -518,14 +527,14 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/gender"
-                            android:tint="#FF5722"
+                            android:tint="#f97316"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Gender icon" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Gender:"
+                            android:text="Gender"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textStyle="bold" />
@@ -564,14 +573,14 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_people"
-                            android:tint="#FF5722"
+                            android:tint="#f97316"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Civil status icon" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Civil Status:"
+                            android:text="Civil Status"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textStyle="bold" />
@@ -610,14 +619,14 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/religion"
-                            android:tint="#FF5722"
+                            android:tint="#f97316"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Religion icon" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Religion:"
+                            android:text="Religion"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textStyle="bold" />
@@ -656,14 +665,14 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/blood"
-                            android:tint="#FF5722"
+                            android:tint="#f97316"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Blood type icon" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Blood Type:"
+                            android:text="Blood Type"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textStyle="bold" />
@@ -702,14 +711,14 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_person_hand"
-                            android:tint="#FF5722"
+                            android:tint="#f97316"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="PWD status icon" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="PWD Status:"
+                            android:text="PWD Status"
                             android:textSize="16sp"
                             android:textColor="#333333"
                             android:textStyle="bold" />
@@ -758,7 +767,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_location"
-                        android:tint="#FF5722"
+                        android:tint="#f97316"
                         android:layout_marginEnd="16dp"
                         android:contentDescription="Location icon" />
 
@@ -808,7 +817,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_notification"
-                        android:tint="#FF5722"
+                        android:tint="#f97316"
                         android:layout_marginEnd="16dp"
                         android:contentDescription="Notification icon" />
 
@@ -882,7 +891,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_info"
-                        android:tint="#FF5722"
+                        android:tint="#f97316"
                         android:layout_marginEnd="16dp"
                         android:contentDescription="Info icon" />
 
@@ -913,7 +922,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/vector__1_"
-                        android:tint="#FF5722"
+                        android:tint="#f97316"
                         android:layout_marginEnd="16dp"
                         android:contentDescription="Document icon" />
 
@@ -944,7 +953,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/vector__2_"
-                        android:tint="#FF5722"
+                        android:tint="#f97316"
                         android:layout_marginEnd="16dp"
                         android:contentDescription="Delete icon" />
 

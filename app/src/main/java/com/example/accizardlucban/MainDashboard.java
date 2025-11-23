@@ -2640,6 +2640,64 @@ public class MainDashboard extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Check if a barangay is one of the 32 official barangays of Lucban
+     * @param barangayName The barangay name to check
+     * @return true if it's a valid Lucban barangay, false otherwise
+     */
+    private boolean isValidLucbanBarangay(String barangayName) {
+        if (barangayName == null || barangayName.trim().isEmpty()) {
+            return false;
+        }
+        
+        // List of 32 official barangays of Lucban, Quezon
+        String[] officialBarangays = {
+            "Abang", "Aliliw", "Atulinao", "Ayuti", "Barangay 1", "Barangay 2", 
+            "Barangay 3", "Barangay 4", "Barangay 5", "Barangay 6", 
+            "Barangay 7", "Barangay 8", "Barangay 9", "Barangay 10", 
+            "Igang", "Kabatete", "Kakawit", "Kalangay", "Kalyaat", "Kilib", 
+            "Kulapi", "Mahabang Parang", "Malupak", "Manasa", "May-It", 
+            "Nagsinamo", "Nalunao", "Palola", "Piis", "Samil", "Tiawe", "Tinamnan"
+        };
+        
+        // Normalize the input barangay name for comparison
+        String normalizedInput = normalizeBarangayNameForValidation(barangayName);
+        
+        // Check against official list
+        for (String official : officialBarangays) {
+            String normalizedOfficial = normalizeBarangayNameForValidation(official);
+            if (normalizedInput.equals(normalizedOfficial) || 
+                normalizedInput.contains(normalizedOfficial) || 
+                normalizedOfficial.contains(normalizedInput)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Normalize barangay name for validation (remove common prefixes, lowercase, trim)
+     */
+    private String normalizeBarangayNameForValidation(String barangayName) {
+        if (barangayName == null) {
+            return "";
+        }
+        
+        String normalized = barangayName.trim();
+        
+        // Remove common prefixes
+        normalized = normalized.replaceAll("(?i)^(brgy\\.?|barangay|brg\\.?)\\s*", "");
+        
+        // Remove (Poblacion) suffix
+        normalized = normalized.replaceAll("(?i)\\s*\\(poblacion\\)", "");
+        
+        // Trim and lowercase for comparison
+        normalized = normalized.trim().toLowerCase(Locale.ROOT);
+        
+        return normalized;
+    }
+
     private void processTopBarangaySnapshot(QuerySnapshot queryDocumentSnapshots) {
         try {
             Map<String, Integer> barangayCounts = new HashMap<>();
@@ -2650,12 +2708,25 @@ public class MainDashboard extends AppCompatActivity {
                 if (rawBarangay == null || rawBarangay.isEmpty()) {
                     continue;
                 }
+                
+                // ✅ FILTER: Only include valid Lucban barangays
+                if (!isValidLucbanBarangay(rawBarangay)) {
+                    Log.d(TAG, "Skipping invalid barangay: " + rawBarangay);
+                    continue;
+                }
+                
                 String key = rawBarangay.toLowerCase(Locale.ROOT);
                 barangayCounts.put(key, barangayCounts.getOrDefault(key, 0) + 1);
                 barangayKeyToDisplay.putIfAbsent(key, formatBarangayDisplay(rawBarangay));
             }
 
+            // Filter and sort only valid barangays
             LinkedHashMap<String, Integer> orderedBarangayCounts = barangayCounts.entrySet().stream()
+                    .filter(entry -> {
+                        // Double-check that the display name is valid
+                        String displayName = barangayKeyToDisplay.getOrDefault(entry.getKey(), formatBarangayDisplay(entry.getKey()));
+                        return isValidLucbanBarangay(displayName);
+                    })
                     .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                     .limit(3)
                     .collect(Collectors.toMap(
