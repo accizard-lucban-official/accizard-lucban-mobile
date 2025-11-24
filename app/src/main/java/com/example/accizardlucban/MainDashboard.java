@@ -2661,11 +2661,19 @@ public class MainDashboard extends AppCompatActivity {
             return false;
         }
         
-        // List of 32 official barangays of Lucban, Quezon
+        // List of 32 official barangays of Lucban, Quezon (matching AddressInfoActivity.java)
         String[] officialBarangays = {
-            "Abang", "Aliliw", "Atulinao", "Ayuti", "Barangay 1", "Barangay 2", 
-            "Barangay 3", "Barangay 4", "Barangay 5", "Barangay 6", 
-            "Barangay 7", "Barangay 8", "Barangay 9", "Barangay 10", 
+            "Abang", "Aliliw", "Atulinao", "Ayuti (Poblacion)", "Ayuti", 
+            "Barangay 1 (Poblacion)", "Barangay 1", 
+            "Barangay 2 (Poblacion)", "Barangay 2", 
+            "Barangay 3 (Poblacion)", "Barangay 3", 
+            "Barangay 4 (Poblacion)", "Barangay 4", 
+            "Barangay 5 (Poblacion)", "Barangay 5", 
+            "Barangay 6 (Poblacion)", "Barangay 6", 
+            "Barangay 7 (Poblacion)", "Barangay 7", 
+            "Barangay 8 (Poblacion)", "Barangay 8", 
+            "Barangay 9 (Poblacion)", "Barangay 9", 
+            "Barangay 10 (Poblacion)", "Barangay 10", 
             "Igang", "Kabatete", "Kakawit", "Kalangay", "Kalyaat", "Kilib", 
             "Kulapi", "Mahabang Parang", "Malupak", "Manasa", "May-It", 
             "Nagsinamo", "Nalunao", "Palola", "Piis", "Samil", "Tiawe", "Tinamnan"
@@ -2674,12 +2682,11 @@ public class MainDashboard extends AppCompatActivity {
         // Normalize the input barangay name for comparison
         String normalizedInput = normalizeBarangayNameForValidation(barangayName);
         
-        // Check against official list
+        // Check against official list - use exact match or normalized match
         for (String official : officialBarangays) {
             String normalizedOfficial = normalizeBarangayNameForValidation(official);
-            if (normalizedInput.equals(normalizedOfficial) || 
-                normalizedInput.contains(normalizedOfficial) || 
-                normalizedOfficial.contains(normalizedInput)) {
+            // Use exact match for normalized names to avoid false positives
+            if (normalizedInput.equals(normalizedOfficial)) {
                 return true;
             }
         }

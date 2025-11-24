@@ -1989,7 +1989,7 @@ public class MapViewActivity extends AppCompatActivity {
 
         android.widget.TextView mapText = mapTab.findViewById(R.id.mapText);
         if (mapText != null) {
-            mapText.setTextColor(getResources().getColor(android.R.color.holo_red_light));
+            mapText.setTextColor(ContextCompat.getColor(this, R.color.orange_primary));
         }
     }
 
@@ -2656,7 +2656,7 @@ public class MapViewActivity extends AppCompatActivity {
             if (style != null) {
                 ensureFacilityLayersHidden(style);
                 // Apply health facilities visibility based on current toggle state
-                setLayerVisibility(style, "health-facilities", healthFacilitiesVisible);
+                setLayerVisibility(style, "health-facilities", false); // Always hidden - only Firestore pins are used
             }
         } catch (Exception e) {
             Log.e(TAG, "Error in onResume: " + e.getMessage(), e);
@@ -3524,9 +3524,9 @@ public class MapViewActivity extends AppCompatActivity {
                 setSatelliteVisibility(loadedStyle, false); // Explicitly hide satellite for street view
                 
             // CRITICAL: Hide evacuation-centers layer (Firestore only)
-            // Health facilities layer will be controlled by toggle
+            // Health facilities layer is always hidden - only Firestore pins are used
             ensureFacilityLayersHidden(loadedStyle);
-            // Health facilities layer starts hidden, will be shown when toggle is enabled
+            // Health facilities layer always hidden - only Firestore pins are shown
             setLayerVisibility(loadedStyle, "health-facilities", false);
                 
                 Log.d(TAG, "Initial map view set to: Street View (satellite layer hidden) - Same as MapPickerActivity");
@@ -3574,7 +3574,7 @@ public class MapViewActivity extends AppCompatActivity {
             barangayBoundariesVisible = false;
             roadNetworkVisible = false;
             waterwaysVisible = false;
-            healthFacilitiesVisible = false; // Hidden by default, can be toggled
+            healthFacilitiesVisible = false; // Hidden by default, can be toggled (Firestore pins only)
             evacuationCentersVisible = false;
             
             // Apply initial visibility states to existing layers in the style
@@ -3583,7 +3583,7 @@ public class MapViewActivity extends AppCompatActivity {
             setLayerVisibility(style, "lucban-brgy-names", false);
             setLayerVisibility(style, "road", false);
             setLayerVisibility(style, "waterway", false);
-            setLayerVisibility(style, "health-facilities", false); // Hidden by default
+            setLayerVisibility(style, "health-facilities", false); // Always hidden - only Firestore pins are used
             setLayerVisibility(style, "evacuation-centers", false); // Always hidden (Firestore only)
             
             // Hide pins by default when layers are initialized
@@ -3717,7 +3717,7 @@ public class MapViewActivity extends AppCompatActivity {
     /**
      * CRITICAL: Ensure evacuation-centers Mapbox layer is ALWAYS hidden
      * Evacuation centers come from Firestore only
-     * Health facilities come from Mapbox and should be shown when toggle is enabled
+     * Health facilities come from Firestore only - Mapbox layer is always hidden
      */
     private void ensureFacilityLayersHidden(Style style) {
         if (style == null) return;
@@ -3726,10 +3726,10 @@ public class MapViewActivity extends AppCompatActivity {
             // Always hide evacuation-centers Mapbox layer - we only use Firestore pins
             setLayerVisibility(style, "evacuation-centers", false);
             
-            // Health facilities layer visibility is controlled by toggleHealthFacilities()
-            // Don't hide it here - let the toggle method control it
+            // Always hide health-facilities Mapbox layer - we only use Firestore pins
+            setLayerVisibility(style, "health-facilities", false);
             
-            Log.d(TAG, "✅ Evacuation centers Mapbox layer ensured as hidden (using Firestore pins only)");
+            Log.d(TAG, "✅ Evacuation centers and health facilities Mapbox layers ensured as hidden (using Firestore pins only)");
         } catch (Exception e) {
             Log.e(TAG, "Error ensuring facility layers are hidden: " + e.getMessage(), e);
         }
@@ -4194,7 +4194,7 @@ public class MapViewActivity extends AppCompatActivity {
                         // CRITICAL: Ensure evacuation-centers layer is hidden (health-facilities controlled by toggle)
                         ensureFacilityLayersHidden(style);
                         // Apply health facilities visibility based on current toggle state
-                        setLayerVisibility(style, "health-facilities", healthFacilitiesVisible);
+                        setLayerVisibility(style, "health-facilities", false); // Always hidden - only Firestore pins are used
                         
                         forceMapRefresh();
                     }
@@ -4395,9 +4395,10 @@ public class MapViewActivity extends AppCompatActivity {
                     continue;
                 }
                 
-                // Skip health-facilities layer - its visibility is controlled by toggleHealthFacilities()
+                // Skip health-facilities layer - always hidden, only Firestore pins are used
                 if (layerId.equals("health-facilities")) {
-                    layersSkipped.add(layerId + " (Mapbox layer - visibility controlled by toggle)");
+                    setLayerVisibility(style, layerId, false);
+                    layersSkipped.add(layerId + " (Mapbox layer - always hidden, using Firestore pins only)");
                     continue;
                 }
                 
@@ -4449,22 +4450,22 @@ public class MapViewActivity extends AppCompatActivity {
     
     /**
      * Toggle Health Facilities visibility
-     * Health Facilities come from Mapbox layer - show/hide the layer based on toggle
-     * Also show/hide Firestore pins for health facilities
+     * Health Facilities come from Firestore only - Mapbox layer is always hidden
+     * Show/hide Firestore pins for health facilities based on toggle
      */
     private void toggleHealthFacilities(boolean visible) {
         try {
             healthFacilitiesVisible = visible;
             
-            // Toggle Mapbox health-facilities layer visibility
+            // CRITICAL: Always hide Mapbox health-facilities layer - only use Firestore pins
             Style style = mapboxMap != null ? mapboxMap.getStyle() : null;
             if (style != null) {
-                setLayerVisibility(style, "health-facilities", visible);
-                Log.d(TAG, "Health facilities Mapbox layer toggled: " + (visible ? "VISIBLE" : "HIDDEN"));
+                setLayerVisibility(style, "health-facilities", false);
+                Log.d(TAG, "Health facilities Mapbox layer kept HIDDEN (using Firestore pins only)");
             }
             
-            // Also apply filters to show/hide Firestore pins based on facility type
-            Log.d(TAG, "Health facilities filter toggled: " + visible + " (Mapbox layer + Firestore pins)");
+            // Apply filters to show/hide Firestore pins based on facility type
+            Log.d(TAG, "Health facilities filter toggled: " + visible + " (Firestore pins only)");
             applyFiltersToFirestorePins(false);
         } catch (Exception e) {
             Log.e(TAG, "Error toggling health facilities: " + e.getMessage(), e);
@@ -6564,19 +6565,62 @@ public class MapViewActivity extends AppCompatActivity {
             
             if (isFacilityPin) {
                 Log.d(TAG, "Showing FACILITY layout");
-                // FACILITY LAYOUT: Category label, Name, Location, Description
+                // FACILITY LAYOUT: Category label (Marker Type), Name, Location, Type
                 
-                // Show category label (grey, smaller) - Use type field for facilities
+                // Show category label as marker type (e.g., "Health Facility", "Evacuation Center")
+                // For health facilities, show the type (from type or category field)
                 if (pinCategory != null) {
                     String categoryText = null;
-                    // PRIORITY: Use type field for facilities
+                    // Determine if this is a health facility
+                    boolean isHealthFacility = false;
+                    String facilityType = null;
+                    
+                    // PRIORITY: Use type field for facilities to determine marker type
                     if (pin.getType() != null && !pin.getType().trim().isEmpty()) {
-                        categoryText = formatCategoryLabel(pin.getType());
+                        facilityType = pin.getType().trim().toLowerCase();
+                        // Check if it's a health facility
+                        isHealthFacility = facilityType.contains("health") || 
+                                         facilityType.contains("hospital") || 
+                                         facilityType.contains("clinic") || 
+                                         facilityType.contains("pharmacy");
                     }
                     // Fallback to category field if type is not available
-                    if (categoryText == null || categoryText.isEmpty()) {
-                        categoryText = formatCategoryLabel(pin.getCategory());
+                    if (!isHealthFacility && pin.getCategory() != null && !pin.getCategory().trim().isEmpty()) {
+                        String category = pin.getCategory().trim().toLowerCase();
+                        isHealthFacility = category.contains("health") || 
+                                         category.contains("hospital") || 
+                                         category.contains("clinic") || 
+                                         category.contains("pharmacy");
+                        if (facilityType == null) {
+                            facilityType = category;
+                        }
                     }
+                    
+                    // For health facilities, show the formatted type
+                    if (isHealthFacility && facilityType != null) {
+                        categoryText = formatCategoryLabel(facilityType);
+                    } else {
+                        // For other facilities, show marker type
+                        if (facilityType != null) {
+                            if (facilityType.contains("evacuation")) {
+                                categoryText = "Evacuation Center";
+                            } else if (facilityType.contains("police")) {
+                                categoryText = "Police Station";
+                            } else if (facilityType.contains("fire")) {
+                                categoryText = "Fire Station";
+                            } else {
+                                categoryText = "Emergency Facility";
+                            }
+                        } else if (pin.getCategory() != null && !pin.getCategory().trim().isEmpty()) {
+                            String category = pin.getCategory().trim().toLowerCase();
+                            if (category.contains("evacuation")) {
+                                categoryText = "Evacuation Center";
+                            } else {
+                                categoryText = "Emergency Facility";
+                            }
+                        }
+                    }
+                    
                     if (categoryText == null || categoryText.isEmpty()) {
                         categoryText = "Emergency Facility";
                     }
@@ -6584,7 +6628,7 @@ public class MapViewActivity extends AppCompatActivity {
                     pinCategory.setVisibility(View.VISIBLE);
                 }
                 
-                // Show facility name (large, bold) - use title field from Firestore
+                // Show facility name (large, bold) - use title field from Firestore, centered
                 if (pinTitle != null) {
                     String nameText = null;
                     // Priority: Use title field from Firestore
@@ -6600,7 +6644,7 @@ public class MapViewActivity extends AppCompatActivity {
                         nameText = "Unknown Facility";
                     }
                     pinTitle.setText(nameText);
-                    pinTitle.setGravity(android.view.Gravity.START); // Left align for facilities (matches design)
+                    pinTitle.setGravity(android.view.Gravity.CENTER); // Center align for facilities
                 }
                 
                 // Hide date row, show description row
@@ -6611,12 +6655,14 @@ public class MapViewActivity extends AppCompatActivity {
                     descriptionRow.setVisibility(View.VISIBLE);
                 }
                 
-                // Set description
+                // Set description in description row with icon (format: [Icon] [Description])
+                // For all facilities (including health facilities): show description field from Firestore
                 if (pinDescription != null) {
                     String descriptionText = pin.getDescription();
                     if (descriptionText == null || descriptionText.trim().isEmpty()) {
                         descriptionText = "No description available";
                     }
+                    // Just show the text (icon is already in layout)
                     pinDescription.setText(descriptionText);
                 }
                 
@@ -6629,18 +6675,16 @@ public class MapViewActivity extends AppCompatActivity {
                     pinCategory.setVisibility(View.GONE);
                 }
                 
-                // Set incident type as title - use title field from Firestore
+                // Set incident type as title - only show type, no location name
                 if (pinTitle != null) {
                     String titleText = null;
-                    // Priority: Use title field from Firestore
-                    if (pin.getTitle() != null && !pin.getTitle().trim().isEmpty()) {
-                        titleText = pin.getTitle().trim();
+                    // Priority: Use type field (formatted)
+                    if (pin.getType() != null && !pin.getType().trim().isEmpty()) {
+                        titleText = formatCategoryLabel(pin.getType());
                     }
-                    // Fallback to type field if title is not available
+                    // Fallback to category field if type is not available
                     if (titleText == null || titleText.isEmpty()) {
-                        if (pin.getType() != null && !pin.getType().trim().isEmpty()) {
-                            titleText = pin.getType().trim();
-                        } else if (pin.getCategory() != null && !pin.getCategory().trim().isEmpty()) {
+                        if (pin.getCategory() != null && !pin.getCategory().trim().isEmpty()) {
                             titleText = formatCategoryLabel(pin.getCategory());
                         }
                     }
@@ -7227,7 +7271,7 @@ public class MapViewActivity extends AppCompatActivity {
      * Disable compass on the map view
      */
     /**
-     * Setup map click listener to handle clicks on Health Facilities from Mapbox layer
+     * Setup map click listener (no longer used for Health Facilities - only Firestore pins are shown)
      */
     private void setupMapClickListener() {
         try {
@@ -7243,7 +7287,7 @@ public class MapViewActivity extends AppCompatActivity {
                         return true;
                     }
                 });
-                Log.d(TAG, "✅ Map click listener registered for Health Facilities");
+                Log.d(TAG, "✅ Map click listener registered (Health Facilities from Mapbox disabled)");
             } else {
                 Log.e(TAG, "GesturesPlugin is null - map click listener NOT registered");
             }
@@ -7253,7 +7297,8 @@ public class MapViewActivity extends AppCompatActivity {
     }
     
     /**
-     * Handle map click - query for Health Facilities features and show info window
+     * Handle map click - no longer handles Health Facilities from Mapbox (only Firestore pins)
+     * Health facilities are now only from Firestore, so map clicks are handled by pin click listeners
      */
     private void handleMapClick(Point point) {
         try {
@@ -7262,12 +7307,9 @@ public class MapViewActivity extends AppCompatActivity {
             Style style = mapboxMap.getStyle();
             if (style == null) return;
             
-            // Convert point to screen coordinate for potential future use
-            ScreenCoordinate screenCoord = mapboxMap.pixelForCoordinate(point);
-            
-            // Use helper class to get health facility info from location
-            // Since we can't directly query Mapbox layer features, we use reverse geocoding
-            getHealthFacilityInfoFromLocation(point);
+            // Map clicks are now only used for other purposes (if any)
+            // Health facilities from Mapbox are disabled - only Firestore pins are shown
+            // Pin clicks are handled by the pin click listeners in addFirestorePinToMap()
         } catch (Exception e) {
             Log.e(TAG, "Error handling map click: " + e.getMessage(), e);
         }
@@ -7297,7 +7339,7 @@ public class MapViewActivity extends AppCompatActivity {
     }
     
     /**
-     * Show info window for Health Facility from Mapbox layer
+     * Show info window for Health Facility (deprecated - no longer used for Mapbox, only Firestore pins)
      * Displays facility name and type (amenity)
      */
     private void showHealthFacilityInfoWindow(String facilityName, String facilityType, Point location) {
@@ -7328,7 +7370,6 @@ public class MapViewActivity extends AppCompatActivity {
             TextView pinDescription = dialog.findViewById(R.id.pinDescription);
             LinearLayout dateRow = dialog.findViewById(R.id.dateRow);
             LinearLayout descriptionRow = dialog.findViewById(R.id.descriptionRow);
-            Button btnClose = dialog.findViewById(R.id.btnClose);
             
             // Set health facility icon - use custom health.xml drawable
             if (pinIcon != null) {
@@ -7336,47 +7377,98 @@ public class MapViewActivity extends AppCompatActivity {
                 pinIcon.setColorFilter(null);
             }
             
-            // Show category label with facility type (amenity)
+            // Show category label as type (from amenity field - this is the Type field)
+            // The facilityType parameter contains the amenity value from Mapbox
             if (pinCategory != null) {
-                String categoryText = "Health Facility";
-                if (facilityType != null && !facilityType.trim().isEmpty() && !facilityType.equals("Health Facility")) {
-                    // Use the detected facility type directly (Pharmacy, Hospital, Clinic, etc.)
-                    categoryText = facilityType;
-                }
-                pinCategory.setText(categoryText);
+                String typeText = facilityType != null && !facilityType.trim().isEmpty() && !facilityType.equals("Health Facility")
+                    ? formatCategoryLabel(facilityType)
+                    : "Health Facility";
+                pinCategory.setText(typeText);
                 pinCategory.setVisibility(View.VISIBLE);
-                Log.d(TAG, "✅ Health facility category displayed: " + categoryText);
+                Log.d(TAG, "✅ Health facility category displayed: " + typeText);
             }
             
-            // Show facility name (large, bold)
+            // Show facility name (large, bold, centered) - from "name" field in Mapbox
             if (pinTitle != null) {
                 String nameText = facilityName != null && !facilityName.trim().isEmpty() 
                     ? facilityName.trim() 
                     : "Unknown Health Facility";
                 pinTitle.setText(nameText);
-                pinTitle.setGravity(android.view.Gravity.START);
+                pinTitle.setGravity(android.view.Gravity.CENTER);
             }
             
-            // Show location coordinates
+            // Get location name from coordinates using reverse geocoding
             if (pinLocation != null) {
-                String locationText = String.format("📍 %.6f, %.6f", location.longitude(), location.latitude());
-                pinLocation.setText(locationText);
+                pinLocation.setText("Getting location...");
                 pinLocation.setVisibility(View.VISIBLE);
+                
+                // Perform reverse geocoding to get location name
+                new Thread(() -> {
+                    try {
+                        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+                        List<Address> addresses = geocoder.getFromLocation(
+                            location.latitude(), 
+                            location.longitude(), 
+                            1
+                        );
+                        
+                        runOnUiThread(() -> {
+                            if (addresses != null && !addresses.isEmpty()) {
+                                Address address = addresses.get(0);
+                                StringBuilder locationText = new StringBuilder();
+                                
+                                // Build address string
+                                if (address.getThoroughfare() != null) {
+                                    locationText.append(address.getThoroughfare());
+                                }
+                                if (address.getSubLocality() != null) {
+                                    if (locationText.length() > 0) locationText.append(", ");
+                                    locationText.append(address.getSubLocality());
+                                }
+                                if (address.getLocality() != null) {
+                                    if (locationText.length() > 0) locationText.append(", ");
+                                    locationText.append(address.getLocality());
+                                }
+                                if (address.getAdminArea() != null) {
+                                    if (locationText.length() > 0) locationText.append(", ");
+                                    locationText.append(address.getAdminArea());
+                                }
+                                
+                                String finalLocation = locationText.length() > 0 
+                                    ? locationText.toString() 
+                                    : String.format(Locale.getDefault(), "%.6f, %.6f", location.latitude(), location.longitude());
+                                pinLocation.setText(finalLocation);
+                            } else {
+                                // Fallback to coordinates if geocoding fails
+                                pinLocation.setText(String.format(Locale.getDefault(), "%.6f, %.6f", location.latitude(), location.longitude()));
+                            }
+                        });
+                    } catch (Exception e) {
+                        runOnUiThread(() -> {
+                            // Fallback to coordinates on error
+                            pinLocation.setText(String.format(Locale.getDefault(), "%.6f, %.6f", location.latitude(), location.longitude()));
+                            Log.e(TAG, "Error reverse geocoding: " + e.getMessage(), e);
+                        });
+                    }
+                }).start();
+            }
+            
+            // Show description (amenity) in description row with icon (format: [Icon] [Description])
+            // The facilityType parameter contains the amenity value from Mapbox, which is the description
+            if (descriptionRow != null) {
+                descriptionRow.setVisibility(View.VISIBLE);
+            }
+            if (pinDescription != null) {
+                String descriptionText = facilityType != null && !facilityType.trim().isEmpty() && !facilityType.equals("Health Facility")
+                    ? facilityType.trim()
+                    : "Health Facility";
+                // Just show the text (icon is already in layout)
+                pinDescription.setText(descriptionText);
             }
             
             // Hide date row (not applicable for Mapbox facilities)
             if (dateRow != null) {
                 dateRow.setVisibility(View.GONE);
-            }
-            
-            // Hide description row (not applicable for Mapbox facilities)
-            if (descriptionRow != null) {
-                descriptionRow.setVisibility(View.GONE);
-            }
-            
-            // Setup close button
-            if (btnClose != null) {
-                btnClose.setOnClickListener(v -> dialog.dismiss());
             }
             
             dialog.show();

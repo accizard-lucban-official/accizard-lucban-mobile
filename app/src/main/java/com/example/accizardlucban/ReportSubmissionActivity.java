@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -24,6 +25,7 @@ import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -98,7 +100,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private EditText coordinatesEditText; // Coordinates field for map picker
     private ImageView pinningButton;
     private LinearLayout getCurrentLocationButton;
-    private Button uploadImagesButton;
+    private CardView uploadImagesButton;
     private Button takePhotoButton;
     private Button submitReportButton;
     private ImageButton profileButton;
@@ -134,11 +136,13 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     
     private static final int IMAGE_PICK_REQUEST = 2001;
     private static final int VIDEO_PICK_REQUEST = 2004;
+    private static final int VIDEO_RECORD_REQUEST = 2005;
     private static final int CAMERA_REQUEST_CODE = 2002;
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 2003;
     private Uri selectedImageUri;
     private List<Uri> selectedImageUris = new ArrayList<>(); // Keep for backward compatibility
     private List<MediaItem> selectedMediaItems = new ArrayList<>(); // New: supports both images and videos
+    private boolean pendingVideoRecording = false; // Track if video recording is pending permission
 
     // Bottom Navigation
     private LinearLayout homeTab;
@@ -360,12 +364,28 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 "➕ Others"
         };
 
-        // Create adapter and set to spinner
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+        // Create custom adapter with reduced text size
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(
                 this,
                 android.R.layout.simple_spinner_item,
                 reportTypes
-        );
+        ) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                TextView textView = (TextView) view;
+                textView.setTextSize(14);
+                return view;
+            }
+
+            @Override
+            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                View view = super.getDropDownView(position, convertView, parent);
+                TextView textView = (TextView) view;
+                textView.setTextSize(14);
+                return view;
+            }
+        };
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         reportTypeSpinner.setAdapter(adapter);
     }
@@ -470,12 +490,12 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         
         imageGalleryRecyclerView.setAdapter(mediaGalleryAdapter);
         
-        // Setup placeholder click listener to take photo
+        // Setup placeholder click listener to show capture menu (take photo or record video)
         if (placeholderContainer != null) {
             placeholderContainer.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    checkCameraPermissionAndTakePhoto();
+                    showMediaCaptureMenu(v);
                 }
             });
         }
@@ -684,11 +704,11 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             });
         }
         
-        // Upload images/videos button click - show popup menu
+        // Upload images/videos button click - show selection menu (select image or select video)
         uploadImagesButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showMediaSelectionMenu(v);
+                showMediaSelectMenu(v);
             }
         });
 
@@ -894,6 +914,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private void checkCameraPermissionAndTakePhoto() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
                 != PackageManager.PERMISSION_GRANTED) {
+            pendingVideoRecording = false; // Set flag to indicate photo is pending
             ActivityCompat.requestPermissions(this, 
                     new String[]{Manifest.permission.CAMERA}, 
                     CAMERA_PERMISSION_REQUEST_CODE);
@@ -917,14 +938,90 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     }
     
     /**
-     * Show popup menu to select Image or Video
+     * Check camera permission and record video
      */
-    private void showMediaSelectionMenu(View anchor) {
+    private void checkCameraPermissionAndRecordVideo() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
+                != PackageManager.PERMISSION_GRANTED) {
+            pendingVideoRecording = true; // Set flag to indicate video recording is pending
+            ActivityCompat.requestPermissions(this, 
+                    new String[]{Manifest.permission.CAMERA}, 
+                    CAMERA_PERMISSION_REQUEST_CODE);
+        } else {
+            openVideoRecorder();
+        }
+    }
+    
+    /**
+     * Open video recorder
+     */
+    private void openVideoRecorder() {
+        try {
+            Intent videoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+            if (videoIntent.resolveActivity(getPackageManager()) != null) {
+                startActivityForResult(videoIntent, VIDEO_RECORD_REQUEST);
+            } else {
+                Toast.makeText(this, "Video recorder not available", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error opening video recorder: " + e.getMessage(), e);
+            Toast.makeText(this, "Error opening video recorder: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * Show popup menu for capturing media (Take Photo or Record Video)
+     * Used when placeholder is clicked
+     */
+    private void showMediaCaptureMenu(View anchor) {
         try {
             PopupMenu popupMenu = new PopupMenu(this, anchor);
             
             // Inflate menu from resource
-            popupMenu.getMenuInflater().inflate(R.menu.media_selection_menu, popupMenu.getMenu());
+            popupMenu.getMenuInflater().inflate(R.menu.media_capture_menu, popupMenu.getMenu());
+            
+            // Ensure menu has items (fallback if resource not found)
+            if (popupMenu.getMenu().size() == 0) {
+                popupMenu.getMenu().add(0, 1, 0, "Take Photo");
+                popupMenu.getMenu().add(0, 2, 0, "Record Video");
+            }
+            
+            popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                @Override
+                public boolean onMenuItemClick(android.view.MenuItem item) {
+                    int itemId = item.getItemId();
+                    String title = item.getTitle().toString();
+                    
+                    // Check by resource ID first, then by numeric ID, then by title
+                    if (itemId == R.id.menu_take_photo || itemId == 1 || title.contains("Take Photo")) {
+                        checkCameraPermissionAndTakePhoto();
+                        return true;
+                    } else if (itemId == R.id.menu_record_video || itemId == 2 || title.contains("Record Video")) {
+                        checkCameraPermissionAndRecordVideo();
+                        return true;
+                    }
+                    return false;
+                }
+            });
+            
+            popupMenu.show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing media capture menu: " + e.getMessage(), e);
+            // Fallback: just take photo
+            checkCameraPermissionAndTakePhoto();
+        }
+    }
+    
+    /**
+     * Show popup menu for selecting media from gallery (Select Image or Select Video)
+     * Used when upload button is clicked
+     */
+    private void showMediaSelectMenu(View anchor) {
+        try {
+            PopupMenu popupMenu = new PopupMenu(this, anchor);
+            
+            // Inflate menu from resource
+            popupMenu.getMenuInflater().inflate(R.menu.media_select_menu, popupMenu.getMenu());
             
             // Ensure menu has items (fallback if resource not found)
             if (popupMenu.getMenu().size() == 0) {
@@ -939,10 +1036,10 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                     String title = item.getTitle().toString();
                     
                     // Check by resource ID first, then by numeric ID, then by title
-                    if (itemId == R.id.menu_select_image || itemId == 1 || title.contains("Image")) {
+                    if (itemId == R.id.menu_select_image || itemId == 1 || title.contains("Select Image")) {
                         pickImageFromGallery();
                         return true;
-                    } else if (itemId == R.id.menu_select_video || itemId == 2 || title.contains("Video")) {
+                    } else if (itemId == R.id.menu_select_video || itemId == 2 || title.contains("Select Video")) {
                         pickVideoFromGallery();
                         return true;
                     }
@@ -952,7 +1049,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             
             popupMenu.show();
         } catch (Exception e) {
-            Log.e(TAG, "Error showing media selection menu: " + e.getMessage(), e);
+            Log.e(TAG, "Error showing media select menu: " + e.getMessage(), e);
             // Fallback: just pick image
             pickImageFromGallery();
         }
@@ -1172,6 +1269,31 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             
             // Update professional image gallery (it will handle videos too)
             updateProfessionalImageGallery();
+        }
+        
+        // Handle video recording result
+        if (requestCode == VIDEO_RECORD_REQUEST && resultCode == RESULT_OK && data != null) {
+            try {
+                Uri videoUri = data.getData();
+                if (videoUri != null) {
+                    // Grant read permission
+                    grantUriPermission(getPackageName(), videoUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    // Take persistent URI permission for content URIs
+                    takePersistableUriPermission(videoUri);
+                    
+                    selectedMediaItems.add(new MediaItem(videoUri, MediaItem.TYPE_VIDEO));
+                    Log.d(TAG, "Recorded video added: " + videoUri.toString());
+                    
+                    // Update professional image gallery
+                    updateProfessionalImageGallery();
+                } else {
+                    Log.e(TAG, "Video URI is null");
+                    Toast.makeText(this, "Error: Video URI is null", Toast.LENGTH_SHORT).show();
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error processing recorded video: " + e.getMessage(), e);
+                Toast.makeText(this, "Error processing video: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
         }
         
         // Handle camera result
@@ -3041,11 +3163,20 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             }
         } else if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Camera permission granted, open camera
-                openCamera();
+                // Camera permission granted, check if video recording or photo
+                if (pendingVideoRecording) {
+                    openVideoRecorder();
+                    pendingVideoRecording = false; // Reset flag
+                } else {
+                    openCamera();
+                }
             } else {
                 // Permission denied
-                Toast.makeText(this, "Camera permission is required to take photos", Toast.LENGTH_LONG).show();
+                String message = pendingVideoRecording ? 
+                    "Camera permission is required to record videos" : 
+                    "Camera permission is required to take photos";
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                pendingVideoRecording = false; // Reset flag
             }
         }
     }

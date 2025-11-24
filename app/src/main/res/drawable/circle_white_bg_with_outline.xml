@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Outer white circle - this creates the visible outline against the orange header -->
+    <!-- Outer white circle - creates the white outline/border visible against orange background -->
     <item>
         <shape android:shape="oval">
             <solid android:color="#FFFFFF" />
         </shape>
     </item>
-    <!-- Inner white circle with margin to create border effect -->
+    <!-- Inner circle with margin to create visible white outline effect (2dp border) -->
     <item
-        android:top="4dp"
-        android:bottom="4dp"
-        android:left="4dp"
-        android:right="4dp">
+        android:top="2dp"
+        android:bottom="2dp"
+        android:left="2dp"
+        android:right="2dp">
         <shape android:shape="oval">
             <solid android:color="#FFFFFF" />
         </shape>

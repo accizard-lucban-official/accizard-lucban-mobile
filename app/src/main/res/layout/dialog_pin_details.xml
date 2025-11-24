@@ -74,13 +74,12 @@
                 android:gravity="center_vertical"
                 android:layout_marginBottom="12dp">
 
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_location_pin"
-                    android:tint="#D32F2F"
-                    android:layout_marginEnd="8dp"
-                    android:contentDescription="Location icon" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📍"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="8dp" />
 
                 <TextView
                     android:id="@+id/pinLocation"
@@ -135,12 +134,9 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Description: "
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/dark_gray"
-                    android:fontFamily="@font/dmsans"
-                    android:layout_marginEnd="4dp" />
+                    android:text="ℹ️"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="8dp" />
 
                 <TextView
                     android:id="@+id/pinDescription"

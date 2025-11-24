@@ -28,16 +28,6 @@
             android:gravity="start|center_vertical">
 
             <ImageView
-                android:id="@+id/ldrrmoLogo"
-                android:layout_width="wrap_content"
-                android:layout_height="@dimen/dashboard_header_logo_height"
-                android:layout_marginEnd="@dimen/spacing_small"
-                android:src="@drawable/logo_mdrrmo"
-                android:adjustViewBounds="true"
-                android:scaleType="fitCenter"
-                android:contentDescription="LDRRMO Logo" />
-
-            <ImageView
                 android:id="@+id/accizardLogo"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/dashboard_header_logo_height"
@@ -87,6 +77,17 @@
                 android:background="@drawable/circle_white_bg_with_outline"
                 android:layout_marginEnd="@dimen/spacing_medium"
                 android:contentDescription="User Avatar" />
+
+            <!-- DRRMO Logo -->
+            <ImageView
+                android:id="@+id/ldrrmoLogo"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/dashboard_profile_size"
+                android:layout_marginEnd="@dimen/spacing_medium"
+                android:src="@drawable/logo_mdrrmo"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:contentDescription="LDRRMO Logo" />
 
             <!-- Text Container (Welcome + Location) -->
             <LinearLayout
@@ -786,7 +787,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Add"
-                        android:textColor="@color/black"
+                        android:textColor="@color/orange_primary    "
                         android:textSize="@dimen/dashboard_emergency_label_size"
                         android:textStyle="bold"
                         android:gravity="center" />
