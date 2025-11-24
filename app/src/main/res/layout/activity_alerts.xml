@@ -18,7 +18,7 @@
         android:paddingTop="@dimen/padding_large"
         android:paddingBottom="@dimen/padding_large"
         android:background="@android:color/white"
-        android:elevation="@dimen/card_elevation_medium"
+
         android:gravity="center_vertical|end"
         android:minHeight="70dp">
 
@@ -54,11 +54,11 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Alerts"
-            android:textSize="@dimen/text_size_title"
+            android:textSize="@dimen/text_size_header"
             android:textColor="#333333"
             android:textStyle="bold"
             android:gravity="start"
-            android:layout_marginBottom="@dimen/margin_medium" />
+            android:layout_marginBottom="@dimen/margin_large" />
 
         <!-- Filter Dropdowns Row -->
         <LinearLayout

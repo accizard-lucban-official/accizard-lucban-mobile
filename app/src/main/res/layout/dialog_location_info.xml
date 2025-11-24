@@ -5,40 +5,8 @@
     android:orientation="vertical"
     android:background="@android:color/white">
 
-    <!-- Header with Icon and Title -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:padding="24dp"
-        android:paddingBottom="16dp"
-        android:background="@android:color/white">
+    <!-- Header with Title -->
 
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_info"
-            android:contentDescription="Location Info Icon"
-            android:layout_marginEnd="12dp"
-            android:tint="#FF5722" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Location Information"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="#333333" />
-
-    </LinearLayout>
-
-    <!-- Bottom Border -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#E0E0E0" />
 
     <!-- Content -->
     <LinearLayout
@@ -49,10 +17,18 @@
         android:paddingTop="16dp">
 
         <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Location Information"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#333333" />
+
+        <TextView
             android:id="@+id/tvLocationInfoMessage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="We only respond to reports within Lucban. Please select a location within Lucban."
+            android:text="The Lucban MDRRMO responds exclusively to geotagged reports within Lucban. However, reports from outside the area may still be submitted."
             android:textSize="16sp"
             android:textColor="#555555"
             android:lineSpacingExtra="4dp"
@@ -62,7 +38,7 @@
             android:id="@+id/btnCloseLocationInfo"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="Got it"
+            android:text="Okay"
             android:textAllCaps="false"
             android:textStyle="bold"
             android:textColor="@android:color/white"

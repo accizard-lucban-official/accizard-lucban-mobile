@@ -11,7 +11,7 @@ import com.airbnb.lottie.LottieAnimationView;
 public class SplashActivity extends AppCompatActivity {
     
     private static final String TAG = "SplashActivity";
-    private static final int SPLASH_DURATION = 3000; // 3 seconds
+    private static final int SPLASH_DURATION = 4000; // 4 seconds
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,7 +25,7 @@ public class SplashActivity extends AppCompatActivity {
         
         // Play animation
         if (lottieAnimationView != null) {
-            lottieAnimationView.setAnimation("accizard-splashscreen-orange.json"); // Your Lottie file name
+            lottieAnimationView.setAnimation("bounce-logo-splashscreen.json");
             lottieAnimationView.playAnimation();
             Log.d(TAG, "Lottie animation started");
         } else {

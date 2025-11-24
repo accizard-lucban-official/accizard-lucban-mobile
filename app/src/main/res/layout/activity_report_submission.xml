@@ -261,39 +261,6 @@
 
                 </LinearLayout>
 
-                <!-- Get Current Location Button -->
-                <LinearLayout
-                    android:id="@+id/getCurrentLocationButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingVertical="8dp"
-                    android:paddingHorizontal="4dp"
-                    android:layout_marginStart="0dp"
-                    android:layout_marginTop="0dp"
-                    android:layout_marginBottom="16dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?android:attr/selectableItemBackground">
-                    
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/pingetcurrent"
-                        android:layout_marginEnd="8dp"
-                        android:contentDescription="Location Pin Icon" />
-                    
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Get Current Location"
-                        android:textColor="#f97316"
-                        android:textSize="14sp"
-                        android:textStyle="normal" />
-                    
-                </LinearLayout>
-
                 <!-- Legacy location field (hidden, for backward compatibility) -->
                 <EditText
                     android:id="@+id/locationEditText"

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Low opacity white background -->
+    <solid android:color="#30FFFFFF" />
+    
+    <!-- White outline/stroke -->
+    <stroke
+        android:width="1dp"
+        android:color="#FFFFFF" />
+    
+    <!-- Rounded corners -->
+    <corners android:radius="12dp" />
+    
+    <!-- Padding will be handled in the layout -->
+</shape>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    android:padding="24dp">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Report Location"
+        android:textSize="20sp"
+        android:textColor="#333333"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Pin Location on Map Option -->
+    <LinearLayout
+        android:id="@+id/optionPinLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:layout_marginBottom="12dp">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/frame__8_"
+            android:contentDescription="Map Icon"
+            android:layout_marginEnd="16dp"
+            android:tint="@color/orange_primary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Pin Location on Map"
+            android:textSize="16sp"
+            android:textColor="#333333" />
+
+    </LinearLayout>
+
+    <!-- Get Current Location Option -->
+    <LinearLayout
+        android:id="@+id/optionGetCurrentLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/pingetcurrent"
+            android:contentDescription="Current Location Icon"
+            android:layout_marginEnd="16dp"
+            android:tint="@color/orange_primary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Get Current Location"
+            android:textSize="16sp"
+            android:textColor="#333333" />
+
+    </LinearLayout>
+
+</LinearLayout>

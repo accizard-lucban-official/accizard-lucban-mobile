@@ -28,6 +28,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -99,7 +100,6 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private EditText locationEditText; // Legacy field (hidden)
     private EditText coordinatesEditText; // Coordinates field for map picker
     private ImageView pinningButton;
-    private LinearLayout getCurrentLocationButton;
     private CardView uploadImagesButton;
     private Button takePhotoButton;
     private Button submitReportButton;
@@ -218,7 +218,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         locationEditText = findViewById(R.id.locationEditText); // Legacy field (hidden)
         coordinatesEditText = findViewById(R.id.coordinatesEditText); // Coordinates field for map picker
         pinningButton = findViewById(R.id.pinningButton);
-        getCurrentLocationButton = findViewById(R.id.getCurrentLocationButton);
+        // getCurrentLocationButton removed - functionality moved to bottom sheet
         uploadImagesButton = findViewById(R.id.uploadImagesButton);
         takePhotoButton = findViewById(R.id.takePhotoButton);
         submitReportButton = findViewById(R.id.submitReportButton);
@@ -669,28 +669,11 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             }
         });
 
-        // Pinning button click
+        // Pinning button click - show location options bottom sheet
         pinningButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // If current location is already obtained, open map in view-only mode
-                // Otherwise, open map for selection
-                if (isLocationSelected && selectedLatitude != 0.0 && selectedLongitude != 0.0) {
-                    Log.d(TAG, "Opening map to VIEW current location pin");
-                    openMapPickerViewOnly();
-                } else {
-                    Log.d(TAG, "Opening map to SELECT new location");
-                    openMapPicker();
-                }
-            }
-        });
-
-        // Get Current Location button click
-        getCurrentLocationButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Log.d(TAG, "Get Current Location button clicked");
-                getCurrentLocation();
+                showLocationOptionsBottomSheet();
             }
         });
 
@@ -801,10 +784,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             TextView tvLocationInfoMessage = dialogView.findViewById(R.id.tvLocationInfoMessage);
             Button btnCloseLocationInfo = dialogView.findViewById(R.id.btnCloseLocationInfo);
             
-            // Set message
-            if (tvLocationInfoMessage != null) {
-                tvLocationInfoMessage.setText("We only respond to reports within Lucban. Please select a location within Lucban.");
-            }
+            // Message is already set in XML layout
             
             // Create dialog
             AlertDialog dialog = builder.setView(dialogView)
@@ -826,8 +806,61 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             Log.e(TAG, "Error showing location info dialog", e);
             // Fallback to Toast if dialog fails
             Toast.makeText(this, 
-                "We only respond to reports within Lucban. Please select a location within Lucban.",
+                "The Lucban MDRRMO only responds to geotagged reports within Lucban, but you may submit reports that are outside of the vicinity.",
                 Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /**
+     * Show location options bottom sheet with two options:
+     * 1. Pin Location on Map
+     * 2. Get Current Location
+     */
+    private void showLocationOptionsBottomSheet() {
+        try {
+            BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(this);
+            View bottomSheetView = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_location_options, null);
+            bottomSheetDialog.setContentView(bottomSheetView);
+            
+            // Find option views
+            LinearLayout optionPinLocation = bottomSheetView.findViewById(R.id.optionPinLocation);
+            LinearLayout optionGetCurrentLocation = bottomSheetView.findViewById(R.id.optionGetCurrentLocation);
+            
+            // Pin Location on Map option
+            if (optionPinLocation != null) {
+                optionPinLocation.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        bottomSheetDialog.dismiss();
+                        // If current location is already obtained, open map in view-only mode
+                        // Otherwise, open map for selection
+                        if (isLocationSelected && selectedLatitude != 0.0 && selectedLongitude != 0.0) {
+                            Log.d(TAG, "Opening map to VIEW current location pin");
+                            openMapPickerViewOnly();
+                        } else {
+                            Log.d(TAG, "Opening map to SELECT new location");
+                            openMapPicker();
+                        }
+                    }
+                });
+            }
+            
+            // Get Current Location option
+            if (optionGetCurrentLocation != null) {
+                optionGetCurrentLocation.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        bottomSheetDialog.dismiss();
+                        Log.d(TAG, "Get Current Location option clicked");
+                        getCurrentLocation();
+                    }
+                });
+            }
+            
+            bottomSheetDialog.show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing location options bottom sheet: " + e.getMessage(), e);
+            Toast.makeText(this, "Error showing location options", Toast.LENGTH_SHORT).show();
         }
     }
 
