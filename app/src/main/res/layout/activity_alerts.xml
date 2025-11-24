@@ -253,7 +253,7 @@
                         android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_gravity="center"
-                        android:src="@drawable/ic_map_selector"
+                        android:src="@drawable/unselected_map"
                         android:contentDescription="Map Icon" />
                 </FrameLayout>
 

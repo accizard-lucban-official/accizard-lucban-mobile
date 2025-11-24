@@ -11,7 +11,7 @@ import com.airbnb.lottie.LottieAnimationView;
 public class SplashActivity extends AppCompatActivity {
     
     private static final String TAG = "SplashActivity";
-    private static final int SPLASH_DURATION = 4000; // 4 seconds
+    private static final int SPLASH_DURATION = 3000; // 3 seconds
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {

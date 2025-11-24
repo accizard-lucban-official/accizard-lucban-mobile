@@ -40,9 +40,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp"
-        android:background="@color/white"
-        android:elevation="2dp">
+        android:padding="16dp">
 
         <AutoCompleteTextView
             android:id="@+id/etSearchLocation"
@@ -50,12 +48,14 @@
             android:layout_height="48dp"
             android:layout_weight="1"
             android:hint="Search for a location..."
+            android:textSize="@dimen/text_size_small"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:background="@drawable/edit_text_background"
             android:layout_marginEnd="12dp"
             android:inputType="text"
             android:maxLines="1"
+            android:elevation="2dp"
             android:imeOptions="actionSearch"
             android:completionThreshold="1" />
 

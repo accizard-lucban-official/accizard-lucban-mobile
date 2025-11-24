@@ -8,10 +8,9 @@
     <!-- Lottie Animation View -->
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/lottieAnimationView"
-        android:layout_width="264dp"
-        android:layout_height="264dp"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
         android:layout_gravity="center"
-        android:layout_marginBottom="@dimen/margin_large"
         app:lottie_autoPlay="true"
         app:lottie_loop="true"
         app:lottie_speed="1.0" />
