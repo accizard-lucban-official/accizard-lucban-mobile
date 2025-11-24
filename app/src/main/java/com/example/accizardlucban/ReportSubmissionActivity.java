@@ -2103,6 +2103,27 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                             }
                         }
                         
+                        // Send notification to web admins about new report
+                        try {
+                            String reportType = (String) reportData.get("reportType");
+                            String reporterName = (String) reportData.get("reporterName");
+                            String location = (String) reportData.get("location");
+                            String description = (String) reportData.get("description");
+                            
+                            WebNotificationSender notificationSender = new WebNotificationSender(ReportSubmissionActivity.this);
+                            notificationSender.notifyNewReport(
+                                documentReference.getId(),
+                                reportType != null ? reportType : "Unknown",
+                                reporterName != null ? reporterName : "Unknown User",
+                                location != null ? location : "Unknown Location",
+                                description != null ? description : ""
+                            );
+                            Log.d(TAG, "✅ Web notification sent for new report");
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error sending web notification for report: " + e.getMessage(), e);
+                            // Don't show error to user - notification failure shouldn't block report submission
+                        }
+                        
                         Toast.makeText(ReportSubmissionActivity.this, 
                             "Report submitted successfully!", Toast.LENGTH_SHORT).show();
                         

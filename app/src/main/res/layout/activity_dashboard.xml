@@ -78,17 +78,6 @@
                 android:layout_marginEnd="@dimen/spacing_medium"
                 android:contentDescription="User Avatar" />
 
-            <!-- DRRMO Logo -->
-            <ImageView
-                android:id="@+id/ldrrmoLogo"
-                android:layout_width="wrap_content"
-                android:layout_height="@dimen/dashboard_profile_size"
-                android:layout_marginEnd="@dimen/spacing_medium"
-                android:src="@drawable/logo_mdrrmo"
-                android:adjustViewBounds="true"
-                android:scaleType="fitCenter"
-                android:contentDescription="LDRRMO Logo" />
-
             <!-- Text Container (Welcome + Location) -->
             <LinearLayout
                 android:layout_width="wrap_content"

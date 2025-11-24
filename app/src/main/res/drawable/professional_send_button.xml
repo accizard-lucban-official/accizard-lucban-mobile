@@ -3,17 +3,17 @@
     android:shape="oval">
     
     <!-- Background color -->
-    <solid android:color="#f97316" />
+    <solid android:color="@color/orange_primary" />
     
     <!-- Gradient for professional look -->
-    <gradient
-        android:startColor="#f97316"
-        android:endColor="#E64A19"
-        android:angle="135" />
+<!--    <gradient-->
+<!--        android:startColor="#f97316"-->
+<!--        android:endColor="#E64A19"-->
+<!--        android:angle="135" />-->
     
     <!-- Shadow effect -->
-    <stroke
-        android:width="2dp"
-        android:color="#D84315" />
+<!--    <stroke-->
+<!--        android:width="2dp"-->
+<!--        android:color="#D84315" />-->
         
 </shape>

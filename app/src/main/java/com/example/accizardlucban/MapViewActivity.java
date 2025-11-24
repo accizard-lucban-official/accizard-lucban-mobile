@@ -6608,6 +6608,8 @@ public class MapViewActivity extends AppCompatActivity {
                                 categoryText = "Police Station";
                             } else if (facilityType.contains("fire")) {
                                 categoryText = "Fire Station";
+                            } else if (facilityType.contains("government")) {
+                                categoryText = "Government Office";
                             } else {
                                 categoryText = "Emergency Facility";
                             }
@@ -6615,6 +6617,8 @@ public class MapViewActivity extends AppCompatActivity {
                             String category = pin.getCategory().trim().toLowerCase();
                             if (category.contains("evacuation")) {
                                 categoryText = "Evacuation Center";
+                            } else if (category.contains("government")) {
+                                categoryText = "Government Office";
                             } else {
                                 categoryText = "Emergency Facility";
                             }

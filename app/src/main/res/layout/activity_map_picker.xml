@@ -48,7 +48,7 @@
             android:layout_height="48dp"
             android:layout_weight="1"
             android:hint="Search for a location..."
-            android:textSize="@dimen/text_size_small"
+            android:textSize="@dimen/text_size_medium"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:background="@drawable/edit_text_background"

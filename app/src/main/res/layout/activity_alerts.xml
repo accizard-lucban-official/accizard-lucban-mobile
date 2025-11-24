@@ -18,7 +18,7 @@
         android:paddingTop="@dimen/padding_large"
         android:paddingBottom="@dimen/padding_large"
         android:background="@android:color/white"
-
+        android:elevation="2dp"
         android:gravity="center_vertical|end"
         android:minHeight="70dp">
 
@@ -42,9 +42,9 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/header_layout"
         android:orientation="vertical"
-        android:paddingStart="@dimen/padding_medium"
-        android:paddingEnd="@dimen/padding_medium"
-        android:paddingTop="@dimen/padding_medium"
+        android:paddingStart="@dimen/padding_large"
+        android:paddingEnd="@dimen/padding_large"
+        android:paddingTop="@dimen/padding_large"
         android:paddingBottom="@dimen/padding_medium"
         android:background="@android:color/white">
 

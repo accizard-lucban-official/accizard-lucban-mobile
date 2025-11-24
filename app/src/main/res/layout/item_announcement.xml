@@ -76,7 +76,9 @@
         android:lineSpacingExtra="@dimen/spacing_tiny"
         android:layout_marginBottom="@dimen/spacing_medium"
         android:linksClickable="true"
-        android:autoLink="web|email" />
+        android:autoLink="web|email"
+        android:maxLines="6"
+        android:ellipsize="end" />
 
     <!-- Timestamp and Attachments Row -->
     <LinearLayout

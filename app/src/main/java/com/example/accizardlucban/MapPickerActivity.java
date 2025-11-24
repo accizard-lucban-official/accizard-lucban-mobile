@@ -375,7 +375,6 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
     private LinearLayout locationPopup;
     private TextView tvPopupLocationName;
     private TextView tvPopupCoordinates;
-    private Button btnCancelLocation;
     private Button btnSelectLocationPopup;
     
     // Current location info
@@ -427,7 +426,6 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
         locationPopup = findViewById(R.id.locationPopup);
         tvPopupLocationName = findViewById(R.id.tvPopupLocationName);
         tvPopupCoordinates = findViewById(R.id.tvPopupCoordinates);
-        btnCancelLocation = findViewById(R.id.btnCancelLocation);
         btnSelectLocationPopup = findViewById(R.id.btnSelectLocationPopup);
         
         // Setup back button
@@ -435,11 +433,7 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
             btnBack.setOnClickListener(v -> finish());
         }
         
-        // Setup popup button listeners
-        if (btnCancelLocation != null) {
-            btnCancelLocation.setOnClickListener(v -> hideLocationPopup());
-        }
-        
+        // Setup popup button listener
         if (btnSelectLocationPopup != null) {
             btnSelectLocationPopup.setOnClickListener(v -> selectLocationFromPopup());
         }
@@ -1147,22 +1141,11 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
                 tvPopupLocationName.setText("🔍 Getting location details...");
             }
             
-            // Always show both buttons - users can select or cancel
-            // View-only mode is now just for button text, but interaction is always enabled
+            // Always show select button - users can select location
             if (btnSelectLocationPopup != null) {
                 btnSelectLocationPopup.setVisibility(View.VISIBLE);
             }
-            if (btnCancelLocation != null) {
-                btnCancelLocation.setText(isViewOnlyMode ? "Close" : "Cancel");
-                btnCancelLocation.setOnClickListener(v -> {
-                    if (isViewOnlyMode) {
-                        finish(); // Close activity in view-only mode
-                    } else {
-                        hideLocationPopup(); // Just hide popup in normal mode
-                    }
-                });
-            }
-            Log.d("MapPicker", "✅ Popup buttons configured - users can always select or cancel");
+            Log.d("MapPicker", "✅ Popup button configured - users can select location");
             
             // Show popup with enhanced Google Maps-style animation
             locationPopup.setVisibility(View.VISIBLE);
