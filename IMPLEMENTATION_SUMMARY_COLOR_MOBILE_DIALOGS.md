@@ -119,3 +119,5 @@ Web push notifications require additional setup:
 - Dialog rounded corners follow Material Design guidelines (28dp)
 - Web push notifications require separate web app implementation
 
+
+

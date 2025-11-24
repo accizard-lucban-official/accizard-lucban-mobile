@@ -32,7 +32,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/dashboard_header_logo_height"
                 android:layout_marginEnd="@dimen/spacing_small"
-                android:src="@drawable/logo_ldrrmo"
+                android:src="@drawable/logo_mdrrmo"
                 android:adjustViewBounds="true"
                 android:scaleType="fitCenter"
                 android:contentDescription="LDRRMO Logo" />
@@ -154,6 +154,7 @@
             android:layout_width="@dimen/dashboard_phone_icon_size"
             android:layout_height="@dimen/dashboard_call_button_height"
             android:src="@drawable/phone_call"
+            android:tint="@color/orange_primary"
             android:layout_marginEnd="@dimen/margin_medium"
             android:contentDescription="Phone Icon" />
 
@@ -204,7 +205,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:layout_marginBottom="@dimen/margin_xxlarge"
-                android:background="@drawable/weather_bg"
+                android:background="@drawable/weather_background"
                 android:padding="@dimen/dashboard_weather_card_padding">
 
                 <!-- Top Section: Temperature, Weather Icon, Location/Date -->
@@ -441,7 +442,7 @@
                                 android:layout_width="@dimen/dashboard_forecast_icon_size"
                                 android:layout_height="@dimen/dashboard_forecast_icon_size"
                                 android:src="@drawable/fluent__weather_partly_cloudy_day_48_filled"
-                                android:tint="@color/colorPrimary"
+                                android:tint="@color/orange_primary"
                                 android:layout_marginBottom="@dimen/margin_medium"
                                 android:contentDescription="Today Weather" />
 
@@ -495,7 +496,7 @@
                                 android:layout_width="@dimen/dashboard_forecast_icon_size"
                                 android:layout_height="@dimen/dashboard_forecast_icon_size"
                                 android:src="@drawable/fluent__weather_partly_cloudy_day_48_filled"
-                                android:tint="@color/colorPrimary"
+                                android:tint="@color/orange_primary"
                                 android:layout_marginBottom="@dimen/margin_medium"
                                 android:contentDescription="Day 1 Weather" />
 
@@ -549,7 +550,7 @@
                                 android:layout_width="@dimen/dashboard_forecast_icon_size"
                                 android:layout_height="@dimen/dashboard_forecast_icon_size"
                                 android:src="@drawable/fluent__weather_partly_cloudy_day_48_filled"
-                                android:tint="@color/colorPrimary"
+                                android:tint="@color/orange_primary"
                                 android:layout_marginBottom="@dimen/margin_medium"
                                 android:contentDescription="Day 2 Weather" />
 
@@ -603,7 +604,7 @@
                                 android:layout_width="@dimen/dashboard_forecast_icon_size"
                                 android:layout_height="@dimen/dashboard_forecast_icon_size"
                                 android:src="@drawable/fluent__weather_partly_cloudy_day_48_filled"
-                                android:tint="@color/colorPrimary"
+                                android:tint="@color/orange_primary"
                                 android:layout_marginBottom="@dimen/margin_medium"
                                 android:contentDescription="Day 3 Weather" />
 
@@ -657,7 +658,7 @@
                                 android:layout_width="@dimen/dashboard_forecast_icon_size"
                                 android:layout_height="@dimen/dashboard_forecast_icon_size"
                                 android:src="@drawable/ic_cloud_rain"
-                                android:tint="@color/colorPrimary"
+                                android:tint="@color/orange_primary"
                                 android:layout_marginBottom="@dimen/margin_medium"
                                 android:contentDescription="Day 4 Weather" />
 
@@ -710,7 +711,7 @@
                                 android:layout_width="@dimen/dashboard_forecast_icon_size"
                                 android:layout_height="@dimen/dashboard_forecast_icon_size"
                                 android:src="@drawable/ic_cloud_rain"
-                                android:tint="@color/colorPrimary"
+                                android:tint="@color/orange_primary"
                                 android:layout_marginBottom="@dimen/margin_medium"
                                 android:contentDescription="Day 5 Weather" />
 
@@ -772,8 +773,9 @@
                         android:id="@+id/addContactIcon"
                         android:layout_width="@dimen/dashboard_emergency_contact_size"
                         android:layout_height="@dimen/dashboard_emergency_contact_size"
-                        android:src="@drawable/add_contacts"
+                        android:src="@drawable/add_contact"
                         android:padding="@dimen/spacing_medium"
+                        android:tint="@color/orange_primary"
                         android:layout_marginBottom="@dimen/spacing_small"
                         android:clickable="true"
                         android:focusable="true"
@@ -1215,6 +1217,7 @@
                             android:layout_width="@dimen/dashboard_stat_icon_size"
                             android:layout_height="@dimen/dashboard_stat_icon_size"
                             android:src="@drawable/vector__3_"
+                            android:tint="@color/orange_primary"
                             android:layout_marginEnd="@dimen/spacing_small"
                             android:contentDescription="Total Reports Icon" />
 
@@ -1259,6 +1262,7 @@
                             android:layout_width="@dimen/dashboard_stat_icon_size"
                             android:layout_height="@dimen/dashboard_stat_icon_size"
                             android:src="@drawable/frame__14_"
+
                             android:layout_marginEnd="@dimen/spacing_small"
                             android:contentDescription="Barangay Reports Icon" />
 
@@ -1303,6 +1307,7 @@
                             android:layout_width="@dimen/dashboard_stat_icon_size"
                             android:layout_height="@dimen/dashboard_stat_icon_size"
                             android:src="@drawable/ic_report_selected"
+                            android:tint="@color/orange_primary"
                             android:layout_marginEnd="@dimen/spacing_small"
                             android:contentDescription="My Reports Icon" />
 
@@ -1617,7 +1622,7 @@
                         android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_gravity="center"
-                        android:src="@drawable/frame__6_"
+                        android:src="@drawable/ic_chat_selector"
                         android:contentDescription="Chat Icon" />
 
                     <!-- Chat Notification Badge - Positioned above the icon -->
@@ -1677,7 +1682,7 @@
                         android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_gravity="center"
-                        android:src="@drawable/frame__8_"
+                        android:src="@drawable/ic_map_selector"
                         android:contentDescription="Map Icon" />
                 </FrameLayout>
 
@@ -1713,7 +1718,7 @@
                         android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_gravity="center"
-                        android:src="@drawable/frame__9_"
+                        android:src="@drawable/ic_alerts_selector"
                         android:contentDescription="Alerts Icon" />
 
                     <!-- Notification Badge - Positioned above the icon -->

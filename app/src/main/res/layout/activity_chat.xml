@@ -43,7 +43,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Lucban LDRRMO"
+                android:text="Lucban MDRRMO"
                 android:textColor="#333333"
                 android:textSize="@dimen/text_size_xlarge"
                 android:textStyle="bold"/>
@@ -240,7 +240,7 @@
                         android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_chat_selected"
-                        android:tint="#f97316"
+                        android:tint="@color/orange_primary"
                         android:tintMode="src_in"/>
 
                     <!-- Chat notification badge -->
@@ -300,9 +300,8 @@
                         android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_gravity="center"
-                        android:src="@drawable/frame__8_"
-                        android:tint="#999999"
-                        android:tintMode="src_in"/>
+                        android:src="@drawable/ic_map_selector"
+                        android:contentDescription="Map Icon" />
                 </FrameLayout>
 
                 <TextView
@@ -337,9 +336,8 @@
                         android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_gravity="center"
-                        android:src="@drawable/frame__9_"
-                        android:tint="#999999"
-                        android:tintMode="src_in"/>
+                        android:src="@drawable/ic_alerts_selector"
+                        android:contentDescription="Alerts Icon" />
 
                     <!-- Notification Badge - Positioned above the icon -->
                     <TextView

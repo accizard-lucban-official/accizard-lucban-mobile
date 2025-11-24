@@ -480,7 +480,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/birthday"
+                            android:src="@drawable/birthday_icon"
                             android:tint="#f97316"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Calendar icon" />
@@ -572,7 +572,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/ic_people"
+                            android:src="@drawable/civil_status"
                             android:tint="#f97316"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Civil status icon" />
@@ -618,7 +618,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/religion"
+                            android:src="@drawable/church"
                             android:tint="#f97316"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="Religion icon" />
@@ -710,7 +710,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/ic_person_hand"
+                            android:src="@drawable/pwd_status"
                             android:tint="#f97316"
                             android:layout_marginEnd="16dp"
                             android:contentDescription="PWD status icon" />

@@ -191,7 +191,7 @@
                         android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_gravity="center"
-                        android:src="@drawable/frame__6_"
+                        android:src="@drawable/ic_chat_selector"
                         android:contentDescription="Chat Icon" />
 
                     <!-- Chat Notification Badge - Positioned above the icon -->
@@ -253,7 +253,8 @@
                         android:layout_width="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_height="@dimen/dashboard_bottom_nav_icon_size"
                         android:layout_gravity="center"
-                        android:src="@drawable/frame__8_" />
+                        android:src="@drawable/ic_map_selector"
+                        android:contentDescription="Map Icon" />
                 </FrameLayout>
 
                 <TextView

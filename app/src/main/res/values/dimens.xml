@@ -201,7 +201,7 @@
     <!-- Weather Section -->
     <dimen name="dashboard_weather_card_padding">20dp</dimen>
     <dimen name="dashboard_temperature_text_size">48sp</dimen>
-    <dimen name="dashboard_weather_icon_size">48dp</dimen>
+    <dimen name="dashboard_weather_icon_size">64dp</dimen>
     <dimen name="dashboard_weather_description_size">12sp</dimen>
     <dimen name="dashboard_weather_location_size">16sp</dimen>
     <dimen name="dashboard_weather_detail_text_size">14sp</dimen>
@@ -210,7 +210,7 @@
     <!-- Forecast Section -->
     <dimen name="dashboard_forecast_title_size">18sp</dimen>
     <dimen name="dashboard_forecast_day_padding">16dp</dimen>
-    <dimen name="dashboard_forecast_icon_size">48dp</dimen>
+    <dimen name="dashboard_forecast_icon_size">56dp</dimen>
     <dimen name="dashboard_forecast_temp_size">16sp</dimen>
     <dimen name="dashboard_forecast_day_name_size">14sp</dimen>
     <dimen name="dashboard_forecast_description_size">10sp</dimen>

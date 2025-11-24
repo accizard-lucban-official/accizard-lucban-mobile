@@ -96,6 +96,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.content.res.ColorStateList;
 import android.util.TypedValue;
 import org.json.JSONObject;
@@ -1308,6 +1310,9 @@ public class MainDashboard extends AppCompatActivity {
                             Log.w(TAG, "  ⚠️ Day " + i + " icon code is null or empty: '" + daily.icon + "'");
                             // Fallback to default clear sky icon
                             dayIcons[i].setImageResource(R.drawable.owm_01d);
+                            // Apply orange_primary color filter
+                            int orangeColor = ContextCompat.getColor(this, R.color.orange_primary);
+                            dayIcons[i].setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
                         }
                     } else {
                         Log.e(TAG, "  ❌ Day " + i + " ImageView is null!");
@@ -1351,6 +1356,8 @@ public class MainDashboard extends AppCompatActivity {
                                 loadWeatherIconFromUrl(dayIcons[5], lastDay.icon);
                             } else if (dayIcons[5] != null) {
                                 dayIcons[5].setImageResource(R.drawable.owm_01d);
+                                int orangeColor = ContextCompat.getColor(this, R.color.orange_primary);
+                                dayIcons[5].setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
                             }
                             
                             // Use last day's temperature as fallback
@@ -1369,6 +1376,8 @@ public class MainDashboard extends AppCompatActivity {
                             // Use default icon
                             if (dayIcons[5] != null) {
                                 dayIcons[5].setImageResource(R.drawable.owm_01d);
+                                int orangeColor = ContextCompat.getColor(this, R.color.orange_primary);
+                                dayIcons[5].setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
                             }
                         }
                     } else if (i == 5) {
@@ -1376,6 +1385,8 @@ public class MainDashboard extends AppCompatActivity {
                         // Use default icon
                         if (dayIcons[5] != null) {
                             dayIcons[5].setImageResource(R.drawable.owm_01d);
+                            int orangeColor = ContextCompat.getColor(this, R.color.orange_primary);
+                            dayIcons[5].setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
                         }
                     }
                 }
@@ -4772,6 +4783,8 @@ public class MainDashboard extends AppCompatActivity {
             Log.w(TAG, "ImageView or iconCode is null/empty, using fallback icon");
             if (imageView != null) {
                 imageView.setImageResource(R.drawable.owm_01d);
+                int orangeColor = ContextCompat.getColor(this, R.color.orange_primary);
+                imageView.setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
             }
             return;
         }
@@ -4806,6 +4819,9 @@ public class MainDashboard extends AppCompatActivity {
                         // Update UI on main thread
                         mainHandler.post(() -> {
                             imageView.setImageBitmap(bitmap);
+                            // Apply orange_primary color filter to weather icons
+                            int orangeColor = ContextCompat.getColor(MainDashboard.this, R.color.orange_primary);
+                            imageView.setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
                             String viewId = getResources().getResourceEntryName(imageView.getId());
                             Log.d(TAG, "✅ OpenWeatherMap icon loaded successfully: " + iconCode + 
                                   " (size: " + bitmap.getWidth() + "x" + bitmap.getHeight() + 
@@ -4815,6 +4831,8 @@ public class MainDashboard extends AppCompatActivity {
                         Log.e(TAG, "❌ Failed to decode bitmap from URL: " + iconUrl);
                         mainHandler.post(() -> {
                             imageView.setImageResource(R.drawable.owm_01d);
+                            int orangeColor = ContextCompat.getColor(MainDashboard.this, R.color.orange_primary);
+                            imageView.setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
                             Log.w(TAG, "  Using fallback icon for: " + iconCode);
                         });
                     }
@@ -4824,6 +4842,8 @@ public class MainDashboard extends AppCompatActivity {
                     Log.e(TAG, "❌ HTTP error loading icon: " + responseCode + " for " + iconCode);
                     mainHandler.post(() -> {
                         imageView.setImageResource(R.drawable.owm_01d);
+                        int orangeColor = ContextCompat.getColor(MainDashboard.this, R.color.orange_primary);
+                        imageView.setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
                         Log.w(TAG, "  Using fallback icon due to HTTP error");
                     });
                 }
@@ -4835,6 +4855,8 @@ public class MainDashboard extends AppCompatActivity {
                 e.printStackTrace();
                 mainHandler.post(() -> {
                     imageView.setImageResource(R.drawable.owm_01d);
+                    int orangeColor = ContextCompat.getColor(MainDashboard.this, R.color.orange_primary);
+                    imageView.setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
                     Log.w(TAG, "  Using fallback icon due to exception: " + e.getMessage());
                 });
             }
