@@ -7,3 +7,4 @@
         android:id="@+id/menu_record_video"
         android:title="Record Video" />
 </menu>
+

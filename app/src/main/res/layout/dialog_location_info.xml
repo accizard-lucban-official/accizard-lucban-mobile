@@ -20,8 +20,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Location Information"
-            android:textSize="20sp"
+            android:textSize="16sp"
             android:textStyle="bold"
+            android:layout_marginBottom="@dimen/margin_medium"
             android:textColor="#333333" />
 
         <TextView
@@ -29,9 +30,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="The Lucban MDRRMO responds exclusively to geotagged reports within Lucban. However, reports from outside the area may still be submitted."
-            android:textSize="16sp"
+            android:textSize="12sp"
             android:textColor="#555555"
-            android:lineSpacingExtra="4dp"
             android:layout_marginBottom="24dp" />
 
         <Button

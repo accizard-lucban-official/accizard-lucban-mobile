@@ -21,7 +21,6 @@
             android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="#333333"
-            android:gravity="center"
             android:layout_marginBottom="20dp" />
 
         <!-- Report Type Section -->
@@ -41,6 +40,7 @@
             android:text="Road Crash"
             android:textSize="16sp"
             android:textColor="#333333"
+            android:backgroundTintMode="@null"
             android:padding="12dp"
             android:background="#F5F5F5"
             android:layout_marginBottom="16dp" />
@@ -100,14 +100,6 @@
             android:layout_marginBottom="16dp" />
 
         <!-- Attachments Section -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Reminders"
-            android:textSize="12sp"
-            android:textColor="#666666"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
 
         <!-- Horizontal RecyclerView for image previews -->
         <androidx.recyclerview.widget.RecyclerView
@@ -130,22 +122,13 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Please review your report details before submitting. You won't be able to edit or delete it afterward. Submitting false or misleading reports may delay emergency response or result in penalties."
+                android:text="Please review your report details before submitting. You won't be able to edit or delete it afterward. Submitting false or misleading reports may delay emergency response or result in account suspension."
                 android:textSize="12sp"
                 android:textColor="#C62828"
                 android:lineSpacingExtra="2dp" />
         </LinearLayout>
 
         <!-- Confirmation Question -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Are you sure you want to submit this report?"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#333333"
-            android:gravity="center"
-            android:layout_marginBottom="20dp" />
 
         <!-- Action Buttons -->
         <LinearLayout
@@ -158,18 +141,17 @@
             <!-- Cancel Button -->
 
             <!-- Confirm Button -->
+
             <Button
                 android:id="@+id/btnCancelReport"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="fill_parent"
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
-                android:background="@drawable/button_gray_background"
-                android:backgroundTint="@null"
+                android:backgroundTint="@color/white"
                 android:text="Cancel"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textColor="@color/gray_dark"
+                android:textSize="16sp"/>
 
             <Button
                 android:id="@+id/btnConfirmSubmit"
@@ -181,7 +163,7 @@
                 android:textColor="@android:color/white"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:background="@drawable/button_take_photo_background"
+                android:background="@drawable/submit_button_background"
                 android:backgroundTint="@null" />
 
         </LinearLayout>

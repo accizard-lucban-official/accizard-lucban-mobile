@@ -145,6 +145,7 @@ public class MapViewActivity extends AppCompatActivity {
     private MapboxMap mapboxMap;
     private CameraAnimationsPlugin cameraAnimationsPlugin;
     private GesturesPlugin gesturesPlugin;
+    private com.mapbox.maps.plugin.locationcomponent.LocationComponentPlugin locationComponent;
 
     // Search functionality
     private SimpleSearchAdapter simpleSearchAdapter;
@@ -249,11 +250,9 @@ public class MapViewActivity extends AppCompatActivity {
     private static final float PIN_WIDTH_DP = 56f;
     private static final float PIN_HEIGHT_DP = 76f;
     private static final float PIN_OFFSET_DP = 4f;
-    private static final float CURRENT_LOCATION_PIN_OFFSET_DP = 6f;
     private int pinWidthPx;
     private int pinHeightPx;
     private int pinOffsetPx;
-    private int currentLocationPinOffsetPx;
     
     // Camera tracking for Firestore pins
     private Handler firestorePinCameraHandler;
@@ -263,12 +262,12 @@ public class MapViewActivity extends AppCompatActivity {
     // Guard flag to prevent infinite loops when applying filters and layers simultaneously
     private boolean isApplyingFiltersOrLayers = false;
     
-    // Current location pin system (like MapPickerActivity)
-    private ImageView currentLocationMarker;
+    // Current location state
     private Point currentLocationPoint;
-    private Handler cameraUpdateHandler;
-    private Runnable cameraUpdateRunnable;
     private boolean isCurrentLocationActive = false;
+    private ImageView currentLocationIndicator; // Simple blue dot marker for current location
+    private Handler currentLocationMarkerHandler; // Handler for tracking current location marker
+    private Runnable currentLocationMarkerRunnable; // Runnable for updating marker position
     
     // Custom marker class to hold marker data
     private static class MapMarker {
@@ -324,9 +323,6 @@ public class MapViewActivity extends AppCompatActivity {
         
         // Initialize SharedPreferences for badge
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        
-        // Initialize camera tracking handler for current location pin
-        cameraUpdateHandler = new Handler(Looper.getMainLooper());
         
         // Initialize camera tracking handler for Firestore pins
         firestorePinCameraHandler = new Handler(Looper.getMainLooper());
@@ -1085,7 +1081,7 @@ public class MapViewActivity extends AppCompatActivity {
     private void setupIncidentCheckboxListener(CheckBox checkBox, String incidentType) {
         if (checkBox != null) {
             // Ensure checkbox is properly initialized
-            checkBox.setChecked(incidentFilters.getOrDefault(incidentType, false));
+            checkBox.setChecked(getOrDefault(incidentFilters, incidentType, false));
             
             checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 if (isUpdatingIncidentCheckboxes) {
@@ -1147,7 +1143,7 @@ public class MapViewActivity extends AppCompatActivity {
             isUpdatingFacilityCheckboxes = true;
             try {
                 // Initialize checkbox state based on current filters without triggering listener
-                boolean initialChecked = facilityFilters.getOrDefault(facilityType, false);
+                boolean initialChecked = getOrDefault(facilityFilters, facilityType, false);
                 checkBox.setChecked(initialChecked);
             } finally {
                 isUpdatingFacilityCheckboxes = false;
@@ -2042,12 +2038,8 @@ public class MapViewActivity extends AppCompatActivity {
         }
         
         // Cleanup current location camera tracking
-        stopCurrentLocationCameraTracking();
         
-        // Cleanup camera update handler
-        if (cameraUpdateHandler != null) {
-            cameraUpdateHandler.removeCallbacksAndMessages(null);
-        }
+        // Note: Current location no longer uses continuous camera tracking
         
         // Cleanup Firestore pin camera tracking
         stopFirestorePinCameraTracking();
@@ -2158,224 +2150,290 @@ public class MapViewActivity extends AppCompatActivity {
     }
     
     /**
-     * Handle current location update (like MapPickerActivity)
+     * Handle current location update - only animate once, no continuous tracking
      */
     private void handleCurrentLocationUpdate(Location location) {
         if (location != null) {
             // Create point from current location
             Point currentPoint = Point.fromLngLat(location.getLongitude(), location.getLatitude());
             
-            // Clear existing current location pin
-            clearCurrentLocationPin();
-            
             // Set as current location point
             currentLocationPoint = currentPoint;
             isCurrentLocationActive = true;
             
-            // Add current location marker (fixed positioning like MapPickerActivity)
-            addCurrentLocationMarker(currentPoint);
+            // Enable Mapbox's default location component
+            enableLocationComponent(currentPoint);
             
-            // Animate to current location with higher zoom
+            // Animate to current location only once (no continuous tracking)
             animateToLocation(currentPoint, 17.0);
             
-            // Show success message
-            // Current location pinned (toast removed)
-            
             Log.d(TAG, "Current location: " + location.getLatitude() + ", " + location.getLongitude());
-        } else {
-            // Unable to get current location (toast removed)
         }
     }
 
     /**
-     * Add current location marker with fixed positioning (like MapPickerActivity)
+     * Initialize Mapbox's LocationComponent plugin
      */
-    private void addCurrentLocationMarker(Point point) {
-        Log.d(TAG, "addCurrentLocationMarker called");
+    private void initializeLocationComponent() {
+        if (mapView == null) {
+            return;
+        }
         
-        if (mapContainer != null) {
-            try {
-                Log.d(TAG, "Map container found, creating current location marker...");
-                ensurePinDimensions();
-                
-                // Create marker
-                ImageView markerView = new ImageView(this);
-                Bitmap markerBitmap = createCurrentLocationMarkerBitmap();
-                markerView.setImageBitmap(markerBitmap);
-                Log.d(TAG, "Current location marker bitmap created: " + markerBitmap.getWidth() + "x" + markerBitmap.getHeight());
-                FrameLayout.LayoutParams initialParams = new FrameLayout.LayoutParams(pinWidthPx, pinHeightPx);
-                markerView.setLayoutParams(initialParams);
-                
-                // Add to container
-                mapContainer.addView(markerView);
-                currentLocationMarker = markerView;
-                Log.d(TAG, "Current location marker added to container");
-                
-                // Position marker at actual coordinates immediately
-                positionCurrentLocationMarkerAtCoordinates(point);
-                Log.d(TAG, "Current location marker positioned");
-                
-                // Add Google Maps-style drop animation
-                animateCurrentLocationMarkerDrop(markerView);
-                Log.d(TAG, "Current location marker animation started");
-                
-                // Start camera tracking to keep marker positioned correctly
-                startCurrentLocationCameraTracking();
-                Log.d(TAG, "Current location camera tracking started");
-                
-                Log.d(TAG, "Current location marker successfully added at: " + point.longitude() + ", " + point.latitude());
-                
-            } catch (Exception e) {
-                Log.e(TAG, "Error adding current location marker", e);
-                // Error creating current location marker (toast removed)
+        try {
+            // Get the location component plugin using the plugin system
+            locationComponent = (com.mapbox.maps.plugin.locationcomponent.LocationComponentPlugin) 
+                mapView.getPlugin("com.mapbox.maps.plugin.locationcomponent");
+            if (locationComponent != null) {
+                // Location component will be enabled when user clicks the pin location button
+                // For now, keep it disabled until user requests location
+                locationComponent.setEnabled(false);
+                Log.d(TAG, "Location component initialized (disabled by default)");
+            } else {
+                Log.w(TAG, "Location component plugin not found");
             }
-        } else {
-            Log.e(TAG, "mapContainer is NULL - cannot add current location marker!");
-            // Error: Map container not found (toast removed)
+        } catch (Exception e) {
+            Log.e(TAG, "Error initializing location component", e);
         }
     }
     
     /**
-     * Create current location marker bitmap (blue pin like Google Maps)
+     * Enable location indicator and show blue dot marker on map
      */
-    private Bitmap createCurrentLocationMarkerBitmap() {
-        ensurePinDimensions();
-        Drawable pinDrawable = ContextCompat.getDrawable(this, R.drawable.accizard_pin);
-        if (pinDrawable == null) {
-            return Bitmap.createBitmap(pinWidthPx, pinHeightPx, Bitmap.Config.ARGB_8888);
+    private void enableLocationComponent(Point location) {
+        if (mapboxMap == null || mapView == null || location == null || mapContainer == null) {
+            return;
         }
-
-        Bitmap bitmap = Bitmap.createBitmap(pinWidthPx, pinHeightPx, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bitmap);
-
-        pinDrawable.setBounds(0, 0, pinWidthPx, pinHeightPx);
-        pinDrawable.draw(canvas);
-
-        return bitmap;
+        
+        try {
+            // Try to enable Mapbox's LocationComponent first
+            if (locationComponent == null) {
+                try {
+                    locationComponent = (com.mapbox.maps.plugin.locationcomponent.LocationComponentPlugin) 
+                        mapView.getPlugin("com.mapbox.maps.plugin.locationcomponent");
+                    if (locationComponent != null) {
+                        locationComponent.setEnabled(true);
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "LocationComponent plugin not available, using custom marker", e);
+                }
+            }
+            
+            // Add a simple blue dot marker as visual indicator (fallback if LocationComponent doesn't work)
+            addCurrentLocationMarker(location);
+            
+            // Request location updates
+            if (fusedLocationClient != null && checkLocationPermission()) {
+                requestLocationForComponent();
+            } else {
+                Log.d(TAG, "Location indicator enabled at: " + location.longitude() + ", " + location.latitude());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error enabling location component", e);
+        }
     }
     
     /**
-     * Position current location marker at specific coordinates with high precision (like MapPickerActivity)
+     * Add a simple blue dot marker to show current location
      */
-    private void positionCurrentLocationMarkerAtCoordinates(Point point) {
-        if (currentLocationMarker != null && mapboxMap != null && mapContainer != null) {
-            if (heatmapEnabled && hasActiveHazardFilter()) {
-                currentLocationMarker.setVisibility(View.GONE);
+    private void addCurrentLocationMarker(Point location) {
+        if (mapContainer == null || mapboxMap == null) {
+            return;
+        }
+        
+        try {
+            // Remove existing marker if any
+            if (currentLocationIndicator != null) {
+                mapContainer.removeView(currentLocationIndicator);
+                currentLocationIndicator = null;
+            }
+            
+            // Create a blue circle drawable programmatically
+            int sizePx = dpToPx(20f); // 20dp blue dot
+            ImageView markerView = new ImageView(this);
+            
+            // Create a blue circle bitmap
+            Bitmap bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            Paint paint = new Paint();
+            paint.setColor(Color.parseColor("#4285F4")); // Google Maps blue color
+            paint.setAntiAlias(true);
+            paint.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f - 2, paint);
+            
+            // Add white border
+            Paint borderPaint = new Paint();
+            borderPaint.setColor(Color.WHITE);
+            borderPaint.setAntiAlias(true);
+            borderPaint.setStyle(Paint.Style.STROKE);
+            borderPaint.setStrokeWidth(3f);
+            canvas.drawCircle(sizePx / 2f, sizePx / 2f, sizePx / 2f - 2, borderPaint);
+            
+            markerView.setImageBitmap(bitmap);
+            
+            // Set layout parameters
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(sizePx, sizePx);
+            markerView.setLayoutParams(params);
+            
+            // Add to container
+            mapContainer.addView(markerView);
+            currentLocationIndicator = markerView;
+            
+            // Position the marker at the location
+            positionCurrentLocationMarker(location);
+            
+            // Start camera tracking to keep marker positioned correctly
+            startCurrentLocationMarkerTracking();
+            
+            Log.d(TAG, "Current location marker added at: " + location.longitude() + ", " + location.latitude());
+        } catch (Exception e) {
+            Log.e(TAG, "Error adding current location marker", e);
+        }
+    }
+    
+    /**
+     * Position the current location marker at the given coordinates
+     */
+    private void positionCurrentLocationMarker(Point location) {
+        if (currentLocationIndicator == null || mapboxMap == null || mapContainer == null) {
+            return;
+        }
+        
+        try {
+            // Convert geographic coordinates to screen coordinates
+            ScreenCoordinate screenCoord = mapboxMap.pixelForCoordinate(location);
+            
+            int containerWidth = mapContainer.getWidth();
+            int containerHeight = mapContainer.getHeight();
+            
+            if (containerWidth <= 0 || containerHeight <= 0) {
+                // Container not ready, try again later
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    positionCurrentLocationMarker(location);
+                }, 100);
                 return;
             }
-            try {
-                ensurePinDimensions();
-                // Convert geographic coordinates to screen coordinates with high precision
-                ScreenCoordinate screenCoord = mapboxMap.pixelForCoordinate(point);
+            
+            double x = screenCoord.getX();
+            double y = screenCoord.getY();
+            
+            // Check if coordinates are within visible bounds
+            int margin = dpToPx(20f);
+            if (x >= -margin && x <= containerWidth + margin && 
+                y >= -margin && y <= containerHeight + margin) {
                 
-                // Get map container dimensions
-                int containerWidth = mapContainer.getWidth();
-                int containerHeight = mapContainer.getHeight();
-                
-                if (containerWidth <= 0 || containerHeight <= 0) {
-                    // Container not ready yet, try again later
-                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        positionCurrentLocationMarkerAtCoordinates(point);
-                    }, 100);
-                    return;
-                }
-                
-                // Calculate marker position relative to container with high precision
-                double x = screenCoord.getX();
-                double y = screenCoord.getY();
-                
-                // Check if coordinates are within visible bounds (with some margin)
-                int margin = dpToPx(40f); // Allow marker to be slightly outside bounds
-                if (x >= -margin && x <= containerWidth + margin && 
-                    y >= -margin && y <= containerHeight + margin) {
-                    
-                    // Create layout parameters with absolute positioning
-                    FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                        pinWidthPx,
-                        pinHeightPx
-                    );
-                    
-                    // Center the pin point exactly on the geographic coordinates
-                    params.leftMargin = (int) Math.round(x - (pinWidthPx / 2.0));
-                    params.topMargin = (int) Math.round(y - pinHeightPx + currentLocationPinOffsetPx);
-                    
-                    currentLocationMarker.setLayoutParams(params);
-                    currentLocationMarker.setVisibility(View.VISIBLE);
-                    
-                    // Log positioning for debugging
-                    Log.d(TAG, String.format("Current location marker positioned at screen coords: %.2f, %.2f -> margin: %d, %d", 
-                        x, y, params.leftMargin, params.topMargin));
-                    
-                } else {
-                    // Marker is outside visible area, hide it
-                    currentLocationMarker.setVisibility(View.GONE);
-                    Log.d(TAG, "Current location marker hidden - outside visible bounds");
-                }
-                
-            } catch (Exception e) {
-                Log.e(TAG, "Error positioning current location marker", e);
-                // Keep marker hidden if positioning fails
-                if (currentLocationMarker != null) {
-                    currentLocationMarker.setVisibility(View.GONE);
-                }
+                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) currentLocationIndicator.getLayoutParams();
+                params.leftMargin = (int) Math.round(x - params.width / 2.0);
+                params.topMargin = (int) Math.round(y - params.height / 2.0);
+                currentLocationIndicator.setLayoutParams(params);
+                currentLocationIndicator.setVisibility(View.VISIBLE);
+            } else {
+                currentLocationIndicator.setVisibility(View.GONE);
             }
+        } catch (Exception e) {
+            Log.e(TAG, "Error positioning current location marker", e);
         }
     }
     
     /**
-     * Animate current location marker drop like Google Maps
+     * Start camera tracking for current location marker
      */
-    private void animateCurrentLocationMarkerDrop(ImageView markerView) {
-        // Start from above and scale
-        markerView.setScaleX(0.1f);
-        markerView.setScaleY(0.1f);
-        markerView.setTranslationY(-50f);
-        markerView.setAlpha(0.8f);
+    private void startCurrentLocationMarkerTracking() {
+        if (currentLocationPoint == null) {
+            return;
+        }
         
-        // Animate to final position
-        markerView.animate()
-            .scaleX(1.0f)
-            .scaleY(1.0f)
-            .translationY(0f)
-            .alpha(1.0f)
-            .setDuration(300)
-            .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f))
-            .start();
+        // Stop any existing tracking
+        stopCurrentLocationMarkerTracking();
+        
+        // Create new handler and runnable
+        currentLocationMarkerHandler = new Handler(Looper.getMainLooper());
+        currentLocationMarkerRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (currentLocationIndicator != null && currentLocationPoint != null && isCurrentLocationActive) {
+                    positionCurrentLocationMarker(currentLocationPoint);
+                    if (currentLocationMarkerHandler != null) {
+                        currentLocationMarkerHandler.postDelayed(this, 100); // Update every 100ms
+                    }
+                }
+            }
+        };
+        currentLocationMarkerHandler.post(currentLocationMarkerRunnable);
     }
     
     /**
-     * Start camera tracking for current location marker (like MapPickerActivity)
+     * Stop camera tracking for current location marker
      */
-    private void startCurrentLocationCameraTracking() {
-        if (cameraUpdateRunnable == null) {
-            cameraUpdateRunnable = new Runnable() {
+    private void stopCurrentLocationMarkerTracking() {
+        if (currentLocationMarkerHandler != null && currentLocationMarkerRunnable != null) {
+            currentLocationMarkerHandler.removeCallbacks(currentLocationMarkerRunnable);
+            currentLocationMarkerHandler = null;
+            currentLocationMarkerRunnable = null;
+        }
+    }
+    
+    /**
+     * Request location updates for the location component
+     */
+    private void requestLocationForComponent() {
+        if (fusedLocationClient == null || !checkLocationPermission()) {
+            return;
+        }
+        
+        try {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
+            
+            // Request fresh location updates for the component
+            com.google.android.gms.location.LocationRequest locationRequest = new com.google.android.gms.location.LocationRequest.Builder(
+                com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, 1000)
+                .setWaitForAccurateLocation(false)
+                .setMinUpdateIntervalMillis(2000)
+                .setMaxUpdateDelayMillis(5000)
+                .build();
+            
+            com.google.android.gms.location.LocationCallback locationCallback = new com.google.android.gms.location.LocationCallback() {
                 @Override
-                public void run() {
-                    // Update current location marker position if it exists
-                    if (currentLocationMarker != null && currentLocationPoint != null) {
-                        positionCurrentLocationMarkerAtCoordinates(currentLocationPoint);
-                    }
-                    
-                    // Schedule next update
-                    if (cameraUpdateHandler != null) {
-                        cameraUpdateHandler.postDelayed(this, 50); // Update every 50ms for smooth tracking
+                public void onLocationResult(com.google.android.gms.location.LocationResult locationResult) {
+                    if (locationResult != null && locationResult.getLastLocation() != null) {
+                        android.location.Location location = locationResult.getLastLocation();
+                        // The location component should automatically update with this location
+                        Log.d(TAG, "Location component updated with location: " + 
+                            location.getLatitude() + ", " + location.getLongitude());
+                        
+                        // Stop location updates after getting one (no continuous tracking)
+                        stopLocationUpdatesForComponent();
                     }
                 }
             };
-        }
-        
-        // Start the tracking
-        if (cameraUpdateHandler != null) {
-            cameraUpdateHandler.post(cameraUpdateRunnable);
+            
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+            
+            // Also get last location as fallback
+            fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, location -> {
+                    if (location != null && locationComponent != null) {
+                        Log.d(TAG, "Location component showing indicator at: " + 
+                            location.getLatitude() + ", " + location.getLongitude());
+                    }
+                });
+        } catch (SecurityException e) {
+            Log.e(TAG, "Security exception while getting location for component", e);
         }
     }
     
     /**
-     * Stop current location camera tracking
+     * Stop location updates for the location component
      */
-    private void stopCurrentLocationCameraTracking() {
-        if (cameraUpdateHandler != null && cameraUpdateRunnable != null) {
-            cameraUpdateHandler.removeCallbacks(cameraUpdateRunnable);
+    private void stopLocationUpdatesForComponent() {
+        if (fusedLocationClient != null) {
+            fusedLocationClient.removeLocationUpdates(new com.google.android.gms.location.LocationCallback() {
+                @Override
+                public void onLocationResult(com.google.android.gms.location.LocationResult locationResult) {
+                    // Empty implementation
+                }
+            });
         }
     }
     
@@ -2383,17 +2441,31 @@ public class MapViewActivity extends AppCompatActivity {
      * Clear current location pin
      */
     private void clearCurrentLocationPin() {
-        if (currentLocationMarker != null && mapContainer != null) {
-            mapContainer.removeView(currentLocationMarker);
-            currentLocationMarker = null;
-            currentLocationPoint = null;
-            isCurrentLocationActive = false;
-            
-            // Stop camera tracking when no current location marker
-            stopCurrentLocationCameraTracking();
-            
-            Log.d(TAG, "Current location pin cleared");
+        // Stop marker tracking
+        stopCurrentLocationMarkerTracking();
+        
+        // Disable LocationComponent if available
+        if (locationComponent != null) {
+            try {
+                locationComponent.setEnabled(false);
+            } catch (Exception e) {
+                Log.e(TAG, "Error disabling location component", e);
+            }
         }
+        
+        // Remove the custom marker
+        if (currentLocationIndicator != null && mapContainer != null) {
+            try {
+                mapContainer.removeView(currentLocationIndicator);
+            } catch (Exception e) {
+                Log.e(TAG, "Error removing location indicator", e);
+            }
+            currentLocationIndicator = null;
+        }
+        
+        currentLocationPoint = null;
+        isCurrentLocationActive = false;
+        Log.d(TAG, "Current location cleared");
     }
 
     private void addPinToMap(Point point, String title) {
@@ -2916,7 +2988,7 @@ public class MapViewActivity extends AppCompatActivity {
             int hiddenPins = 0;
             int totalPins = firestorePinMarkers.size() + userReportPinMarkers.size();
             // Note: layersActive is no longer used to hide pins - layers should NOT hide pins
-            boolean isMyReportsFilterActive = incidentFilters.getOrDefault("Report", false);
+            boolean isMyReportsFilterActive = getOrDefault(incidentFilters, "Report", false);
             
             // Process regular Firestore pins
             for (MapMarker mapMarker : firestorePinMarkers) {
@@ -3104,14 +3176,14 @@ public class MapViewActivity extends AppCompatActivity {
     private String getActiveFilterName() {
         // Check incident filters
         for (String filterName : incidentFilters.keySet()) {
-            if (incidentFilters.getOrDefault(filterName, false)) {
+            if (getOrDefault(incidentFilters, filterName, false)) {
                 return filterName;
             }
         }
         
         // Check facility filters
         for (String filterName : facilityFilters.keySet()) {
-            if (facilityFilters.getOrDefault(filterName, false)) {
+            if (getOrDefault(facilityFilters, filterName, false)) {
                 return filterName;
             }
         }
@@ -3129,24 +3201,24 @@ public class MapViewActivity extends AppCompatActivity {
             
             // Check facility filters
             if (name.contains("hospital") || name.contains("medical") || name.contains("health")) {
-                return facilityFilters.getOrDefault("Health Facilities", false);
+                return getOrDefault(facilityFilters, "Health Facilities", false);
             }
             
             if (name.contains("police") || name.contains("station")) {
-                return facilityFilters.getOrDefault("Police Stations", false);
+                return getOrDefault(facilityFilters, "Police Stations", false);
             }
             
             if (name.contains("fire")) {
-                return facilityFilters.getOrDefault("Fire Stations", false);
+                return getOrDefault(facilityFilters, "Fire Stations", false);
             }
             
             if (name.contains("hall") || name.contains("government") || name.contains("municipal") || 
                 name.contains("capitol") || name.contains("office")) {
-                return facilityFilters.getOrDefault("Government Offices", false);
+                return getOrDefault(facilityFilters, "Government Offices", false);
             }
             
             if (name.contains("evacuation") || name.contains("center")) {
-                return facilityFilters.getOrDefault("Evacuation Centers", false);
+                return getOrDefault(facilityFilters, "Evacuation Centers", false);
             }
             
             // If no specific category matches, show by default
@@ -3234,7 +3306,7 @@ public class MapViewActivity extends AppCompatActivity {
         }
         
         // Add user report pins to heatmap when "My Reports" is active
-        boolean isMyReportsActive = incidentFilters.getOrDefault("Report", false);
+        boolean isMyReportsActive = getOrDefault(incidentFilters, "Report", false);
         if (isMyReportsActive) {
             for (MapMarker mapMarker : userReportPinMarkers) {
                 if (mapMarker != null && mapMarker.location != null && mapMarker.pinData != null) {
@@ -3265,7 +3337,7 @@ public class MapViewActivity extends AppCompatActivity {
 
     private boolean hasActiveHazardFilter() {
         for (String key : HAZARD_FILTER_KEYS) {
-            if (incidentFilters.getOrDefault(key, false)) {
+            if (getOrDefault(incidentFilters, key, false)) {
                 return true;
             }
         }
@@ -3479,6 +3551,9 @@ public class MapViewActivity extends AppCompatActivity {
                 if (gesturesPlugin == null) {
                     gesturesPlugin = GesturesUtils.getGestures(mapView);
                 }
+                
+                // Initialize location component after style is loaded
+                initializeLocationComponent();
                 
                 // Setup map click listener for Health Facilities
                 setupMapClickListener();
@@ -3997,10 +4072,8 @@ public class MapViewActivity extends AppCompatActivity {
                 }
             }
             
-            // Hide/show current location pin
-            if (currentLocationMarker != null) {
-                currentLocationMarker.setVisibility(visibility);
-            }
+            // Note: Current location is now handled by Mapbox's LocationComponent
+            // No custom marker to hide/show
             
             Log.d(TAG, "All pins visibility set to: " + (visible ? "VISIBLE" : "HIDDEN"));
         } catch (Exception e) {
@@ -5484,7 +5557,7 @@ public class MapViewActivity extends AppCompatActivity {
                         // Apply filters to update visibility and show pins if "My Reports" is active
                         runOnUiThread(() -> {
                             // Check if "My Reports" filter is active
-                            boolean isMyReportsActive = incidentFilters.getOrDefault("Report", false);
+                            boolean isMyReportsActive = getOrDefault(incidentFilters, "Report", false);
                             Log.d(TAG, "My Reports filter active: " + isMyReportsActive);
                             
                             if (isMyReportsActive) {
@@ -5583,7 +5656,7 @@ public class MapViewActivity extends AppCompatActivity {
             Log.d(TAG, "  - Pin positioned at coordinates");
             
             // Check if "My Reports" filter is active - if so, show the pin immediately
-            boolean isMyReportsActive = incidentFilters.getOrDefault("Report", false);
+            boolean isMyReportsActive = getOrDefault(incidentFilters, "Report", false);
             Log.d(TAG, "  - My Reports filter active: " + isMyReportsActive);
             
             if (isMyReportsActive) {
@@ -6183,7 +6256,7 @@ public class MapViewActivity extends AppCompatActivity {
         }
         
         // Check if "My Reports" filter is active FIRST
-        boolean isMyReportsFilterActive = incidentFilters.getOrDefault("Report", false);
+        boolean isMyReportsFilterActive = getOrDefault(incidentFilters, "Report", false);
         if (isMyReportsFilterActive) {
             // When "My Reports" is active, only show pins from user reports
             // User report pins have IDs starting with "report_"
@@ -6257,50 +6330,50 @@ public class MapViewActivity extends AppCompatActivity {
                     (typeLower.contains("road") && (typeLower.contains("crash") || typeLower.contains("accident"))) ||
                     typeLower.contains("traffic accident") || typeLower.contains("traffic crash") ||
                     typeLower.contains("crash") || typeLower.contains("accident") || typeLower.contains("traffic")) {
-                    return incidentFilters.getOrDefault("Road Accident", false);
+                    return getOrDefault(incidentFilters, "Road Accident", false);
                 }
                 if (typeLower.contains("fire") && !typeLower.contains("station")) {
-                    return incidentFilters.getOrDefault("Fire", false);
+                    return getOrDefault(incidentFilters, "Fire", false);
                 }
                 if (typeLower.contains("medical emergency") || (typeLower.contains("medical") && typeLower.contains("emergency"))) {
-                    return incidentFilters.getOrDefault("Medical Emergency", false);
+                    return getOrDefault(incidentFilters, "Medical Emergency", false);
                 }
                 if (typeLower.contains("flooding") || typeLower.contains("flood")) {
-                    return incidentFilters.getOrDefault("Flooding", false);
+                    return getOrDefault(incidentFilters, "Flooding", false);
                 }
                 if (typeLower.contains("volcanic activity") || typeLower.contains("volcanic") || typeLower.contains("volcano")) {
-                    return incidentFilters.getOrDefault("Volcanic Activity", false);
+                    return getOrDefault(incidentFilters, "Volcanic Activity", false);
                 }
                 if (typeLower.contains("landslide")) {
-                    return incidentFilters.getOrDefault("Landslide", false);
+                    return getOrDefault(incidentFilters, "Landslide", false);
                 }
                 if (typeLower.contains("earthquake")) {
-                    return incidentFilters.getOrDefault("Earthquake", false);
+                    return getOrDefault(incidentFilters, "Earthquake", false);
                 }
                 if (typeLower.contains("civil disturbance") || typeLower.contains("civil")) {
-                    return incidentFilters.getOrDefault("Civil Disturbance", false);
+                    return getOrDefault(incidentFilters, "Civil Disturbance", false);
                 }
                 if (typeLower.contains("armed conflict") || typeLower.contains("armed")) {
-                    return incidentFilters.getOrDefault("Armed Conflict", false);
+                    return getOrDefault(incidentFilters, "Armed Conflict", false);
                 }
                 if (typeLower.contains("infectious disease") || typeLower.contains("infectious")) {
-                    return incidentFilters.getOrDefault("Infectious Disease", false);
+                    return getOrDefault(incidentFilters, "Infectious Disease", false);
                 }
                 if (typeLower.contains("poor infrastructure") || typeLower.contains("infrastructure")) {
-                    return incidentFilters.getOrDefault("Poor Infrastructure", false);
+                    return getOrDefault(incidentFilters, "Poor Infrastructure", false);
                 }
                 if (typeLower.contains("obstruction") || typeLower.contains("obstacle")) {
-                    return incidentFilters.getOrDefault("Obstructions", false);
+                    return getOrDefault(incidentFilters, "Obstructions", false);
                 }
                 if (typeLower.contains("electrical hazard") || (typeLower.contains("electrical") && typeLower.contains("hazard"))) {
-                    return incidentFilters.getOrDefault("Electrical Hazard", false);
+                    return getOrDefault(incidentFilters, "Electrical Hazard", false);
                 }
                 if (typeLower.contains("environmental hazard") || (typeLower.contains("environmental") && typeLower.contains("hazard"))) {
-                    return incidentFilters.getOrDefault("Environmental Hazard", false);
+                    return getOrDefault(incidentFilters, "Environmental Hazard", false);
                 }
                 if (typeLower.contains("animal concerns") || typeLower.contains("animal concern") || 
                     (typeLower.contains("animal") && typeLower.contains("concern"))) {
-                    return incidentFilters.getOrDefault("Animal Concerns", false);
+                    return getOrDefault(incidentFilters, "Animal Concerns", false);
                 }
                 
                 // Check for "Others" - must be exact match or specific "others" keyword to avoid false matches
@@ -6309,13 +6382,13 @@ public class MapViewActivity extends AppCompatActivity {
                 if (typeTrimmed.equalsIgnoreCase("Others") || typeTrimmed.equalsIgnoreCase("Other") ||
                     typeTrimmed.equalsIgnoreCase("➕ Others") || typeLower.equals("others") || 
                     typeLower.equals("other") || typeLower.trim().equals("others")) {
-                    return incidentFilters.getOrDefault("Others", false);
+                    return getOrDefault(incidentFilters, "Others", false);
                 }
                 
                 // Try exact match with filter names (case-insensitive)
                 for (String filterName : incidentFilters.keySet()) {
                     if (typeTrimmed.equalsIgnoreCase(filterName)) {
-                        return incidentFilters.getOrDefault(filterName, false);
+                        return getOrDefault(incidentFilters, filterName, false);
                     }
                 }
                 
@@ -6332,7 +6405,7 @@ public class MapViewActivity extends AppCompatActivity {
                 for (String filterName : facilityFilters.keySet()) {
                     if (typeTrimmed.equalsIgnoreCase(filterName)) {
                         Log.d(TAG, "Facility type exact match: '" + typeTrimmed + "' matches filter: '" + filterName + "'");
-                        return facilityFilters.getOrDefault(filterName, false);
+                        return getOrDefault(facilityFilters, filterName, false);
                     }
                 }
                 
@@ -6340,30 +6413,30 @@ public class MapViewActivity extends AppCompatActivity {
                 // Check Government Offices
                 if (typeLower.contains("government office") || typeLower.contains("government offices") || 
                     typeLower.contains("gobyerno") || (typeLower.contains("government") && typeLower.contains("office"))) {
-                    return facilityFilters.getOrDefault("Government Offices", false);
+                    return getOrDefault(facilityFilters, "Government Offices", false);
                 }
                 
                 // Check Evacuation Centers (must be specific)
                 if (typeLower.contains("evacuation center") || typeLower.contains("evacuation centers")) {
-                    return facilityFilters.getOrDefault("Evacuation Centers", false);
+                    return getOrDefault(facilityFilters, "Evacuation Centers", false);
                 }
                 
                 // Check Health Facilities (must be specific - "health facility" not just "health")
                 if (typeLower.contains("health facility") || typeLower.contains("health facilities") ||
                     typeLower.contains("hospital") || typeLower.contains("clinic")) {
-                    return facilityFilters.getOrDefault("Health Facilities", false);
+                    return getOrDefault(facilityFilters, "Health Facilities", false);
                 }
                 
                 // Check Police Stations (must be specific)
                 if (typeLower.contains("police station") || typeLower.contains("police stations") || 
                     typeLower.contains("pulisya")) {
-                    return facilityFilters.getOrDefault("Police Stations", false);
+                    return getOrDefault(facilityFilters, "Police Stations", false);
                 }
                 
                 // Check Fire Stations (must be specific)
                 if (typeLower.contains("fire station") || typeLower.contains("fire stations") || 
                     typeLower.contains("bumbero") || (typeLower.contains("fire") && typeLower.contains("station"))) {
-                    return facilityFilters.getOrDefault("Fire Stations", false);
+                    return getOrDefault(facilityFilters, "Fire Stations", false);
                 }
             }
             
@@ -6401,7 +6474,7 @@ public class MapViewActivity extends AppCompatActivity {
             // Check Evacuation Centers (must be exact match or specific phrase)
             if (categoryLower.equals("evacuation center") || categoryLower.equals("evacuation centers") ||
                 categoryLower.equals("evacuation")) {
-                boolean filterEnabled = facilityFilters.getOrDefault("Evacuation Centers", false);
+                boolean filterEnabled = getOrDefault(facilityFilters, "Evacuation Centers", false);
                 Log.d(TAG, "Evacuation Centers pin - Category: " + category + ", Filter enabled: " + filterEnabled);
                 return filterEnabled;
             }
@@ -6412,7 +6485,7 @@ public class MapViewActivity extends AppCompatActivity {
                 // Make sure it's not an incident type
                 if (!categoryLower.contains("emergency") && !categoryLower.contains("medical emergency") &&
                     !categoryLower.contains("disease") && !categoryLower.contains("infectious")) {
-                    boolean filterEnabled = facilityFilters.getOrDefault("Health Facilities", false);
+                    boolean filterEnabled = getOrDefault(facilityFilters, "Health Facilities", false);
                     Log.d(TAG, "Health Facilities pin - Category: " + category + ", Filter enabled: " + filterEnabled);
                     return filterEnabled;
                 }
@@ -6420,17 +6493,17 @@ public class MapViewActivity extends AppCompatActivity {
             
             // Check Police Stations
             if ((categoryLower.contains("police") && categoryLower.contains("station")) || categoryLower.contains("pulisya")) {
-                return facilityFilters.getOrDefault("Police Stations", false);
+                return getOrDefault(facilityFilters, "Police Stations", false);
             }
             
             // Check Fire Stations
             if ((categoryLower.contains("fire") && categoryLower.contains("station")) || categoryLower.contains("bumbero")) {
-                return facilityFilters.getOrDefault("Fire Stations", false);
+                return getOrDefault(facilityFilters, "Fire Stations", false);
             }
             
             // Check Government Offices
             if ((categoryLower.contains("government") && categoryLower.contains("office")) || categoryLower.contains("gobyerno")) {
-                return facilityFilters.getOrDefault("Government Offices", false);
+                return getOrDefault(facilityFilters, "Government Offices", false);
             }
             
             // Facility pin but doesn't match any known facility type - hide it
@@ -6448,63 +6521,63 @@ public class MapViewActivity extends AppCompatActivity {
                 categoryLower.contains("road_accident") || categoryLower.contains("road-crash") ||
                 (categoryLower.contains("road") && (categoryLower.contains("crash") || categoryLower.contains("accident"))) ||
                 categoryLower.contains("traffic accident") || categoryLower.contains("traffic crash")) {
-                return incidentFilters.getOrDefault("Road Accident", false);
+                return getOrDefault(incidentFilters, "Road Accident", false);
             }
             if (categoryLower.contains("fire") || categoryLower.contains("sunog")) {
                 // Make sure it's not a fire station (facility)
                 if (!categoryLower.contains("station") && !categoryLower.contains("bumbero")) {
-                    return incidentFilters.getOrDefault("Fire", false);
+                    return getOrDefault(incidentFilters, "Fire", false);
                 }
             }
             if ((categoryLower.contains("medical") || categoryLower.contains("emergency")) && 
                 !categoryLower.contains("fire") && !categoryLower.contains("health facility")) {
-                return incidentFilters.getOrDefault("Medical Emergency", false);
+                return getOrDefault(incidentFilters, "Medical Emergency", false);
             }
             if (categoryLower.contains("flooding") || categoryLower.contains("baha")) {
-                return incidentFilters.getOrDefault("Flooding", false);
+                return getOrDefault(incidentFilters, "Flooding", false);
             }
             if (categoryLower.contains("volcanic") || categoryLower.contains("bulkan")) {
-                return incidentFilters.getOrDefault("Volcanic Activity", false);
+                return getOrDefault(incidentFilters, "Volcanic Activity", false);
             }
             if (categoryLower.contains("landslide") || categoryLower.contains("guho")) {
-                return incidentFilters.getOrDefault("Landslide", false);
+                return getOrDefault(incidentFilters, "Landslide", false);
             }
             if (categoryLower.contains("earthquake") || categoryLower.contains("lindol")) {
-                return incidentFilters.getOrDefault("Earthquake", false);
+                return getOrDefault(incidentFilters, "Earthquake", false);
             }
             if (categoryLower.contains("civil") || categoryLower.contains("kaguluhan")) {
-                return incidentFilters.getOrDefault("Civil Disturbance", false);
+                return getOrDefault(incidentFilters, "Civil Disturbance", false);
             }
             if (categoryLower.contains("armed") || categoryLower.contains("barilan")) {
-                return incidentFilters.getOrDefault("Armed Conflict", false);
+                return getOrDefault(incidentFilters, "Armed Conflict", false);
             }
             if (categoryLower.contains("infectious") || categoryLower.contains("sakit")) {
-                return incidentFilters.getOrDefault("Infectious Disease", false);
+                return getOrDefault(incidentFilters, "Infectious Disease", false);
             }
             if (categoryLower.contains("poor infrastructure") || categoryLower.contains("infrastructure")) {
-                return incidentFilters.getOrDefault("Poor Infrastructure", false);
+                return getOrDefault(incidentFilters, "Poor Infrastructure", false);
             }
             if (categoryLower.contains("obstruction") || categoryLower.contains("obstacle")) {
-                return incidentFilters.getOrDefault("Obstructions", false);
+                return getOrDefault(incidentFilters, "Obstructions", false);
             }
             if (categoryLower.contains("electrical") && categoryLower.contains("hazard")) {
-                return incidentFilters.getOrDefault("Electrical Hazard", false);
+                return getOrDefault(incidentFilters, "Electrical Hazard", false);
             }
             if (categoryLower.contains("environmental") && categoryLower.contains("hazard")) {
-                return incidentFilters.getOrDefault("Environmental Hazard", false);
+                return getOrDefault(incidentFilters, "Environmental Hazard", false);
             }
             if (categoryLower.contains("animal concerns") || categoryLower.contains("animal concern") || 
                 (categoryLower.contains("animal") && categoryLower.contains("concern"))) {
-                return incidentFilters.getOrDefault("Animal Concerns", false);
+                return getOrDefault(incidentFilters, "Animal Concerns", false);
             }
             if (categoryLower.contains("report")) {
-                return incidentFilters.getOrDefault("Report", false);
+                return getOrDefault(incidentFilters, "Report", false);
             }
             // Check for "Others" - must be exact match or specific "others" keyword to avoid false matches
             // This should only match categories that are explicitly "Others" or "Other", not categories containing "other" as part of another word
             if (categoryLower.equals("others") || categoryLower.equals("other") || 
                 categoryLower.equals("➕ others") || categoryLower.trim().equals("others")) {
-                return incidentFilters.getOrDefault("Others", false);
+                return getOrDefault(incidentFilters, "Others", false);
             }
             
             // Incident pin but doesn't match any known incident type - hide it
@@ -7067,16 +7140,24 @@ public class MapViewActivity extends AppCompatActivity {
     }
 
     private void ensurePinDimensions() {
-        if (pinWidthPx == 0 || pinHeightPx == 0 || pinOffsetPx == 0 || currentLocationPinOffsetPx == 0) {
+        if (pinWidthPx == 0 || pinHeightPx == 0 || pinOffsetPx == 0) {
             pinWidthPx = dpToPx(PIN_WIDTH_DP);
             pinHeightPx = dpToPx(PIN_HEIGHT_DP);
             pinOffsetPx = dpToPx(PIN_OFFSET_DP);
-            currentLocationPinOffsetPx = dpToPx(CURRENT_LOCATION_PIN_OFFSET_DP);
         }
     }
 
     private int dpToPx(float dp) {
         return Math.round(dp * getResources().getDisplayMetrics().density);
+    }
+    
+    /**
+     * Helper method to replace Map.getOrDefault for API 23 compatibility
+     * getOrDefault requires API 24, but minSdk is 23
+     */
+    private <K, V> V getOrDefault(Map<K, V> map, K key, V defaultValue) {
+        V value = map.get(key);
+        return value != null ? value : defaultValue;
     }
 
     private void updateCheckboxVisualState(android.widget.CompoundButton checkbox, boolean isChecked) {
