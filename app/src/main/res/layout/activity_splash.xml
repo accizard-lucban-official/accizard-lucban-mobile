@@ -5,15 +5,17 @@
     android:layout_height="match_parent"
     android:background="@color/colorPrimary">
 
-    <!-- Lottie Animation View -->
-    <com.airbnb.lottie.LottieAnimationView
-        android:id="@+id/lottieAnimationView"
-        android:layout_width="300dp"
-        android:layout_height="300dp"
+    <!-- AcciZard Logo -->
+    <ImageView
+        android:id="@+id/accizardLogo"
+        android:layout_width="264dp"
+        android:layout_height="264dp"
         android:layout_gravity="center"
-        app:lottie_autoPlay="true"
-        app:lottie_loop="true"
-        app:lottie_speed="1.0" />
+        android:layout_marginBottom="32dp"
+        android:src="@drawable/accizardlogowhite"
+        android:contentDescription="AcciZard Logo"
+        android:scaleType="fitCenter"
+        android:adjustViewBounds="true" />
 
     <!-- LDRRMO Logo and Text at Bottom Center -->
     <LinearLayout

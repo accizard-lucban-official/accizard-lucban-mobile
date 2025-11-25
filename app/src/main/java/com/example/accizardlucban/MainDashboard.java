@@ -3419,7 +3419,7 @@ public class MainDashboard extends AppCompatActivity {
             TextView phoneNumber = bottomSheetView.findViewById(R.id.phoneNumber);
             android.widget.FrameLayout swipeToCallContainer = bottomSheetView.findViewById(R.id.swipeToCallContainer);
 
-            if (agencyIcon != null) agencyIcon.setImageResource(R.drawable.add_contacts);
+            if (agencyIcon != null) agencyIcon.setImageResource(R.drawable.add_contact);
             if (agencyName != null) agencyName.setText("Add Contact");
             if (agencyFullName != null) agencyFullName.setText("Emergency Contact");
             if (facebookLinkContainer != null) facebookLinkContainer.setVisibility(View.GONE);
@@ -3514,6 +3514,9 @@ public class MainDashboard extends AppCompatActivity {
 
                 Button btnSave = new Button(this);
                 btnSave.setText("Save");
+                btnSave.setTypeface(null, android.graphics.Typeface.BOLD);
+                btnSave.setBackgroundResource(R.drawable.button_primary_background);
+                btnSave.setTextColor(getResources().getColor(android.R.color.white));
                 LinearLayout.LayoutParams lp3 = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT

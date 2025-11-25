@@ -3523,11 +3523,11 @@ public class MapViewActivity extends AppCompatActivity {
                 ensureSatelliteLayer(loadedStyle);
                 setSatelliteVisibility(loadedStyle, false); // Explicitly hide satellite for street view
                 
-            // CRITICAL: Hide evacuation-centers layer (Firestore only)
-            // Health facilities layer is always hidden - only Firestore pins are used
-            ensureFacilityLayersHidden(loadedStyle);
-            // Health facilities layer always hidden - only Firestore pins are shown
-            setLayerVisibility(loadedStyle, "health-facilities", false);
+                // CRITICAL: Hide evacuation-centers layer (Firestore only)
+                // Health facilities layer is always hidden - only Firestore pins are used
+                ensureFacilityLayersHidden(loadedStyle);
+                // Health facilities layer always hidden - only Firestore pins are shown
+                setLayerVisibility(loadedStyle, "health-facilities", false);
                 
                 Log.d(TAG, "Initial map view set to: Street View (satellite layer hidden) - Same as MapPickerActivity");
                 

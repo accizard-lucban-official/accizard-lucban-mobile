@@ -87,7 +87,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/margin_tiny"
-                android:textColor="#E0E0E0"
+                android:textColor="#F0F0F0"
                 android:textSize="@dimen/text_size_small"
                 android:text="Today • 11:54 AM"/>
         </LinearLayout>

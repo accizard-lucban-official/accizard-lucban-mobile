@@ -766,7 +766,7 @@
                         android:layout_height="@dimen/dashboard_emergency_contact_size"
                         android:src="@drawable/add_contact"
                         android:padding="@dimen/spacing_medium"
-                        android:tint="@color/orange_primary"
+                        android:background="@drawable/location_button_background"
                         android:layout_marginBottom="@dimen/spacing_small"
                         android:clickable="true"
                         android:focusable="true"

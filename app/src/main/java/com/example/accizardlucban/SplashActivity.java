@@ -6,7 +6,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
-import com.airbnb.lottie.LottieAnimationView;
 
 public class SplashActivity extends AppCompatActivity {
     
@@ -19,18 +18,6 @@ public class SplashActivity extends AppCompatActivity {
         setContentView(R.layout.activity_splash);
         
         Log.d(TAG, "SplashActivity started");
-        
-        // Get LottieAnimationView
-        LottieAnimationView lottieAnimationView = findViewById(R.id.lottieAnimationView);
-        
-        // Play animation
-        if (lottieAnimationView != null) {
-            lottieAnimationView.setAnimation("accizard-final-splashscreen.json");
-            lottieAnimationView.playAnimation();
-            Log.d(TAG, "Lottie animation started");
-        } else {
-            Log.w(TAG, "LottieAnimationView not found");
-        }
         
         // Navigate to MainActivity after delay
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
