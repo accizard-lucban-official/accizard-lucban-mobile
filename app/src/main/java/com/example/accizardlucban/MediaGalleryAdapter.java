@@ -5,14 +5,20 @@ import android.graphics.Bitmap;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.ProgressBar;
 import android.widget.VideoView;
 import android.widget.MediaController;
+import android.widget.Toast;
+import android.content.Intent;
+import android.content.ActivityNotFoundException;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
@@ -20,6 +26,9 @@ import java.util.List;
 public class MediaGalleryAdapter extends RecyclerView.Adapter<MediaGalleryAdapter.MediaGalleryViewHolder> {
     
     private static final String TAG = "MediaGalleryAdapter";
+    private static final String VIDEO_DEBUG_TAG = "ReportMediaVideo";
+    private static final long VIDEO_PREPARE_TIMEOUT_MS = 0000L;
+    private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
     private Context context;
     private List<MediaItem> mediaItems;
     private OnMediaClickListener onMediaClickListener;
@@ -57,8 +66,7 @@ public class MediaGalleryAdapter extends RecyclerView.Adapter<MediaGalleryAdapte
     public void onBindViewHolder(@NonNull MediaGalleryViewHolder holder, int position) {
         // Ensure VideoView is hidden (we only show thumbnails)
         if (holder.videoView != null) {
-            holder.videoView.setVisibility(View.GONE);
-            holder.videoView.setVideoURI(null);
+            stopPlaybackWithCleanup(holder);
         }
         
         if (position < 0 || position >= mediaItems.size()) {
@@ -84,6 +92,9 @@ public class MediaGalleryAdapter extends RecyclerView.Adapter<MediaGalleryAdapte
             holder.videoView.setVisibility(View.GONE);
             holder.videoPlayIcon.setVisibility(View.GONE);
             holder.videoDurationText.setVisibility(View.GONE);
+            if (holder.videoLoadingSpinner != null) {
+                holder.videoLoadingSpinner.setVisibility(View.GONE);
+            }
             
             // Ensure VideoView is hidden for images
             holder.videoView.setVisibility(View.GONE);
@@ -111,6 +122,13 @@ public class MediaGalleryAdapter extends RecyclerView.Adapter<MediaGalleryAdapte
             holder.imageView.setVisibility(View.VISIBLE);
             holder.videoView.setVisibility(View.GONE); // Always hide VideoView
             holder.videoPlayIcon.setVisibility(View.VISIBLE);
+            if (holder.videoLoadingSpinner != null) {
+                holder.videoLoadingSpinner.setVisibility(View.GONE);
+            }
+            holder.videoPlayIcon.setOnClickListener(v -> {
+                logVideoDebug("Play icon tapped. Adapter position=" + holder.getAdapterPosition() + ", uri=" + mediaUri);
+                playVideoInline(holder, mediaUri);
+            });
             
             // Generate and show video thumbnail in ImageView
             setVideoThumbnail(holder, mediaUri);
@@ -130,15 +148,22 @@ public class MediaGalleryAdapter extends RecyclerView.Adapter<MediaGalleryAdapte
             }
         }
         
-        // Set click listener for media
-        holder.itemView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (onMediaClickListener != null) {
-                    onMediaClickListener.onMediaClick(position, mediaItem);
+        // Set click listener for media (only for images, not videos)
+        // Videos should only be playable via the play button
+        if (mediaItem.isImage()) {
+            holder.itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (onMediaClickListener != null) {
+                        onMediaClickListener.onMediaClick(position, mediaItem);
+                    }
                 }
-            }
-        });
+            });
+        } else if (mediaItem.isVideo()) {
+            // Remove click listener for videos - only play button should be clickable
+            holder.itemView.setOnClickListener(null);
+            holder.itemView.setClickable(false);
+        }
         
         // Set click listener for remove button
         holder.removeButton.setOnClickListener(new View.OnClickListener() {
@@ -288,6 +313,131 @@ public class MediaGalleryAdapter extends RecyclerView.Adapter<MediaGalleryAdapte
             return String.format("0:%02d", seconds);
         }
     }
+
+    /**
+     * Play video inline with MediaController support.
+     */
+    private void playVideoInline(MediaGalleryViewHolder holder, Uri mediaUri) {
+        if (holder == null || mediaUri == null) {
+            return;
+        }
+        
+        try {
+            logVideoDebug("Start inline playback. position=" + holder.getAdapterPosition() + ", uri=" + mediaUri);
+            holder.currentVideoUri = mediaUri;
+            holder.videoPlayIcon.setVisibility(View.GONE);
+            holder.videoDurationText.setVisibility(View.GONE);
+            holder.videoView.setVisibility(View.INVISIBLE); // show after prepared
+            if (holder.videoLoadingSpinner != null) {
+                holder.videoLoadingSpinner.setVisibility(View.VISIBLE);
+            }
+            schedulePreparationTimeout(holder, mediaUri);
+            
+            holder.videoView.setOnPreparedListener(mp -> {
+                try {
+                    holder.videoView.seekTo(1);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error seeking inline video", e);
+                    logVideoDebug("Seek error: " + e.getMessage());
+                }
+                cancelPreparationTimeout(holder);
+                logVideoDebug("Video prepared. size=" + mp.getVideoWidth() + "x" + mp.getVideoHeight());
+            if (holder.videoLoadingSpinner != null) {
+                    holder.videoLoadingSpinner.setVisibility(View.GONE);
+                }
+                holder.imageView.setVisibility(View.GONE);
+                holder.videoView.setVisibility(View.VISIBLE);
+                holder.mediaController.show();
+                holder.videoView.start();
+                logVideoDebug("Video playback started.");
+            });
+            
+            holder.videoView.setOnCompletionListener(mp -> {
+                logVideoDebug("Video playback completed. uri=" + holder.currentVideoUri);
+                stopPlaybackWithCleanup(holder);
+            });
+            
+            holder.videoView.setOnErrorListener((mp, what, extra) -> {
+                Log.e(TAG, "Inline video error: what=" + what + ", extra=" + extra);
+                logVideoDebug("Video error what=" + what + ", extra=" + extra);
+                cancelPreparationTimeout(holder);
+                stopPlaybackWithCleanup(holder);
+                Toast.makeText(context, "Unable to preview video. Opening externally.", Toast.LENGTH_SHORT).show();
+                openVideoExternally(mediaUri);
+                return true;
+            });
+
+            holder.videoView.setOnInfoListener((mp, what, extra) -> {
+                if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
+                    logVideoDebug("Buffering start for uri=" + holder.currentVideoUri);
+                    if (holder.videoLoadingSpinner != null) {
+                        holder.videoLoadingSpinner.setVisibility(View.VISIBLE);
+                    }
+                } else if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END || what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                    logVideoDebug("Buffering end/render start for uri=" + holder.currentVideoUri);
+                    if (holder.videoLoadingSpinner != null) {
+                        holder.videoLoadingSpinner.setVisibility(View.GONE);
+                    }
+                }
+                return false;
+            });
+
+            if (holder.mediaController == null) {
+                holder.mediaController = new MediaController(context);
+                holder.mediaController.setAnchorView(holder.videoView);
+            }
+            
+            holder.videoView.setVideoURI(mediaUri);
+            holder.videoView.setMediaController(holder.mediaController);
+            holder.videoView.requestFocus();
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error playing inline video: " + e.getMessage(), e);
+            logVideoDebug("Exception while starting playback: " + e.getMessage());
+            stopPlaybackWithCleanup(holder);
+        }
+    }
+    
+    private void schedulePreparationTimeout(MediaGalleryViewHolder holder, Uri uri) {
+        cancelPreparationTimeout(holder);
+        holder.preparationTimeoutRunnable = new Runnable() {
+            @Override
+            public void run() {
+                logVideoDebug("Video prepare timeout for uri=" + uri);
+                if (holder.videoLoadingSpinner != null) {
+                    holder.videoLoadingSpinner.setVisibility(View.GONE);
+                }
+                openVideoExternally(uri);
+                stopPlaybackWithCleanup(holder);
+                holder.preparationTimeoutRunnable = null;
+            }
+        };
+        MAIN_HANDLER.postDelayed(holder.preparationTimeoutRunnable, VIDEO_PREPARE_TIMEOUT_MS);
+    }
+
+    private void cancelPreparationTimeout(MediaGalleryViewHolder holder) {
+        if (holder.preparationTimeoutRunnable != null) {
+            MAIN_HANDLER.removeCallbacks(holder.preparationTimeoutRunnable);
+            holder.preparationTimeoutRunnable = null;
+        }
+    }
+
+    private void openVideoExternally(Uri uri) {
+        if (uri == null) return;
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(uri, "video/*");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
+            logVideoDebug("Opened video externally for uri=" + uri);
+        } catch (ActivityNotFoundException e) {
+            Log.e(TAG, "No external player available: " + e.getMessage());
+            Toast.makeText(context, "No video player available to open this file.", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Log.e(TAG, "Error opening external video player: " + e.getMessage());
+        }
+    }
     
     @Override
     public int getItemCount() {
@@ -297,10 +447,7 @@ public class MediaGalleryAdapter extends RecyclerView.Adapter<MediaGalleryAdapte
     @Override
     public void onViewRecycled(@NonNull MediaGalleryViewHolder holder) {
         super.onViewRecycled(holder);
-        // Clean up video view when ViewHolder is recycled
-        if (holder.videoView != null) {
-            holder.videoView.setVideoURI(null);
-        }
+        stopPlaybackWithCleanup(holder);
     }
     
     public void updateMedia(List<MediaItem> newMediaItems) {
@@ -337,6 +484,10 @@ public class MediaGalleryAdapter extends RecyclerView.Adapter<MediaGalleryAdapte
         }
     }
     
+    private void stopPlaybackWithCleanup(MediaGalleryViewHolder holder) {
+        cancelPreparationTimeout(holder);
+        holder.stopVideoPlayback();
+    }
     
     static class MediaGalleryViewHolder extends RecyclerView.ViewHolder {
         ImageView imageView;
@@ -345,6 +496,10 @@ public class MediaGalleryAdapter extends RecyclerView.Adapter<MediaGalleryAdapte
         TextView mediaCountText;
         ImageView videoPlayIcon;
         TextView videoDurationText;
+        ProgressBar videoLoadingSpinner;
+        MediaController mediaController;
+        Uri currentVideoUri;
+        Runnable preparationTimeoutRunnable;
         
         public MediaGalleryViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -354,7 +509,45 @@ public class MediaGalleryAdapter extends RecyclerView.Adapter<MediaGalleryAdapte
             mediaCountText = itemView.findViewById(R.id.imageCountText);
             videoPlayIcon = itemView.findViewById(R.id.videoPlayIcon);
             videoDurationText = itemView.findViewById(R.id.videoDurationText);
+            videoLoadingSpinner = itemView.findViewById(R.id.videoLoadingSpinner);
         }
+        
+        void stopVideoPlayback() {
+            if (videoView != null) {
+                try {
+                    videoView.stopPlayback();
+                } catch (Exception ignored) {}
+                if (currentVideoUri != null) {
+                    logVideoDebug("Stopping playback for uri=" + currentVideoUri);
+                }
+                videoView.setVideoURI(null);
+                videoView.setVisibility(View.GONE);
+            }
+            if (mediaController != null) {
+                mediaController.hide();
+            }
+            if (imageView != null) {
+                imageView.setVisibility(View.VISIBLE);
+            }
+            if (videoPlayIcon != null) {
+                videoPlayIcon.setVisibility(View.VISIBLE);
+            }
+            if (videoDurationText != null) {
+                CharSequence durationText = videoDurationText.getText();
+                if (durationText != null && durationText.length() > 0) {
+                    videoDurationText.setVisibility(View.VISIBLE);
+                } else {
+                    videoDurationText.setVisibility(View.GONE);
+                }
+            }
+            if (videoLoadingSpinner != null) {
+                videoLoadingSpinner.setVisibility(View.GONE);
+            }
+        }
+    }
+    
+    private static void logVideoDebug(String message) {
+        Log.d(VIDEO_DEBUG_TAG, message);
     }
 }
 

@@ -1977,17 +1977,31 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                                             Log.d(TAG, "   - Image URLs: " + imageUrlsList.size());
                                             Log.d(TAG, "   - Video URLs: " + videoUrlsList.size());
                                             
-                                            // Put image and video URLs separately
-                                            reportData.put("imageUrls", imageUrlsList);
-                                            reportData.put("videoUrls", videoUrlsList);
+                                            // Build compatibility media list (images + videos)
+                                            List<String> combinedMediaUrls = new ArrayList<>(imageUrlsList);
+                                            combinedMediaUrls.addAll(videoUrlsList);
+                                            
+                                            // Store pure image list for mobile rendering
+                                            reportData.put("photoUrls", new ArrayList<>(imageUrlsList));
+                                            
+                                            // For backward compatibility, store combined media under imageUrls
+                                            reportData.put("imageUrls", combinedMediaUrls);
+                                            
+                                            // Store videos separately for apps that support them
+                                            reportData.put("videoUrls", new ArrayList<>(videoUrlsList));
+                                            
                                             // Update videoCount to match actual uploaded videos
                                             reportData.put("videoCount", videoUrlsList.size());
                                             submitReportToFirestore(reportData);
                                         } else {
                                             Log.w(TAG, "⚠️ Upload count mismatch: " + uploadCount[0] + "/" + totalMedia);
                                             // Still submit with what we have
-                                            reportData.put("imageUrls", imageUrlsList);
-                                            reportData.put("videoUrls", videoUrlsList);
+                                            List<String> combinedMediaUrls = new ArrayList<>(imageUrlsList);
+                                            combinedMediaUrls.addAll(videoUrlsList);
+                                            reportData.put("photoUrls", new ArrayList<>(imageUrlsList));
+                                            reportData.put("imageUrls", combinedMediaUrls);
+                                            reportData.put("videoUrls", new ArrayList<>(videoUrlsList));
+                                            reportData.put("videoCount", videoUrlsList.size());
                                             submitReportToFirestore(reportData);
                                         }
                                     }
@@ -2013,9 +2027,12 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                         } else {
                             // No videos, just submit with images
                             Log.d(TAG, "✅ Images uploaded successfully, submitting report with " + imageUrlsList.size() + " image(s)...");
-                            reportData.put("imageUrls", imageUrlsList);
+                            List<String> combinedMediaUrls = new ArrayList<>(imageUrlsList);
+                            reportData.put("photoUrls", new ArrayList<>(imageUrlsList));
+                            reportData.put("imageUrls", combinedMediaUrls);
                             // Ensure videoUrls is empty list
                             reportData.put("videoUrls", new ArrayList<String>());
+                            reportData.put("videoCount", 0);
                             submitReportToFirestore(reportData);
                         }
                     }
@@ -2052,11 +2069,19 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                             return;
                         }
                         
-                        // Ensure imageUrls is set (even if empty) for consistency
+                        // Ensure imageUrls/photoUrls are set (even if empty) for consistency
                         if (!reportData.containsKey("imageUrls")) {
                             reportData.put("imageUrls", new ArrayList<String>());
                         }
-                        reportData.put("videoUrls", videoUrls);
+                        if (!reportData.containsKey("photoUrls")) {
+                            reportData.put("photoUrls", new ArrayList<String>());
+                        }
+                        
+                        // Build compatibility list: since there are no images, combined = videos
+                        List<String> combinedMediaUrls = new ArrayList<>(videoUrls);
+                        reportData.put("photoUrls", new ArrayList<String>()); // No images captured
+                        reportData.put("imageUrls", combinedMediaUrls);
+                        reportData.put("videoUrls", new ArrayList<>(videoUrls));
                         // Update videoCount to match actual uploaded videos
                         reportData.put("videoCount", videoUrls.size());
                         Log.d(TAG, "✅ All videos uploaded successfully, submitting report with " + videoUrls.size() + " video(s)");
@@ -2179,6 +2204,22 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 }
                 reportData.put("imageUrls", imageUrlsList);
             }
+        }
+        
+        // Ensure photoUrls (pure images) is a List<String>
+        Object photoUrlsObj = reportData.get("photoUrls");
+        if (photoUrlsObj != null) {
+            if (photoUrlsObj instanceof List) {
+                List<String> photoUrlsList = new ArrayList<>();
+                for (Object item : (List<?>) photoUrlsObj) {
+                    if (item != null) {
+                        photoUrlsList.add(item.toString());
+                    }
+                }
+                reportData.put("photoUrls", photoUrlsList);
+            }
+        } else {
+            reportData.put("photoUrls", new ArrayList<String>());
         }
         
         // Log report data for debugging
@@ -2419,7 +2460,8 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         }
         reportData.put("imageCount", selectedImageUris.size() + videoCount);
         reportData.put("videoCount", videoCount); // Add videoCount field for web app compatibility
-        reportData.put("imageUrls", new ArrayList<>()); // Will be updated after upload
+        reportData.put("photoUrls", new ArrayList<>()); // Pure image list for mobile rendering
+        reportData.put("imageUrls", new ArrayList<>()); // Compatibility field (web uses this)
         reportData.put("videoUrls", new ArrayList<>()); // Will be updated after upload
         
         // Get current date and time
@@ -2923,17 +2965,37 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 report.setTimestamp(Long.parseLong(timestampObj.toString()));
             }
             
-            // Handle image URLs
-            Object imageUrlsObj = doc.get("imageUrls");
-            if (imageUrlsObj instanceof List) {
-                report.setImageUrls((List<String>) imageUrlsObj);
-            }
-            
             // Handle video URLs
             Object videoUrlsObj = doc.get("videoUrls");
             if (videoUrlsObj instanceof List) {
                 report.setVideoUrls((List<String>) videoUrlsObj);
                 Log.d(TAG, "✅ Video URLs loaded from Firestore: " + ((List<?>) videoUrlsObj).size() + " video(s)");
+            }
+            
+            // Handle photo URLs (pure images)
+            List<String> resolvedImageUrls = null;
+            Object photoUrlsObj = doc.get("photoUrls");
+            if (photoUrlsObj instanceof List) {
+                resolvedImageUrls = new ArrayList<>((List<String>) photoUrlsObj);
+                Log.d(TAG, "✅ Photo URLs (pure images) loaded: " + resolvedImageUrls.size());
+            }
+
+            // Fallback to imageUrls if photoUrls not available
+            if (resolvedImageUrls == null) {
+                Object imageUrlsObj = doc.get("imageUrls");
+                if (imageUrlsObj instanceof List) {
+                    resolvedImageUrls = new ArrayList<>((List<String>) imageUrlsObj);
+                    Log.d(TAG, "✅ Fallback imageUrls loaded: " + resolvedImageUrls.size());
+                }
+            }
+
+            // Remove any video URLs from the image list (in case of compatibility duplication)
+            if (resolvedImageUrls != null && videoUrlsObj instanceof List) {
+                resolvedImageUrls.removeAll((List<String>) videoUrlsObj);
+            }
+
+            if (resolvedImageUrls != null) {
+                report.setImageUrls(resolvedImageUrls);
             }
             
             // Handle image count
