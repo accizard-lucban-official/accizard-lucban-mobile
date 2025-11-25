@@ -1677,6 +1677,17 @@ public class AlertsActivity extends AppCompatActivity {
             android.view.LayoutInflater inflater = getLayoutInflater();
             View dialogView = inflater.inflate(R.layout.dialog_image_preview, null);
             
+            // Set title and attachment count
+            TextView tvAttachmentsTitle = dialogView.findViewById(R.id.tvAttachmentsTitle);
+            TextView tvAttachmentCount = dialogView.findViewById(R.id.tvAttachmentCount);
+            if (tvAttachmentsTitle != null) {
+                tvAttachmentsTitle.setText("Alert Attachments");
+            }
+            if (tvAttachmentCount != null) {
+                int count = imageUris.size();
+                tvAttachmentCount.setText(count + (count == 1 ? " attachment" : " attachments"));
+            }
+            
             // Setup horizontal RecyclerView in dialog
             RecyclerView dialogRecyclerView = dialogView.findViewById(R.id.dialogImagesRecyclerView);
             if (dialogRecyclerView != null) {
@@ -1685,6 +1696,7 @@ public class AlertsActivity extends AppCompatActivity {
                 
                 // Create adapter for dialog
                 ProfessionalImageGalleryAdapter dialogAdapter = new ProfessionalImageGalleryAdapter(this, imageUris);
+                dialogAdapter.setShowCounterBadge(false); // Hide counter badge in dialog
                 dialogAdapter.setOnImageClickListener(new ProfessionalImageGalleryAdapter.OnImageClickListener() {
                     @Override
                     public void onImageClick(int position, Uri clickedImageUri) {
@@ -1707,8 +1719,6 @@ public class AlertsActivity extends AppCompatActivity {
             }
             
             builder.setView(dialogView)
-                    .setTitle("Alert Attachments (" + imageUris.size() + ")")
-                    .setPositiveButton("Close", null)
                     .show();
                     
             Log.d(TAG, "Attachments dialog shown successfully");
@@ -1974,6 +1984,8 @@ public class AlertsActivity extends AppCompatActivity {
                     if (holder.tvViewAttachments != null) {
                         if (ann.imageUrl != null && !ann.imageUrl.trim().isEmpty()) {
                             holder.tvViewAttachments.setVisibility(View.VISIBLE);
+                            // Set text with attachment count (announcements have single imageUrl, so count is 1)
+                            holder.tvViewAttachments.setText("View Attachments (1)");
                             holder.tvViewAttachments.setOnClickListener(new View.OnClickListener() {
                                 @Override
                                 public void onClick(View v) {

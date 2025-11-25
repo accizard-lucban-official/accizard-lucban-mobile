@@ -4,23 +4,33 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="@drawable/dialog_rounded_background">
+    android:background="@android:color/white">
 
+    <!-- Title: Report/Alert Attachments -->
     <TextView
+        android:id="@+id/tvAttachmentsTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Report Attachments"
-        android:textSize="18sp"
+        android:text="Attachments"
+        android:textSize="16sp"
         android:textStyle="bold"
-        android:gravity="center"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Attachment count in fine print -->
+    <TextView
+        android:id="@+id/tvAttachmentCount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="12sp"
+        android:textColor="#666666"
         android:layout_marginBottom="16dp" />
 
     <!-- Horizontal scrollable image gallery -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/dialogImagesRecyclerView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp" />
+        android:layout_height="wrap_content" />
 
     <!-- Fallback vertical layout for compatibility -->
     <ScrollView

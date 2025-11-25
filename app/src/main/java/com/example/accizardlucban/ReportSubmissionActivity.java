@@ -2103,26 +2103,8 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                             }
                         }
                         
-                        // Send notification to web admins about new report
-                        try {
-                            String reportType = (String) reportData.get("reportType");
-                            String reporterName = (String) reportData.get("reporterName");
-                            String location = (String) reportData.get("location");
-                            String description = (String) reportData.get("description");
-                            
-                            WebNotificationSender notificationSender = new WebNotificationSender(ReportSubmissionActivity.this);
-                            notificationSender.notifyNewReport(
-                                documentReference.getId(),
-                                reportType != null ? reportType : "Unknown",
-                                reporterName != null ? reporterName : "Unknown User",
-                                location != null ? location : "Unknown Location",
-                                description != null ? description : ""
-                            );
-                            Log.d(TAG, "✅ Web notification sent for new report");
-                        } catch (Exception e) {
-                            Log.e(TAG, "Error sending web notification for report: " + e.getMessage(), e);
-                            // Don't show error to user - notification failure shouldn't block report submission
-                        }
+                        // Web app Cloud Functions will automatically detect new report and send notifications to web admins
+                        Log.d(TAG, "✅ Report submitted - web app Cloud Functions will handle notifications");
                         
                         Toast.makeText(ReportSubmissionActivity.this, 
                             "Report submitted successfully!", Toast.LENGTH_SHORT).show();
@@ -3006,6 +2988,17 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             LayoutInflater inflater = getLayoutInflater();
             View dialogView = inflater.inflate(R.layout.dialog_image_preview, null);
             
+            // Set title and attachment count
+            TextView tvAttachmentsTitle = dialogView.findViewById(R.id.tvAttachmentsTitle);
+            TextView tvAttachmentCount = dialogView.findViewById(R.id.tvAttachmentCount);
+            if (tvAttachmentsTitle != null) {
+                tvAttachmentsTitle.setText("Report Attachments");
+            }
+            if (tvAttachmentCount != null) {
+                int count = imageUris.size();
+                tvAttachmentCount.setText(count + (count == 1 ? " attachment" : " attachments"));
+            }
+            
             // Setup horizontal RecyclerView in dialog
             RecyclerView dialogRecyclerView = dialogView.findViewById(R.id.dialogImagesRecyclerView);
             if (dialogRecyclerView != null) {
@@ -3014,6 +3007,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 
             // Create adapter for dialog (without remove listener to hide X buttons)
             ProfessionalImageGalleryAdapter dialogAdapter = new ProfessionalImageGalleryAdapter(this, imageUris);
+            dialogAdapter.setShowCounterBadge(false); // Hide counter badge in dialog
             dialogAdapter.setOnImageClickListener(new ProfessionalImageGalleryAdapter.OnImageClickListener() {
                 @Override
                 public void onImageClick(int position, Uri clickedImageUri) {
@@ -3037,8 +3031,6 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             }
             
             AlertDialog dialog = builder.setView(dialogView)
-                    .setTitle("Report Attachments (" + imageUris.size() + ")")
-                    .setPositiveButton("Close", null)
                     .create();
             
             // Set rounded corners for dialog window

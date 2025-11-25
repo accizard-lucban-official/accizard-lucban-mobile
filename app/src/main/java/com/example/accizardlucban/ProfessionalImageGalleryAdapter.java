@@ -17,6 +17,7 @@ public class ProfessionalImageGalleryAdapter extends RecyclerView.Adapter<Profes
     private List<Uri> imageUris;
     private OnImageClickListener onImageClickListener;
     private OnImageRemoveListener onImageRemoveListener;
+    private boolean showCounterBadge = true;
     
     public interface OnImageClickListener {
         void onImageClick(int position, Uri imageUri);
@@ -37,6 +38,10 @@ public class ProfessionalImageGalleryAdapter extends RecyclerView.Adapter<Profes
     
     public void setOnImageRemoveListener(OnImageRemoveListener listener) {
         this.onImageRemoveListener = listener;
+    }
+    
+    public void setShowCounterBadge(boolean show) {
+        this.showCounterBadge = show;
     }
     
     @NonNull
@@ -82,8 +87,8 @@ public class ProfessionalImageGalleryAdapter extends RecyclerView.Adapter<Profes
             holder.removeButton.setVisibility(View.GONE);
         }
         
-        // Show image count badge if there are multiple images
-        if (imageUris.size() > 1) {
+        // Show image count badge if there are multiple images and badge is enabled
+        if (showCounterBadge && imageUris.size() > 1) {
             holder.imageCountText.setVisibility(View.VISIBLE);
             holder.imageCountText.setText(String.valueOf(position + 1));
         } else {

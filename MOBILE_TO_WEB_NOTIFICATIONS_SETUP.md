@@ -2,187 +2,218 @@
 
 ## ✅ Implementation Complete!
 
-The mobile app now sends push notifications to web admin dashboards when:
-1. **New Report Submitted** - User submits an incident report
-2. **New Chat Message** - User sends a message to admin
+The mobile app is now configured to work with the web app's existing Cloud Functions for mobile-to-web push notifications.
 
 ---
 
 ## 🎯 How It Works
 
-### **Mobile App Flow:**
-1. User submits report or sends chat message
-2. Mobile app writes notification trigger to Firestore: `web_notifications/{notificationId}`
-3. Cloud Function detects new document
-4. Cloud Function sends FCM notification to all web admin tokens
-5. Web admin dashboard receives notification
-
 ### **Architecture:**
 ```
-Mobile App → Firestore (web_notifications) → Cloud Function → FCM → Web Admin Dashboard
+Mobile App → Firestore (reports/chat_messages) → Web App Cloud Functions → FCM → Web Admin Dashboard
 ```
+
+### **Flow:**
+1. **Mobile User Action**: User submits report or sends chat message
+2. **Mobile App**: Creates document in Firestore (`reports` or `chat_messages` collection)
+3. **Web App Cloud Functions**: Automatically detect new documents
+4. **Cloud Functions**: 
+   - Detect mobile users (by checking for `fcmToken` without `webFcmToken`)
+   - Send FCM notifications to all web users (from `users` and `superAdmin` collections)
+5. **Web Admin Dashboard**: Receives notification
 
 ---
 
 ## 📦 Mobile App Implementation
 
-### **Files Created/Modified:**
+### **What the Mobile App Does:**
 
-1. **`WebNotificationSender.java`** (NEW)
-   - Utility class to send notifications to web admins
-   - Methods:
-     - `notifyNewReport()` - Triggers notification for new reports
-     - `notifyChatMessage()` - Triggers notification for chat messages
+✅ **1. Store FCM Token** (Already Implemented)
+- FCM token is stored in `users/{userId}/fcmToken` field
+- Handled by `FCMTokenManager.java`
+- Token is saved on login and refreshed automatically
 
-2. **`ReportSubmissionActivity.java`** (MODIFIED)
-   - Added notification trigger after successful report submission
-   - Location: `submitReportToFirestore()` success callback
+✅ **2. Create Reports Normally** (Already Implemented)
+- Reports are created in `reports` collection
+- Handled by `ReportSubmissionActivity.java`
+- No additional notification code needed
 
-3. **`ChatActivity.java`** (MODIFIED)
-   - Added notification trigger after successful message send
-   - Location: `sendMessage()` and `uploadImageToFirebase()` success callbacks
+✅ **3. Send Chat Messages Normally** (Already Implemented)
+- Messages are created in `chat_messages` collection
+- Handled by `ChatActivity.java`
+- No additional notification code needed
+
+### **No Additional Code Required!**
+
+The mobile app **does NOT need** to:
+- ❌ Create separate notification documents
+- ❌ Write to `web_notifications` collection
+- ❌ Manually trigger notifications
+- ❌ Query web admin tokens
+
+**Everything is handled automatically by the web app's Cloud Functions!**
 
 ---
 
-## 🌐 Web App Setup Required
+## 🌐 Web App Cloud Functions
 
-### **Step 1: Deploy Cloud Function**
+The web app's Cloud Functions automatically:
 
-1. Copy `MOBILE_TO_WEB_NOTIFICATIONS_CLOUD_FUNCTION.js` to your Firebase Cloud Functions
-2. Install dependencies (if not already installed):
-   ```bash
-   cd functions
-   npm install firebase-functions firebase-admin
-   ```
-3. Deploy the function:
-   ```bash
-   firebase deploy --only functions:sendMobileToWebNotification
-   ```
+### **1. Detect New Reports**
+- Monitor `reports` collection for new documents
+- Check if reporter has `fcmToken` (mobile user)
+- Send notifications to all web admins
 
-### **Step 2: Register Web FCM Tokens**
+### **2. Detect New Chat Messages**
+- Monitor `chat_messages` collection for new documents
+- Check if sender has `fcmToken` without `webFcmToken` (mobile user)
+- Send notifications to all web admins
 
-Your web app needs to register FCM tokens for web push notifications. Add this to your web app:
+### **3. Identify Mobile Users**
+- Mobile users: Have `fcmToken` field in `users/{userId}`
+- Web users: Have `webFcmToken` field in `users/{userId}` or `superAdmin/{adminId}`
 
+### **4. Send to Web Admins**
+- Query `users` collection for web admins (have `webFcmToken`)
+- Query `superAdmin` collection for super admins
+- Send FCM notifications to all web admin tokens
+
+---
+
+## ✅ Mobile App Requirements (Already Complete)
+
+### **1. FCM Token Storage**
+✅ **Status**: Already implemented in `FCMTokenManager.java`
+
+The mobile app stores FCM tokens in:
+```
+users/{userId}/fcmToken: "mobile-fcm-token-here"
+```
+
+This is done automatically on login via:
+```java
+FCMTokenManager tokenManager = new FCMTokenManager(context);
+tokenManager.initializeFCMToken();
+```
+
+### **2. Report Submission**
+✅ **Status**: Already implemented in `ReportSubmissionActivity.java`
+
+Reports are created normally in Firestore:
+```java
+FirestoreHelper.createReportWithAutoId(reportData, successListener, failureListener);
+```
+
+The web app's Cloud Function will automatically detect this and send notifications.
+
+### **3. Chat Message Sending**
+✅ **Status**: Already implemented in `ChatActivity.java`
+
+Messages are created normally in Firestore:
+```java
+db.collection("chat_messages").add(messageData);
+```
+
+The web app's Cloud Function will automatically detect this and send notifications.
+
+---
+
+## 🔧 Web App Setup (Required)
+
+The web app needs to have Cloud Functions that:
+
+### **1. Monitor Reports Collection**
 ```javascript
-// Initialize FCM in your web app
-import { getMessaging, getToken } from 'firebase/messaging';
-
-async function registerWebFCMToken() {
-  try {
-    const messaging = getMessaging();
-    const token = await getToken(messaging, {
-      vapidKey: 'YOUR_VAPID_KEY' // Get from Firebase Console → Project Settings → Cloud Messaging
-    });
+exports.onNewReport = functions.firestore
+  .document('reports/{reportId}')
+  .onCreate(async (snap, context) => {
+    const reportData = snap.data();
+    const userId = reportData.userId;
     
-    if (token) {
-      // Save token to Firestore
-      await db.collection('fcmTokens').add({
-        token: token,
-        platform: 'web',
-        userId: 'admin', // Or your admin user ID
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    // Check if this is from a mobile user (has fcmToken, no webFcmToken)
+    const userDoc = await admin.firestore().collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    
+    if (userData && userData.fcmToken && !userData.webFcmToken) {
+      // This is a mobile user - send notification to web admins
+      await sendNotificationToWebAdmins({
+        type: 'new_report',
+        reportId: context.params.reportId,
+        reportData: reportData
       });
-      
-      console.log('✅ Web FCM token registered:', token);
     }
-  } catch (error) {
-    console.error('❌ Error registering web FCM token:', error);
-  }
-}
-
-// Call on admin login
-registerWebFCMToken();
+  });
 ```
 
-### **Step 3: Handle Incoming Notifications**
-
-Add notification handler in your web app:
-
+### **2. Monitor Chat Messages Collection**
 ```javascript
-import { getMessaging, onMessage } from 'firebase/messaging';
-
-const messaging = getMessaging();
-
-onMessage(messaging, (payload) => {
-  console.log('📱 Notification received:', payload);
-  
-  // Show browser notification
-  if ('Notification' in window && Notification.permission === 'granted') {
-    const notification = new Notification(payload.notification.title, {
-      body: payload.notification.body,
-      icon: payload.notification.icon,
-      badge: payload.notification.badge,
-      tag: payload.data.type,
-      data: payload.data
-    });
+exports.onNewChatMessage = functions.firestore
+  .document('chat_messages/{messageId}')
+  .onCreate(async (snap, context) => {
+    const messageData = snap.data();
+    const userId = messageData.userId;
     
-    // Handle click
-    notification.onclick = (event) => {
-      event.notification.close();
-      
-      // Navigate based on notification type
-      if (payload.data.type === 'new_report') {
-        window.location.href = '/reports';
-      } else if (payload.data.type === 'chat_message') {
-        window.location.href = '/chat';
-      }
-    };
-  }
-});
-```
-
-### **Step 4: Request Notification Permission**
-
-Request permission from user:
-
-```javascript
-async function requestNotificationPermission() {
-  if ('Notification' in window) {
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      console.log('✅ Notification permission granted');
-      registerWebFCMToken();
-    } else {
-      console.log('❌ Notification permission denied');
+    // Check if this is from a mobile user (has fcmToken, no webFcmToken)
+    const userDoc = await admin.firestore().collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    
+    if (userData && userData.fcmToken && !userData.webFcmToken) {
+      // This is a mobile user - send notification to web admins
+      await sendNotificationToWebAdmins({
+        type: 'chat_message',
+        messageId: context.params.messageId,
+        messageData: messageData
+      });
     }
-  }
-}
-
-// Call on admin dashboard load
-requestNotificationPermission();
+  });
 ```
 
----
-
-## 🔧 Firestore Security Rules
-
-Add these rules to allow mobile app to write notifications:
-
+### **3. Send Notifications to Web Admins**
 ```javascript
-match /web_notifications/{notificationId} {
-  // Allow authenticated users to create notifications
-  allow create: if request.auth != null;
+async function sendNotificationToWebAdmins(notificationData) {
+  // Get all web admin FCM tokens
+  const webAdmins = [];
   
-  // Allow Cloud Functions to read/update
-  allow read, update: if request.auth != null || 
-                       resource.data.status == 'pending';
+  // Get from users collection (web admins)
+  const usersSnapshot = await admin.firestore()
+    .collection('users')
+    .where('webFcmToken', '!=', null)
+    .get();
   
-  // Only allow Cloud Function to delete (via admin SDK)
-  allow delete: if false;
-}
-
-match /fcmTokens/{tokenId} {
-  // Allow authenticated users to create/update their own tokens
-  allow create, update: if request.auth != null && 
-                         request.resource.data.userId == request.auth.uid;
+  usersSnapshot.forEach(doc => {
+    const webFcmToken = doc.data().webFcmToken;
+    if (webFcmToken) {
+      webAdmins.push(webFcmToken);
+    }
+  });
   
-  // Allow Cloud Functions to read (via admin SDK)
-  allow read: if request.auth != null;
+  // Get from superAdmin collection
+  const superAdminsSnapshot = await admin.firestore()
+    .collection('superAdmin')
+    .get();
   
-  // Allow users to delete their own tokens
-  allow delete: if request.auth != null && 
-                 resource.data.userId == request.auth.uid;
+  superAdminsSnapshot.forEach(doc => {
+    const adminData = doc.data();
+    if (adminData.webFcmToken) {
+      webAdmins.push(adminData.webFcmToken);
+    }
+  });
+  
+  // Send notifications to all web admins
+  if (webAdmins.length > 0) {
+    const message = {
+      notification: {
+        title: notificationData.type === 'new_report' 
+          ? '🚨 New Report Submitted' 
+          : '💬 New Chat Message',
+        body: buildNotificationBody(notificationData)
+      },
+      data: notificationData,
+      tokens: webAdmins
+    };
+    
+    await admin.messaging().sendEachForMulticast(message);
+  }
 }
 ```
 
@@ -193,20 +224,21 @@ match /fcmTokens/{tokenId} {
 ### **Test 1: New Report Notification**
 1. Login to mobile app as user
 2. Submit a new report
-3. **Expected**: Web admin dashboard receives notification
-4. **Check Firestore**: `web_notifications` collection should have new document
-5. **Check Cloud Function logs**: Should show notification sent
+3. **Check Firestore**: `reports` collection should have new document
+4. **Check Cloud Function logs**: Should show notification sent to web admins
+5. **Expected**: Web admin dashboard receives notification
 
 ### **Test 2: Chat Message Notification**
 1. Login to mobile app as user
 2. Send a chat message
-3. **Expected**: Web admin dashboard receives notification
-4. **Check Firestore**: `web_notifications` collection should have new document
+3. **Check Firestore**: `chat_messages` collection should have new document
+4. **Check Cloud Function logs**: Should show notification sent to web admins
+5. **Expected**: Web admin dashboard receives notification
 
-### **Test 3: Verify FCM Tokens**
-1. Check Firestore: `fcmTokens` collection
-2. Verify web tokens exist with `platform: "web"`
-3. Verify tokens are valid (not expired)
+### **Test 3: Verify FCM Token Storage**
+1. Check Firestore: `users/{userId}/fcmToken` should exist
+2. Verify token is a valid FCM token (long string)
+3. Verify user does NOT have `webFcmToken` (identifies as mobile user)
 
 ---
 
@@ -214,65 +246,55 @@ match /fcmTokens/{tokenId} {
 
 ### **Check Mobile App Logs:**
 ```
-D/WebNotificationSender: Sending new report notification to web admins
-D/WebNotificationSender: ✅ Web notification trigger created: {notificationId}
+D/FCMTokenManager: ✅ FCM token saved to Firestore using document ID: {userId}
+D/ReportSubmissionActivity: ✅ Report submitted successfully with ID: {reportId}
+D/ChatActivity: Message sent successfully with ID: {messageId}
 ```
 
-### **Check Cloud Function Logs:**
+### **Check Firestore:**
+1. **Reports**: `reports` collection should have new documents when reports are submitted
+2. **Chat Messages**: `chat_messages` collection should have new documents when messages are sent
+3. **FCM Tokens**: `users/{userId}/fcmToken` should exist for mobile users
+
+### **Check Web App Cloud Function Logs:**
 ```bash
-firebase functions:log --only sendMobileToWebNotification
+firebase functions:log
 ```
 
 Look for:
-- `📱 Mobile-to-web notification received`
-- `📱 Found X web admin FCM tokens`
-- `✅ Successfully sent X notifications`
-
-### **Check Firestore:**
-1. Open Firebase Console → Firestore
-2. Check `web_notifications` collection:
-   - New documents should appear when mobile sends notification
-   - Status should change from `pending` to `processed`
-3. Check `fcmTokens` collection:
-   - Should have documents with `platform: "web"`
+- `📱 New report detected from mobile user`
+- `📱 New chat message detected from mobile user`
+- `✅ Notification sent to X web admins`
 
 ---
 
-## 📊 Notification Types
+## 📊 Data Structure
 
-### **1. New Report Notification**
+### **Mobile User (in Firestore):**
 ```json
 {
-  "notification": {
-    "title": "🚨 New Report Submitted",
-    "body": "Fire from John Doe"
-  },
-  "data": {
-    "type": "new_report",
-    "reportId": "rpt123",
-    "reportType": "Fire",
-    "reporterName": "John Doe",
-    "location": "123 Main St",
-    "userId": "user123",
-    "click_action": "OPEN_REPORTS"
+  "users/{userId}": {
+    "fcmToken": "mobile-fcm-token-here",
+    // No webFcmToken field = mobile user
   }
 }
 ```
 
-### **2. Chat Message Notification**
+### **Web Admin (in Firestore):**
 ```json
 {
-  "notification": {
-    "title": "💬 New Chat Message",
-    "body": "John Doe: Hello, I need help..."
-  },
-  "data": {
-    "type": "chat_message",
-    "messageId": "msg456",
-    "messageContent": "Hello, I need help...",
-    "senderName": "John Doe",
-    "userId": "user123",
-    "click_action": "OPEN_CHAT"
+  "users/{adminId}": {
+    "webFcmToken": "web-fcm-token-here",
+    // Has webFcmToken = web admin
+  }
+}
+```
+
+### **Super Admin (in Firestore):**
+```json
+{
+  "superAdmin/{adminId}": {
+    "webFcmToken": "web-fcm-token-here"
   }
 }
 ```
@@ -281,36 +303,31 @@ Look for:
 
 ## ⚠️ Important Notes
 
-1. **Web FCM Tokens**: Web app must register FCM tokens in `fcmTokens` collection with `platform: "web"`
-2. **Cloud Function**: Must be deployed for notifications to work
-3. **Notification Permission**: Web app must request and receive notification permission
-4. **VAPID Key**: Required for web push notifications (get from Firebase Console)
-5. **Token Refresh**: Web tokens may expire - implement token refresh logic
+1. **FCM Token Storage**: Mobile app must store FCM token in `users/{userId}/fcmToken`
+2. **User Identification**: Web app identifies mobile users by checking for `fcmToken` without `webFcmToken`
+3. **No Manual Triggers**: Mobile app does NOT need to manually trigger notifications
+4. **Cloud Functions**: Web app's Cloud Functions handle all notification logic
+5. **Web Admin Tokens**: Web app must store web FCM tokens in `users/{adminId}/webFcmToken` or `superAdmin/{adminId}/webFcmToken`
 
 ---
 
 ## 🎉 Status
 
-✅ **Mobile App**: Complete - sends notifications to Firestore  
-⏳ **Web App**: Requires setup (Cloud Function + FCM token registration)  
-✅ **Cloud Function**: Code provided - needs deployment  
+✅ **Mobile App**: Complete - stores FCM tokens, creates reports/messages normally  
+⏳ **Web App**: Requires Cloud Functions to detect and send notifications  
 
 ---
 
-## 📝 Next Steps
+## 📝 Summary
 
-1. ✅ Deploy Cloud Function
-2. ✅ Register web FCM tokens in web app
-3. ✅ Handle incoming notifications in web app
-4. ✅ Request notification permission
-5. ✅ Test end-to-end flow
+**Mobile App Responsibilities:**
+- ✅ Store FCM token in `users/{userId}/fcmToken`
+- ✅ Create reports in `reports` collection
+- ✅ Send chat messages in `chat_messages` collection
 
----
+**Web App Responsibilities:**
+- ⏳ Monitor `reports` and `chat_messages` collections
+- ⏳ Detect mobile users (has `fcmToken`, no `webFcmToken`)
+- ⏳ Send FCM notifications to web admins (has `webFcmToken`)
 
-## 🔗 Related Files
-
-- `WebNotificationSender.java` - Mobile app utility class
-- `MOBILE_TO_WEB_NOTIFICATIONS_CLOUD_FUNCTION.js` - Cloud Function code
-- `ReportSubmissionActivity.java` - Report submission integration
-- `ChatActivity.java` - Chat message integration
-
+**No Additional Mobile App Code Required!** 🎉

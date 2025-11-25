@@ -13,7 +13,6 @@
         android:orientation="horizontal"
         android:padding="16dp"
         android:background="@android:color/white"
-        android:elevation="8dp"
         android:gravity="center_vertical">
 
         <ImageView
@@ -27,21 +26,6 @@
             android:padding="8dp"
             android:contentDescription="Back button"
             android:scaleType="centerInside" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Terms and Conditions"
-            android:textSize="22sp"
-            android:textColor="#1A1A1A"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:fontFamily="@font/dmsans" />
-
-        <View
-            android:layout_width="32dp"
-            android:layout_height="32dp" />
 
     </LinearLayout>
 
@@ -77,20 +61,19 @@
 
                     <View
                         android:layout_width="4dp"
-                        android:layout_height="40dp"
-                        android:background="#FF4444"
-                        android:layout_marginEnd="16dp" />
+                        android:layout_height="fill_parent"
+                        android:layout_marginEnd="16dp"
+                        android:background="@color/orange_primary" />
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Terms and Conditions of AcciZard Lucban"
-                        android:textSize="26sp"
-                        android:textStyle="bold"
+                        android:fontFamily="@font/dmsans"
+                        android:text="Terms and Conditions and Privacy Policy of AcciZard Lucban"
                         android:textColor="#1A1A1A"
-                        android:lineSpacingExtra="4dp"
-                        android:fontFamily="@font/dmsans" />
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
 
                 </LinearLayout>
 
@@ -374,15 +357,6 @@
                     android:orientation="vertical">
 
                     <!-- Section Header -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Your Relationship with AcciZard Lucban"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:textColor="#1A1A1A"
-                        android:layout_marginBottom="20dp"
-                        android:fontFamily="@font/dmsans" />
 
                     <!-- Section 1 -->
                     <LinearLayout
@@ -405,10 +379,10 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="September 30, 2025"
-                            android:textSize="16sp"
+                            android:lineSpacingExtra="4dp"
+                            android:text="November 25, 2025"
                             android:textColor="#666666"
-                            android:lineSpacingExtra="4dp" />
+                            android:textSize="16sp" />
 
                     </LinearLayout>
 
@@ -433,10 +407,10 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:lineSpacingExtra="4dp"
                             android:text="@string/terms_developed_by"
-                            android:textSize="16sp"
                             android:textColor="#666666"
-                            android:lineSpacingExtra="4dp" />
+                            android:textSize="16sp" />
 
                     </LinearLayout>
 
@@ -657,7 +631,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/terms_privacy_policy"
+                            android:text="@string/terms_privacy_policy_changes"
                             android:textSize="16sp"
                             android:textColor="#666666"
                             android:lineSpacingExtra="4dp" />
@@ -882,34 +856,15 @@
                     </LinearLayout>
 
                     <!-- Footer -->
-                    <LinearLayout
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
+                        android:text="© 2025 AcciZard Lucban. All Rights Reserved."
+                        android:textSize="12sp"
+                        android:textColor="#999999"
+                        android:gravity="center"
                         android:layout_marginTop="32dp"
-                        android:layout_marginBottom="24dp"
-                        android:padding="16dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Thank you for using AcciZard Lucban"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:textColor="#333333"
-                            android:layout_gravity="center"
-                            android:layout_marginBottom="8dp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Developed by BSIT Students, Southern Luzon State University"
-                            android:textSize="14sp"
-                            android:textColor="#666666"
-                            android:layout_gravity="center"
-                            android:textStyle="italic" />
-
-                    </LinearLayout>
+                        android:layout_marginBottom="24dp" />
 
                 </LinearLayout>
 

@@ -602,20 +602,8 @@ public class ChatActivity extends AppCompatActivity {
                     .addOnSuccessListener(documentReference -> {
                         Log.d(TAG, "Message sent successfully with ID: " + documentReference.getId());
                         
-                        // Send notification to web admins about new chat message
-                        try {
-                            WebNotificationSender notificationSender = new WebNotificationSender(ChatActivity.this);
-                            notificationSender.notifyChatMessage(
-                                documentReference.getId(),
-                                message,
-                                senderName,
-                                currentUser.getUid()
-                            );
-                            Log.d(TAG, "✅ Web notification sent for chat message");
-                        } catch (Exception e) {
-                            Log.e(TAG, "Error sending web notification for chat message: " + e.getMessage(), e);
-                            // Don't show error to user - notification failure shouldn't block message sending
-                        }
+                        // Web app Cloud Functions will automatically detect new chat message and send notifications to web admins
+                        Log.d(TAG, "✅ Message sent - web app Cloud Functions will handle notifications");
                         
                         // Update chat room metadata with last message info
                         updateChatRoomLastMessage(message, System.currentTimeMillis());
@@ -751,20 +739,8 @@ public class ChatActivity extends AppCompatActivity {
                             .addOnSuccessListener(documentReference -> {
                                 Log.d(TAG, "Image message saved to Firestore with ID: " + documentReference.getId());
                                 
-                                // Send notification to web admins about new image message
-                                try {
-                                    WebNotificationSender notificationSender = new WebNotificationSender(ChatActivity.this);
-                                    notificationSender.notifyChatMessage(
-                                        documentReference.getId(),
-                                        "📷 Sent an image",
-                                        senderName,
-                                        userId
-                                    );
-                                    Log.d(TAG, "✅ Web notification sent for image message");
-                                } catch (Exception e) {
-                                    Log.e(TAG, "Error sending web notification for image message: " + e.getMessage(), e);
-                                    // Don't show error to user - notification failure shouldn't block message sending
-                                }
+                                // Web app Cloud Functions will automatically detect new chat message and send notifications to web admins
+                                Log.d(TAG, "✅ Image message sent - web app Cloud Functions will handle notifications");
                                 
                                 // Update chat room metadata with last message info
                                 updateChatRoomLastMessage("📷 Sent an image", System.currentTimeMillis());

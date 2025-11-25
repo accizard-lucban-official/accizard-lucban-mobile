@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -217,12 +218,13 @@
                 android:focusable="true">
 
                 <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:src="@drawable/accizard_logo_svg"
-                    android:tint="#f97316"
+                    android:tint="@color/orange_primary"
                     android:layout_marginEnd="16dp"
-                    android:contentDescription="Shield icon" />
+                    android:contentDescription="Shield icon"
+                    tools:ignore="UseAppTint" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -233,18 +235,10 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Invite friends to Accizard"
+                        android:text="Invite friends to AcciZard"
                         android:textSize="16sp"
                         android:textColor="#333333"
                         android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="accizardlink.com"
-                        android:textSize="14sp"
-                        android:textColor="#666666"
-                        android:layout_marginTop="4dp" />
 
                 </LinearLayout>
 

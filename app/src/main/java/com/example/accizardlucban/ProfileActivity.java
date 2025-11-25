@@ -287,7 +287,7 @@ public class ProfileActivity extends AppCompatActivity {
             inviteFriendsLayout.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    openAppWebsite();
+                    shareAccizardApp();
                 }
             });
         }
@@ -1773,62 +1773,34 @@ public class ProfileActivity extends AppCompatActivity {
     /**
      * Open the app website in browser where users can download the app
      */
-    private void openAppWebsite() {
+    private void shareAccizardApp() {
         try {
-            // Website URL where users can download the app
-            String websiteUrl = "https://accizard-lucban-official.github.io/accizard-lucban-landing-page/";
+            // Website URL
+            String websiteUrl = "https://tinyurl.com/accizard-official-website";
             
-            // Parse the URI
-            android.net.Uri uri = android.net.Uri.parse(websiteUrl);
+            // Share message
+            String shareMessage = "Help us make Lucban safer!\n\n" +
+                    "Share AcciZard Lucban with your family and friends and invite them to try the app.\n\n" +
+                    "👉 Visit the website: " + websiteUrl;
             
-            // Create intent to open URL in browser with proper categories
-            Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
-            browserIntent.addCategory(Intent.CATEGORY_BROWSABLE);
-            browserIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            // Create share intent
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(Intent.EXTRA_TEXT, shareMessage);
+            shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Invite to AcciZard Lucban");
             
-            // Try to start the activity
+            // Start share chooser
             try {
-                startActivity(browserIntent);
-                Log.d(TAG, "Opening website: " + websiteUrl);
+                startActivity(Intent.createChooser(shareIntent, "Share AcciZard Lucban"));
+                Log.d(TAG, "Sharing app: " + websiteUrl);
             } catch (android.content.ActivityNotFoundException e) {
-                // If no browser is found, try alternative approach
-                Log.w(TAG, "No browser found, trying alternative method", e);
-                
-                // Try with explicit browser package names
-                String[] browserPackages = {
-                    "com.android.chrome",
-                    "com.chrome.browser",
-                    "com.browser",
-                    "com.opera.browser",
-                    "org.mozilla.firefox",
-                    "com.microsoft.emmx"
-                };
-                
-                boolean opened = false;
-                for (String packageName : browserPackages) {
-                    try {
-                        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                        intent.setPackage(packageName);
-                        intent.addCategory(Intent.CATEGORY_BROWSABLE);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent);
-                        opened = true;
-                        Log.d(TAG, "Opened website using browser: " + packageName);
-                        break;
-                    } catch (Exception ex) {
-                        // Continue to next browser
-                    }
-                }
-                
-                if (!opened) {
-                    // Last resort: show error message
-                    Toast.makeText(this, "Please install a web browser to view the website", Toast.LENGTH_LONG).show();
-                    Log.e(TAG, "No browser available to open website");
-                }
+                // If no sharing app is found, show error message
+                Log.w(TAG, "No sharing app found", e);
+                Toast.makeText(this, "No sharing app available", Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
-            Log.e(TAG, "Error opening app website", e);
-            Toast.makeText(this, "Error opening website: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Error sharing app", e);
+            Toast.makeText(this, "Error sharing: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
     

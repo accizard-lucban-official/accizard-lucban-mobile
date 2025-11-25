@@ -231,6 +231,7 @@
                             android:layout_width="@dimen/dashboard_weather_icon_size"
                             android:layout_height="@dimen/dashboard_weather_icon_size"
                             android:src="@drawable/fluent__weather_sunny_32_filled"
+                            android:tint="@android:color/white"
                             android:contentDescription="Weather Icon" />
 
                         <TextView
@@ -776,7 +777,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Add"
-                        android:textColor="@color/orange_primary    "
+                        android:textColor="@color/orange_primary"
                         android:textSize="@dimen/dashboard_emergency_label_size"
                         android:textStyle="bold"
                         android:gravity="center" />
