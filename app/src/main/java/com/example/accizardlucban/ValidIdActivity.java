@@ -1341,6 +1341,18 @@ public class ValidIdActivity extends AppCompatActivity {
             editor.putString("barangay", barangay);
             editor.putString("street_address", streetAddress != null ? streetAddress : "");
             
+            // ✅ ENSURE: Save blood type to SharedPreferences for ProfileActivity sync
+            if (bloodType != null && !bloodType.isEmpty() && !bloodType.equals("Not Available")) {
+                editor.putString("blood_type", bloodType);
+                editor.putString("bloodType", bloodType); // Also save as camelCase for compatibility
+                Log.d(TAG, "Blood type saved to SharedPreferences: " + bloodType);
+            } else if (bloodType != null) {
+                // Even if "Not Available", save it for consistency
+                editor.putString("blood_type", bloodType);
+                editor.putString("bloodType", bloodType);
+                Log.d(TAG, "Blood type (Not Available) saved to SharedPreferences");
+            }
+            
             // Save complete mailing address
             // Format: Street Address (if provided), Barangay, Town, Province
             String mailingAddress;

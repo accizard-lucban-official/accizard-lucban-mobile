@@ -904,8 +904,11 @@ public class ProfileActivity extends AppCompatActivity {
         if (bloodType.isEmpty()) {
             bloodType = prefs.getString("bloodType", "");
         }
-        if (bloodType.isEmpty()) {
-            bloodType = "Blood Type";
+        // Handle "Not Available" case - show it as is or as "Not Available"
+        if (bloodType.isEmpty() || bloodType.equals("Not Available")) {
+            // If empty or "Not Available", try to fetch from Firestore first
+            // This will be handled by loadUserInfoData() which syncs from Firestore
+            bloodType = "Blood Type"; // Default placeholder
         }
         updateInfoText(bloodTypeInfoLayout, bloodType);
         
@@ -983,8 +986,22 @@ public class ProfileActivity extends AppCompatActivity {
             // Fallback to camelCase if underscore version doesn't exist
             bloodType = doc.getString("bloodType");
         }
-        editor.putString("blood_type", bloodType);
-        editor.putString("bloodType", bloodType);
+        // Save blood type to SharedPreferences (even if "Not Available" or empty)
+        if (bloodType != null && !bloodType.isEmpty()) {
+            editor.putString("blood_type", bloodType);
+            editor.putString("bloodType", bloodType);
+            Log.d(TAG, "✅ Blood type synced from Firestore to SharedPreferences: " + bloodType);
+        } else {
+            // If not found in Firestore, keep existing value or set default
+            String existingBloodType = prefs.getString("blood_type", "");
+            if (existingBloodType.isEmpty()) {
+                editor.putString("blood_type", "Not Available");
+                editor.putString("bloodType", "Not Available");
+                Log.d(TAG, "⚠️ Blood type not found in Firestore, setting default: Not Available");
+            } else {
+                Log.d(TAG, "✅ Keeping existing blood type from SharedPreferences: " + existingBloodType);
+            }
+        }
         
         editor.putString("pwd_status", doc.getString("pwdStatus"));
         editor.putString("pwdStatus", doc.getString("pwdStatus"));
