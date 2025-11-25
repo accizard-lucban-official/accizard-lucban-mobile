@@ -47,8 +47,9 @@ public class EditProfileActivity extends AppCompatActivity {
     private static final String TAG = "EditProfileActivity";
     private static final int CAMERA_REQUEST_CODE = 1001;
     private static final int GALLERY_REQUEST_CODE = 1002;
-    private static final int CAMERA_PERMISSION_CODE = 1003;
-    private static final int STORAGE_PERMISSION_CODE = 1004;
+    // Using PermissionHelper's request codes
+    private static final int CAMERA_PERMISSION_CODE = PermissionHelper.CAMERA_PERMISSION_REQUEST_CODE;
+    private static final int STORAGE_PERMISSION_CODE = PermissionHelper.STORAGE_PERMISSION_REQUEST_CODE;
     private static final int VALID_ID_CAMERA_REQUEST_CODE = 1005;
     private static final int VALID_ID_GALLERY_REQUEST_CODE = 1006;
 
@@ -848,18 +849,34 @@ public class EditProfileActivity extends AppCompatActivity {
         builder.setItems(options, (dialog, which) -> {
             switch (which) {
                 case 0:
-                    if (checkCameraPermission()) {
-                        openCamera();
-                    } else {
-                        requestCameraPermission();
-                    }
+                    PermissionHelper.requestCameraPermission(EditProfileActivity.this, new PermissionHelper.PermissionCallback() {
+                        @Override
+                        public void onPermissionGranted() {
+                            openCamera();
+                        }
+                        
+                        @Override
+                        public void onPermissionDenied() {
+                            Toast.makeText(EditProfileActivity.this, 
+                                    "Camera permission is required to take photos", 
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
                     break;
                 case 1:
-                    if (checkStoragePermission()) {
-                        openGallery();
-                    } else {
-                        requestStoragePermission();
-                    }
+                    PermissionHelper.requestStoragePermission(EditProfileActivity.this, new PermissionHelper.PermissionCallback() {
+                        @Override
+                        public void onPermissionGranted() {
+                            openGallery();
+                        }
+                        
+                        @Override
+                        public void onPermissionDenied() {
+                            Toast.makeText(EditProfileActivity.this, 
+                                    "Storage permission is required to select photos", 
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
                     break;
                 case 2:
                     dialog.dismiss();
@@ -876,18 +893,34 @@ public class EditProfileActivity extends AppCompatActivity {
         builder.setItems(options, (dialog, which) -> {
             switch (which) {
                 case 0:
-                    if (checkCameraPermission()) {
-                        openValidIdCamera();
-                    } else {
-                        requestCameraPermission();
-                    }
+                    PermissionHelper.requestCameraPermission(EditProfileActivity.this, new PermissionHelper.PermissionCallback() {
+                        @Override
+                        public void onPermissionGranted() {
+                            openValidIdCamera();
+                        }
+                        
+                        @Override
+                        public void onPermissionDenied() {
+                            Toast.makeText(EditProfileActivity.this, 
+                                    "Camera permission is required to take photos", 
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
                     break;
                 case 1:
-                    if (checkStoragePermission()) {
-                        openValidIdGallery();
-                    } else {
-                        requestStoragePermission();
-                    }
+                    PermissionHelper.requestStoragePermission(EditProfileActivity.this, new PermissionHelper.PermissionCallback() {
+                        @Override
+                        public void onPermissionGranted() {
+                            openValidIdGallery();
+                        }
+                        
+                        @Override
+                        public void onPermissionDenied() {
+                            Toast.makeText(EditProfileActivity.this, 
+                                    "Storage permission is required to select photos", 
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
                     break;
                 case 2:
                     dialog.dismiss();
@@ -897,29 +930,7 @@ public class EditProfileActivity extends AppCompatActivity {
         builder.show();
     }
 
-    private boolean checkCameraPermission() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void requestCameraPermission() {
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_CODE);
-    }
-
-    private boolean checkStoragePermission() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED;
-        } else {
-            return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-        }
-    }
-
-    private void requestStoragePermission() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_MEDIA_IMAGES}, STORAGE_PERMISSION_CODE);
-        } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, STORAGE_PERMISSION_CODE);
-        }
-    }
+    // Permission checking and requesting methods removed - now using PermissionHelper
 
     private void openCamera() {
         Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
@@ -960,18 +971,11 @@ public class EditProfileActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == CAMERA_PERMISSION_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                openCamera();
-            } else {
-                Toast.makeText(this, "Camera permission denied", Toast.LENGTH_SHORT).show();
-            }
-        } else if (requestCode == STORAGE_PERMISSION_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                openGallery();
-            } else {
-                Toast.makeText(this, "Storage permission denied", Toast.LENGTH_SHORT).show();
-            }
+        // Permission results are handled by PermissionHelper callbacks
+        // This method is kept for compatibility but callbacks handle the logic
+        if (requestCode == CAMERA_PERMISSION_CODE || requestCode == STORAGE_PERMISSION_CODE) {
+            // Callbacks in PermissionHelper.request* methods handle the result
+            Log.d("EditProfileActivity", "Permission result received for request code: " + requestCode);
         }
     }
 

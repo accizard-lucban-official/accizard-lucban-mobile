@@ -262,6 +262,7 @@
                                     android:layout_height="16dp"
                                     android:src="@drawable/ic_camera"
                                     android:layout_marginEnd="@dimen/margin_tiny"
+                                    android:alpha="0.2"
                                     android:contentDescription="Camera Icon" />
 
                                 <TextView

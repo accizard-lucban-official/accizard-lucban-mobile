@@ -37,11 +37,11 @@
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@drawable/status_pending_bg"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
+            android:paddingStart="@dimen/padding_medium"
+            android:paddingEnd="@dimen/padding_medium"
             android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:layout_marginStart="8dp">
+            android:paddingBottom="@dimen/padding_small"
+            android:layout_marginStart="@dimen/padding_small">
 
             <!-- Status Dot -->
             <View

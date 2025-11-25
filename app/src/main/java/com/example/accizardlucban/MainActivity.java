@@ -1515,16 +1515,19 @@ public class MainActivity extends AppCompatActivity {
         try {
             String emergencyNumber = "tel:09175204211"; // LDRRMO Lucban: 0917 520 4211
 
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                // Request permission
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.CALL_PHONE},
-                        CALL_PERMISSION_REQUEST_CODE);
-            } else {
-                // Permission already granted, make the call
-                makeCall(emergencyNumber);
-            }
+            PermissionHelper.requestPhonePermission(this, new PermissionHelper.PermissionCallback() {
+                @Override
+                public void onPermissionGranted() {
+                    makeCall(emergencyNumber);
+                }
+                
+                @Override
+                public void onPermissionDenied() {
+                    Toast.makeText(MainActivity.this, 
+                            "Phone permission is required to make emergency calls", 
+                            Toast.LENGTH_LONG).show();
+                }
+            });
         } catch (Exception e) {
             Log.e(TAG, "Error making emergency call: " + e.getMessage(), e);
             Toast.makeText(this, "Error making emergency call", Toast.LENGTH_SHORT).show();

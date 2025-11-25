@@ -37,27 +37,14 @@
 
             <!-- Logo Image -->
             <ImageView
-                android:layout_width="@dimen/success_header_logo_width"
-                android:layout_height="@dimen/success_header_logo_height"
-                android:src="@drawable/accizard_logotype_svg"
+                android:layout_width="@dimen/main_logo_size"
+                android:layout_height="wrap_content"
+                android:src="@drawable/logintagline"
                 android:contentDescription="App Logo"
                 android:adjustViewBounds="true"
                 android:scaleType="fitCenter" />
 
             <!-- Header Text -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/margin_large"
-                android:text="REPORT PROTECT PREVENT"
-                android:textColor="@android:color/white"
-                android:textSize="@dimen/success_tagline_text_size"
-                android:letterSpacing="0.1"
-                android:textStyle="bold"
-                android:shadowColor="#80000000"
-                android:shadowDx="2"
-                android:shadowDy="2"
-                android:shadowRadius="4" />
         </LinearLayout>
 
     </FrameLayout>
@@ -156,7 +143,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Back to Login"
-                android:textColor="#FF9800"
+                android:textColor="@color/gray_medium"
                 android:textSize="16sp"
                 android:fontFamily="sans-serif" />
 

@@ -187,17 +187,18 @@
             </LinearLayout>
 
             <!-- Upload Valid ID Section -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Upload Valid ID"
-                android:textColor="@color/text_dark"
-                android:textSize="@dimen/registration_label_text_size"
-                android:textStyle="bold"
-                android:layout_marginBottom="@dimen/registration_label_margin_bottom" />
 
             <TextView
                 android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/registration_label_margin_bottom"
+                android:text="Provide a Valid ID"
+                android:textColor="@color/text_dark"
+                android:textSize="@dimen/registration_label_text_size"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Upload a clear photo of your valid government-issued ID for verification"
                 android:textColor="@color/text_hint"
@@ -205,13 +206,6 @@
                 android:layout_marginBottom="@dimen/registration_label_margin_bottom" />
 
             <!-- Valid ID Type Dropdown -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Valid ID Type"
-                android:textColor="@color/text_dark"
-                android:textSize="@dimen/registration_label_text_size"
-                android:layout_marginBottom="@dimen/registration_label_margin_bottom" />
 
             <!-- Spinner with hint overlay -->
             <FrameLayout

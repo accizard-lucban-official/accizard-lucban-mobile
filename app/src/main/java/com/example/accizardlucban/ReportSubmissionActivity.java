@@ -138,7 +138,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private static final int VIDEO_PICK_REQUEST = 2004;
     private static final int VIDEO_RECORD_REQUEST = 2005;
     private static final int CAMERA_REQUEST_CODE = 2002;
-    private static final int CAMERA_PERMISSION_REQUEST_CODE = 2003;
+    // Using PermissionHelper's request codes
+    private static final int CAMERA_PERMISSION_REQUEST_CODE = PermissionHelper.CAMERA_PERMISSION_REQUEST_CODE;
+    private static final int STORAGE_PERMISSION_REQUEST_CODE = PermissionHelper.STORAGE_PERMISSION_REQUEST_CODE;
     private Uri selectedImageUri;
     private List<Uri> selectedImageUris = new ArrayList<>(); // Keep for backward compatibility
     private List<MediaItem> selectedMediaItems = new ArrayList<>(); // New: supports both images and videos
@@ -945,15 +947,20 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     }
 
     private void checkCameraPermissionAndTakePhoto() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
-                != PackageManager.PERMISSION_GRANTED) {
-            pendingVideoRecording = false; // Set flag to indicate photo is pending
-            ActivityCompat.requestPermissions(this, 
-                    new String[]{Manifest.permission.CAMERA}, 
-                    CAMERA_PERMISSION_REQUEST_CODE);
-        } else {
-            openCamera();
-        }
+        pendingVideoRecording = false; // Set flag to indicate photo is pending
+        PermissionHelper.requestCameraPermission(this, new PermissionHelper.PermissionCallback() {
+            @Override
+            public void onPermissionGranted() {
+                openCamera();
+            }
+            
+            @Override
+            public void onPermissionDenied() {
+                Toast.makeText(ReportSubmissionActivity.this, 
+                        "Camera permission is required to take photos", 
+                        Toast.LENGTH_LONG).show();
+            }
+        });
     }
     
     private void openCamera() {
@@ -974,15 +981,21 @@ public class ReportSubmissionActivity extends AppCompatActivity {
      * Check camera permission and record video
      */
     private void checkCameraPermissionAndRecordVideo() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
-                != PackageManager.PERMISSION_GRANTED) {
-            pendingVideoRecording = true; // Set flag to indicate video recording is pending
-            ActivityCompat.requestPermissions(this, 
-                    new String[]{Manifest.permission.CAMERA}, 
-                    CAMERA_PERMISSION_REQUEST_CODE);
-        } else {
-            openVideoRecorder();
-        }
+        pendingVideoRecording = true; // Set flag to indicate video recording is pending
+        PermissionHelper.requestCameraPermission(this, new PermissionHelper.PermissionCallback() {
+            @Override
+            public void onPermissionGranted() {
+                openVideoRecorder();
+            }
+            
+            @Override
+            public void onPermissionDenied() {
+                pendingVideoRecording = false; // Reset flag
+                Toast.makeText(ReportSubmissionActivity.this, 
+                        "Camera permission is required to record videos", 
+                        Toast.LENGTH_LONG).show();
+            }
+        });
     }
     
     /**
@@ -1089,10 +1102,23 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     }
     
     private void pickImageFromGallery() {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("image/*");
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        startActivityForResult(Intent.createChooser(intent, "Select Pictures"), IMAGE_PICK_REQUEST);
+        // Request storage permission first if needed
+        PermissionHelper.requestStoragePermission(this, new PermissionHelper.PermissionCallback() {
+            @Override
+            public void onPermissionGranted() {
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("image/*");
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                startActivityForResult(Intent.createChooser(intent, "Select Pictures"), IMAGE_PICK_REQUEST);
+            }
+            
+            @Override
+            public void onPermissionDenied() {
+                Toast.makeText(ReportSubmissionActivity.this, 
+                        "Storage permission is required to select images", 
+                        Toast.LENGTH_LONG).show();
+            }
+        });
     }
     
     /**
@@ -1100,26 +1126,39 @@ public class ReportSubmissionActivity extends AppCompatActivity {
      * Uses ACTION_OPEN_DOCUMENT for better permission handling on Android 5.0+
      */
     private void pickVideoFromGallery() {
-        Intent intent;
-        
-        // Use ACTION_OPEN_DOCUMENT for Android 5.0+ (better for persistent permissions)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
-            intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("video/*");
-            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-            // These flags are important for persistent access
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-        } else {
-            // Fallback to ACTION_GET_CONTENT for older Android versions
-            intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("video/*");
-            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        }
-        
-        startActivityForResult(Intent.createChooser(intent, "Select Videos"), VIDEO_PICK_REQUEST);
+        // Request storage permission first if needed
+        PermissionHelper.requestStoragePermission(this, new PermissionHelper.PermissionCallback() {
+            @Override
+            public void onPermissionGranted() {
+                Intent intent;
+                
+                // Use ACTION_OPEN_DOCUMENT for Android 5.0+ (better for persistent permissions)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+                    intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType("video/*");
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                    // These flags are important for persistent access
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+                } else {
+                    // Fallback to ACTION_GET_CONTENT for older Android versions
+                    intent = new Intent(Intent.ACTION_GET_CONTENT);
+                    intent.setType("video/*");
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                }
+                
+                startActivityForResult(Intent.createChooser(intent, "Select Videos"), VIDEO_PICK_REQUEST);
+            }
+            
+            @Override
+            public void onPermissionDenied() {
+                Toast.makeText(ReportSubmissionActivity.this, 
+                        "Storage permission is required to select videos", 
+                        Toast.LENGTH_LONG).show();
+            }
+        });
     }
     
     /**
@@ -3223,6 +3262,15 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                     "Camera permission is required to take photos";
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show();
                 pendingVideoRecording = false; // Reset flag
+            }
+        } else if (requestCode == STORAGE_PERMISSION_REQUEST_CODE) {
+            // Storage permission result - handled by PermissionHelper callbacks
+            // If permission was granted, the user can try selecting media again
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted - user can now select media
+                Log.d(TAG, "Storage permission granted");
+            } else {
+                Toast.makeText(this, "Storage permission is required to select photos and videos", Toast.LENGTH_LONG).show();
             }
         }
     }

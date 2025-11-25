@@ -87,9 +87,10 @@ public class ChatActivity extends AppCompatActivity {
     private static final int GALLERY_REQUEST_CODE = 202;
     private static final int VIDEO_REQUEST_CODE = 203;
     private static final int AUDIO_REQUEST_CODE = 204;
-    private static final int CAMERA_PERMISSION_CODE = 205;
-    private static final int STORAGE_PERMISSION_CODE = 206;
-    private static final int AUDIO_PERMISSION_CODE = 207;
+    // Using PermissionHelper's request codes
+    private static final int CAMERA_PERMISSION_CODE = PermissionHelper.CAMERA_PERMISSION_REQUEST_CODE;
+    private static final int STORAGE_PERMISSION_CODE = PermissionHelper.STORAGE_PERMISSION_REQUEST_CODE;
+    private static final int AUDIO_PERMISSION_CODE = PermissionHelper.MICROPHONE_PERMISSION_REQUEST_CODE;
     private Uri photoUri;
     private FirebaseAuth mAuth;
     
@@ -904,23 +905,39 @@ public class ChatActivity extends AppCompatActivity {
             if (menuTakePhoto != null) {
                 menuTakePhoto.setOnClickListener(v -> {
                     dialog.dismiss();
-                    if (checkCameraPermission()) {
-                        // Open camera that supports both photo and video capture
-                        openCameraForPhotoAndVideo();
-                    } else {
-                        requestCameraPermission();
-                    }
+                    PermissionHelper.requestCameraPermission(ChatActivity.this, new PermissionHelper.PermissionCallback() {
+                        @Override
+                        public void onPermissionGranted() {
+                            // Open camera that supports both photo and video capture
+                            openCameraForPhotoAndVideo();
+                        }
+                        
+                        @Override
+                        public void onPermissionDenied() {
+                            Toast.makeText(ChatActivity.this, 
+                                    "Camera permission is required to take photos and videos", 
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
                 });
             }
             
             if (menuOpenGallery != null) {
                 menuOpenGallery.setOnClickListener(v -> {
                     dialog.dismiss();
-                    if (checkStoragePermission()) {
-                        openGallery();
-                    } else {
-                        requestStoragePermission();
-                    }
+                    PermissionHelper.requestStoragePermission(ChatActivity.this, new PermissionHelper.PermissionCallback() {
+                        @Override
+                        public void onPermissionGranted() {
+                            openGallery();
+                        }
+                        
+                        @Override
+                        public void onPermissionDenied() {
+                            Toast.makeText(ChatActivity.this, 
+                                    "Storage permission is required to select photos", 
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
                 });
             }
             
@@ -946,21 +963,9 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
-    private boolean checkCameraPermission() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
-    }
+    // Camera permission methods removed - now using PermissionHelper
 
-    private void requestCameraPermission() {
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_CODE);
-    }
-
-    private boolean checkStoragePermission() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void requestStoragePermission() {
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, STORAGE_PERMISSION_CODE);
-    }
+    // Storage permission methods removed - now using PermissionHelper
 
     private void openCamera() {
         Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
@@ -1001,21 +1006,7 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
-    private boolean checkAudioPermission() {
-        // RECORD_AUDIO is required for audio recording on all versions
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void requestAudioPermission() {
-        // For Android 13+ (API 33+), we need both RECORD_AUDIO and READ_MEDIA_AUDIO
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            String[] permissions = {Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_MEDIA_AUDIO};
-            ActivityCompat.requestPermissions(this, permissions, AUDIO_PERMISSION_CODE);
-        } else {
-            // For older Android versions, only RECORD_AUDIO is needed
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, AUDIO_PERMISSION_CODE);
-        }
-    }
+    // Audio permission methods removed - now using PermissionHelper
 
     private void openVideoRecorder() {
         Intent videoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
@@ -2126,16 +2117,19 @@ public class ChatActivity extends AppCompatActivity {
         try {
             String ldrrmoNumber = "tel:09175204211"; // LDRRMO emergency number
             
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                // Request permission
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.CALL_PHONE},
-                        CALL_PERMISSION_REQUEST_CODE);
-            } else {
-                // Permission already granted, make the call
-                makeCall(ldrrmoNumber);
-            }
+            PermissionHelper.requestPhonePermission(this, new PermissionHelper.PermissionCallback() {
+                @Override
+                public void onPermissionGranted() {
+                    makeCall(ldrrmoNumber);
+                }
+                
+                @Override
+                public void onPermissionDenied() {
+                    Toast.makeText(ChatActivity.this, 
+                            "Phone permission is required to make emergency calls", 
+                            Toast.LENGTH_LONG).show();
+                }
+            });
         } catch (Exception e) {
             Log.e(TAG, "Error making emergency call: " + e.getMessage(), e);
             Toast.makeText(this, "Error making emergency call", Toast.LENGTH_SHORT).show();
@@ -2193,7 +2187,7 @@ public class ChatActivity extends AppCompatActivity {
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     openAudioRecorder();
                 } else {
-                    Toast.makeText(this, "Audio permission denied", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Microphone permission is required to record audio", Toast.LENGTH_LONG).show();
                 }
             }
         } catch (Exception e) {

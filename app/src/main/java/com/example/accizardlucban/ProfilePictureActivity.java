@@ -158,11 +158,19 @@ public class ProfilePictureActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     try {
                         // Directly open camera
-                        if (checkCameraPermission()) {
-                            openCamera();
-                        } else {
-                            requestCameraPermission();
-                        }
+                        PermissionHelper.requestCameraPermission(ProfilePictureActivity.this, new PermissionHelper.PermissionCallback() {
+                            @Override
+                            public void onPermissionGranted() {
+                                openCamera();
+                            }
+                            
+                            @Override
+                            public void onPermissionDenied() {
+                                Toast.makeText(ProfilePictureActivity.this, 
+                                        "Camera permission is required to take photos", 
+                                        Toast.LENGTH_LONG).show();
+                            }
+                        });
                     } catch (Exception e) {
                         e.printStackTrace();
                         Toast.makeText(ProfilePictureActivity.this, "Error accessing camera", Toast.LENGTH_SHORT).show();
@@ -178,11 +186,19 @@ public class ProfilePictureActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     try {
                         // Directly open gallery
-                        if (checkStoragePermission()) {
-                            openGallery();
-                        } else {
-                            requestStoragePermission();
-                        }
+                        PermissionHelper.requestStoragePermission(ProfilePictureActivity.this, new PermissionHelper.PermissionCallback() {
+                            @Override
+                            public void onPermissionGranted() {
+                                openGallery();
+                            }
+                            
+                            @Override
+                            public void onPermissionDenied() {
+                                Toast.makeText(ProfilePictureActivity.this, 
+                                        "Storage permission is required to select photos", 
+                                        Toast.LENGTH_LONG).show();
+                            }
+                        });
                     } catch (Exception e) {
                         e.printStackTrace();
                         Toast.makeText(ProfilePictureActivity.this, "Error accessing gallery", Toast.LENGTH_SHORT).show();
@@ -229,30 +245,7 @@ public class ProfilePictureActivity extends AppCompatActivity {
         }
     }
 
-    private boolean checkCameraPermission() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void requestCameraPermission() {
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_CODE);
-    }
-
-    private boolean checkStoragePermission() {
-        // For Android 13 and above, use READ_MEDIA_IMAGES
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED;
-        } else {
-            return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-        }
-    }
-
-    private void requestStoragePermission() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_MEDIA_IMAGES}, STORAGE_PERMISSION_CODE);
-        } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, STORAGE_PERMISSION_CODE);
-        }
-    }
+    // Permission checking and requesting methods removed - now using PermissionHelper
 
     private void openCamera() {
         try {
@@ -406,18 +399,34 @@ public class ProfilePictureActivity extends AppCompatActivity {
         builder.setItems(options, (dialog, which) -> {
             if (which == 0) {
                 // Take Photo option
-                if (checkCameraPermission()) {
-                    openCamera();
-                } else {
-                    requestCameraPermission();
-                }
+                PermissionHelper.requestCameraPermission(ProfilePictureActivity.this, new PermissionHelper.PermissionCallback() {
+                    @Override
+                    public void onPermissionGranted() {
+                        openCamera();
+                    }
+                    
+                    @Override
+                    public void onPermissionDenied() {
+                        Toast.makeText(ProfilePictureActivity.this, 
+                                "Camera permission is required to take photos", 
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
             } else if (which == 1) {
                 // Choose from Gallery option
-                if (checkStoragePermission()) {
-                    openGallery();
-                } else {
-                    requestStoragePermission();
-                }
+                PermissionHelper.requestStoragePermission(ProfilePictureActivity.this, new PermissionHelper.PermissionCallback() {
+                    @Override
+                    public void onPermissionGranted() {
+                        openGallery();
+                    }
+                    
+                    @Override
+                    public void onPermissionDenied() {
+                        Toast.makeText(ProfilePictureActivity.this, 
+                                "Storage permission is required to select photos", 
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
             }
         });
         
@@ -446,11 +455,19 @@ public class ProfilePictureActivity extends AppCompatActivity {
                     public void onClick(View v) {
                         try {
                             // Directly open camera to take another photo
-                            if (checkCameraPermission()) {
-                                openCamera();
-                            } else {
-                                requestCameraPermission();
-                            }
+                            PermissionHelper.requestCameraPermission(ProfilePictureActivity.this, new PermissionHelper.PermissionCallback() {
+                                @Override
+                                public void onPermissionGranted() {
+                                    openCamera();
+                                }
+                                
+                                @Override
+                                public void onPermissionDenied() {
+                                    Toast.makeText(ProfilePictureActivity.this, 
+                                            "Camera permission is required to take photos", 
+                                            Toast.LENGTH_LONG).show();
+                                }
+                            });
                         } catch (Exception e) {
                             e.printStackTrace();
                             Toast.makeText(ProfilePictureActivity.this, "Error accessing camera", Toast.LENGTH_SHORT).show();

@@ -156,11 +156,19 @@ public class ValidIdActivity extends AppCompatActivity {
             ivValidId.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (checkCameraPermission()) {
-                        openCamera();
-                    } else {
-                        requestCameraPermission();
-                    }
+                    PermissionHelper.requestCameraPermission(ValidIdActivity.this, new PermissionHelper.PermissionCallback() {
+                        @Override
+                        public void onPermissionGranted() {
+                            openCamera();
+                        }
+                        
+                        @Override
+                        public void onPermissionDenied() {
+                            Toast.makeText(ValidIdActivity.this, 
+                                    "Camera permission is required to take photos", 
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
                 }
             });
             
@@ -168,11 +176,19 @@ public class ValidIdActivity extends AppCompatActivity {
             placeholderContainer.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (checkCameraPermission()) {
-                        openCamera();
-                    } else {
-                        requestCameraPermission();
-                    }
+                    PermissionHelper.requestCameraPermission(ValidIdActivity.this, new PermissionHelper.PermissionCallback() {
+                        @Override
+                        public void onPermissionGranted() {
+                            openCamera();
+                        }
+                        
+                        @Override
+                        public void onPermissionDenied() {
+                            Toast.makeText(ValidIdActivity.this, 
+                                    "Camera permission is required to take photos", 
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
                 }
             });
 
@@ -199,11 +215,19 @@ public class ValidIdActivity extends AppCompatActivity {
                 .setItems(new String[]{"Gallery", "Take Photo with ID Guide"}, (dialog, which) -> {
                     if (which == 0) {
                         // Gallery option
-                        if (checkStoragePermission()) {
-                            openGallery();
-            } else {
-                            requestStoragePermission();
-                        }
+                        PermissionHelper.requestStoragePermission(ValidIdActivity.this, new PermissionHelper.PermissionCallback() {
+                            @Override
+                            public void onPermissionGranted() {
+                                openGallery();
+                            }
+                            
+                            @Override
+                            public void onPermissionDenied() {
+                                Toast.makeText(ValidIdActivity.this, 
+                                        "Storage permission is required to select photos", 
+                                        Toast.LENGTH_LONG).show();
+                            }
+                        });
                     } else if (which == 1) {
                         // Camera with ID guide option
                         openCustomCamera();
@@ -267,11 +291,19 @@ public class ValidIdActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View v) {
                         // Directly open gallery
-                        if (checkStoragePermission()) {
-                            openGallery();
-                        } else {
-                            requestStoragePermission();
-                        }
+                        PermissionHelper.requestStoragePermission(ValidIdActivity.this, new PermissionHelper.PermissionCallback() {
+                            @Override
+                            public void onPermissionGranted() {
+                                openGallery();
+                            }
+                            
+                            @Override
+                            public void onPermissionDenied() {
+                                Toast.makeText(ValidIdActivity.this, 
+                                        "Storage permission is required to select photos", 
+                                        Toast.LENGTH_LONG).show();
+                            }
+                        });
                     }
                 });
             }
@@ -330,30 +362,7 @@ public class ValidIdActivity extends AppCompatActivity {
         }
     }
 
-    private boolean checkStoragePermission() {
-        // For Android 13 and above, use READ_MEDIA_IMAGES
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED;
-        } else {
-            return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-        }
-    }
-
-    private void requestStoragePermission() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_MEDIA_IMAGES}, STORAGE_PERMISSION_CODE);
-        } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, STORAGE_PERMISSION_CODE);
-        }
-    }
-
-    private boolean checkCameraPermission() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void requestCameraPermission() {
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_CODE);
-    }
+    // Permission checking and requesting methods removed - now using PermissionHelper
 
     private void openCamera() {
         try {

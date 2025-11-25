@@ -3623,16 +3623,19 @@ public class MainDashboard extends AppCompatActivity {
         try {
             String emergencyNumber = "tel:09175204211"; // LDRRMO Lucban: 0917 520 4211
 
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                // Request permission
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.CALL_PHONE},
-                        CALL_PERMISSION_REQUEST_CODE);
-            } else {
-                // Permission already granted, make the call
-                makeCall(emergencyNumber);
-            }
+            PermissionHelper.requestPhonePermission(this, new PermissionHelper.PermissionCallback() {
+                @Override
+                public void onPermissionGranted() {
+                    makeCall(emergencyNumber);
+                }
+                
+                @Override
+                public void onPermissionDenied() {
+                    Toast.makeText(MainDashboard.this, 
+                            "Phone permission is required to make emergency calls", 
+                            Toast.LENGTH_LONG).show();
+                }
+            });
         } catch (Exception e) {
             Log.e(TAG, "Error making emergency call: " + e.getMessage(), e);
             Toast.makeText(this, "Error making emergency call", Toast.LENGTH_SHORT).show();
@@ -4793,8 +4796,12 @@ public class MainDashboard extends AppCompatActivity {
             Log.w(TAG, "ImageView or iconCode is null/empty, using fallback icon");
             if (imageView != null) {
                 imageView.setImageResource(R.drawable.owm_01d);
-                int orangeColor = ContextCompat.getColor(this, R.color.orange_primary);
-                imageView.setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
+                // Check if this is the main weather icon (not forecast icons)
+                boolean isMainWeatherIcon = imageView.getId() == R.id.weatherIcon;
+                int colorToApply = isMainWeatherIcon 
+                    ? ContextCompat.getColor(this, android.R.color.white)
+                    : ContextCompat.getColor(this, R.color.orange_primary);
+                imageView.setColorFilter(colorToApply, PorterDuff.Mode.SRC_ATOP);
             }
             return;
         }
@@ -4829,20 +4836,27 @@ public class MainDashboard extends AppCompatActivity {
                         // Update UI on main thread
                         mainHandler.post(() -> {
                             imageView.setImageBitmap(bitmap);
-                            // Apply orange_primary color filter to weather icons
-                            int orangeColor = ContextCompat.getColor(MainDashboard.this, R.color.orange_primary);
-                            imageView.setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
+                            // Check if this is the main weather icon (not forecast icons)
+                            boolean isMainWeatherIcon = imageView.getId() == R.id.weatherIcon;
+                            int colorToApply = isMainWeatherIcon 
+                                ? ContextCompat.getColor(MainDashboard.this, android.R.color.white)
+                                : ContextCompat.getColor(MainDashboard.this, R.color.orange_primary);
+                            imageView.setColorFilter(colorToApply, PorterDuff.Mode.SRC_ATOP);
                             String viewId = getResources().getResourceEntryName(imageView.getId());
                             Log.d(TAG, "✅ OpenWeatherMap icon loaded successfully: " + iconCode + 
                                   " (size: " + bitmap.getWidth() + "x" + bitmap.getHeight() + 
-                                  ", view: " + viewId + ")");
+                                  ", view: " + viewId + ", color: " + (isMainWeatherIcon ? "white" : "orange") + ")");
                         });
                     } else {
                         Log.e(TAG, "❌ Failed to decode bitmap from URL: " + iconUrl);
                         mainHandler.post(() -> {
                             imageView.setImageResource(R.drawable.owm_01d);
-                            int orangeColor = ContextCompat.getColor(MainDashboard.this, R.color.orange_primary);
-                            imageView.setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
+                            // Check if this is the main weather icon (not forecast icons)
+                            boolean isMainWeatherIcon = imageView.getId() == R.id.weatherIcon;
+                            int colorToApply = isMainWeatherIcon 
+                                ? ContextCompat.getColor(MainDashboard.this, android.R.color.white)
+                                : ContextCompat.getColor(MainDashboard.this, R.color.orange_primary);
+                            imageView.setColorFilter(colorToApply, PorterDuff.Mode.SRC_ATOP);
                             Log.w(TAG, "  Using fallback icon for: " + iconCode);
                         });
                     }
@@ -4852,8 +4866,12 @@ public class MainDashboard extends AppCompatActivity {
                     Log.e(TAG, "❌ HTTP error loading icon: " + responseCode + " for " + iconCode);
                     mainHandler.post(() -> {
                         imageView.setImageResource(R.drawable.owm_01d);
-                        int orangeColor = ContextCompat.getColor(MainDashboard.this, R.color.orange_primary);
-                        imageView.setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
+                        // Check if this is the main weather icon (not forecast icons)
+                        boolean isMainWeatherIcon = imageView.getId() == R.id.weatherIcon;
+                        int colorToApply = isMainWeatherIcon 
+                            ? ContextCompat.getColor(MainDashboard.this, android.R.color.white)
+                            : ContextCompat.getColor(MainDashboard.this, R.color.orange_primary);
+                        imageView.setColorFilter(colorToApply, PorterDuff.Mode.SRC_ATOP);
                         Log.w(TAG, "  Using fallback icon due to HTTP error");
                     });
                 }
@@ -4865,8 +4883,12 @@ public class MainDashboard extends AppCompatActivity {
                 e.printStackTrace();
                 mainHandler.post(() -> {
                     imageView.setImageResource(R.drawable.owm_01d);
-                    int orangeColor = ContextCompat.getColor(MainDashboard.this, R.color.orange_primary);
-                    imageView.setColorFilter(orangeColor, PorterDuff.Mode.SRC_ATOP);
+                    // Check if this is the main weather icon (not forecast icons)
+                    boolean isMainWeatherIcon = imageView.getId() == R.id.weatherIcon;
+                    int colorToApply = isMainWeatherIcon 
+                        ? ContextCompat.getColor(MainDashboard.this, android.R.color.white)
+                        : ContextCompat.getColor(MainDashboard.this, R.color.orange_primary);
+                    imageView.setColorFilter(colorToApply, PorterDuff.Mode.SRC_ATOP);
                     Log.w(TAG, "  Using fallback icon due to exception: " + e.getMessage());
                 });
             }

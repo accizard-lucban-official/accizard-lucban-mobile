@@ -86,8 +86,8 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
     
     private static final String TAG = "MapPickerActivity";
     
-    // Location permission request code
-    private static final int LOCATION_PERMISSION_REQUEST_CODE = 2001;
+    // Location permission request code - using PermissionHelper's code
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = PermissionHelper.LOCATION_PERMISSION_REQUEST_CODE;
 
     // Custom AutoComplete Adapter for location suggestions
     private class LocationAutoCompleteAdapter extends ArrayAdapter<String> implements Filterable {
@@ -1525,9 +1525,20 @@ public class MapPickerActivity extends AppCompatActivity implements OnMapClickLi
     }
     
     private void requestLocationPermissions() {
-        ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
-                LOCATION_PERMISSION_REQUEST_CODE);
+        PermissionHelper.requestLocationPermission(this, new PermissionHelper.PermissionCallback() {
+            @Override
+            public void onPermissionGranted() {
+                // Permission granted, try to get location
+                getCurrentLocation();
+            }
+            
+            @Override
+            public void onPermissionDenied() {
+                Toast.makeText(MapPickerActivity.this, 
+                        "Location permission is required to get your current location", 
+                        Toast.LENGTH_LONG).show();
+            }
+        });
     }
     
     private boolean isLocationEnabled() {
