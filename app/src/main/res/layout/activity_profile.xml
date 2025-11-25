@@ -240,14 +240,15 @@
                         android:textColor="#333333"
                         android:textStyle="bold" />
 
-                </LinearLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Visit the website now to learn more"
+                        android:textSize="12sp"
+                        android:textColor="#666666"
+                        android:layout_marginTop="4dp" />
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_share"
-                    android:tint="#f97316"
-                    android:contentDescription="Share icon" />
+                </LinearLayout>
 
             </LinearLayout>
 

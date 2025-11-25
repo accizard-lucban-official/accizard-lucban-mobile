@@ -231,8 +231,8 @@
                             android:layout_width="@dimen/dashboard_weather_icon_size"
                             android:layout_height="@dimen/dashboard_weather_icon_size"
                             android:src="@drawable/fluent__weather_sunny_32_filled"
-                            android:tint="@android:color/white"
-                            android:contentDescription="Weather Icon" />
+                            android:contentDescription="Weather Icon"
+                            app:tint="@android:color/white" />
 
                         <TextView
                             android:id="@+id/weatherDescriptionText"

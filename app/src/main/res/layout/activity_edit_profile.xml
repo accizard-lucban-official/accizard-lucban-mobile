@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white">
@@ -12,7 +13,6 @@
         android:orientation="horizontal"
         android:padding="16dp"
         android:background="@android:color/white"
-        android:elevation="4dp"
         android:gravity="center_vertical">
 
         <ImageView
@@ -96,9 +96,11 @@
                         android:layout_alignParentEnd="true"
                         android:layout_alignParentBottom="true"
                         android:src="@drawable/ic_camera"
+                        android:background="@drawable/location_button_background"
                         android:padding="6dp"
                         android:clickable="true"
-                        android:focusable="true" />
+                        android:focusable="true"
+                        app:tint="@color/orange_primary" />
 
                 </RelativeLayout>
 
@@ -565,14 +567,54 @@
                     android:orientation="vertical"
                     android:layout_marginBottom="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <!-- Valid ID Label Row with Upload Text -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Valid ID"
-                        android:textSize="14sp"
-                        android:textColor="#333333"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="8dp" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Valid ID"
+                            android:textSize="14sp"
+                            android:textColor="#333333"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/upload_valid_id_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Upload New ID"
+                            android:textSize="14sp"
+                            android:textColor="#f97316"
+                            android:textStyle="bold"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:background="?android:attr/selectableItemBackground"
+                            android:padding="8dp" />
+
+                    </LinearLayout>
+
+                    <!-- Valid ID Type Selection -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginBottom="16dp">
+
+                        <Spinner
+                            android:id="@+id/valid_id_type_spinner"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:background="@drawable/edittext_background"
+                            android:paddingLeft="20dp"
+                            android:paddingRight="20dp" />
+
+                    </LinearLayout>
 
                     <!-- Current Valid ID Image -->
                     <ImageView
@@ -584,17 +626,6 @@
                         android:contentDescription="Valid ID"
                         android:visibility="gone"
                         android:layout_marginBottom="8dp" />
-
-                    <!-- Upload New Valid ID Button -->
-                    <Button
-                        android:id="@+id/upload_valid_id_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:text="Upload New Valid ID"
-                        android:textColor="@android:color/white"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:background="@drawable/submit_button_background" />
 
                 </LinearLayout>
 

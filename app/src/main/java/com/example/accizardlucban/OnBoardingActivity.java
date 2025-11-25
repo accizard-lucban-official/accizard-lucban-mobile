@@ -181,16 +181,9 @@ public class OnBoardingActivity extends AppCompatActivity {
             // Go to previous page
             viewPager.setCurrentItem(currentPage - 1);
         } else {
-            // On first page - show exit confirmation
-            new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Exit Onboarding?")
-                .setMessage("Are you sure you want to skip the tutorial?")
-                .setPositiveButton("Skip", (dialog, which) -> {
-                    markOnboardingAsSeen();
-                    navigateToMainDashboard();
-                })
-                .setNegativeButton("Continue Tutorial", null)
-                .show();
+            // On first page - finish onboarding and navigate to dashboard
+            markOnboardingAsSeen();
+            navigateToMainDashboard();
         }
     }
 }

@@ -17,6 +17,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -53,11 +54,12 @@ public class EditProfileActivity extends AppCompatActivity {
 
     private ImageView backButton, profilePicture, editPictureButton;
     private ImageView validIdImage;
-    private Button saveButton, uploadValidIdButton;
+    private Button saveButton;
+    private TextView uploadValidIdText;
     private EditText firstNameEdit, lastNameEdit, mobileNumberEdit,
             provinceEdit, cityEdit, streetAddressEdit, birthdayEdit;
     private AutoCompleteTextView barangayEdit;
-    private Spinner genderSpinner, civilStatusSpinner, religionSpinner, bloodTypeSpinner, pwdStatusSpinner;
+    private Spinner genderSpinner, civilStatusSpinner, religionSpinner, bloodTypeSpinner, pwdStatusSpinner, validIdTypeSpinner;
 
     private static final String PREFS_NAME = "user_profile_prefs";
     private static final String KEY_FIRST_NAME = "first_name";
@@ -111,7 +113,8 @@ public class EditProfileActivity extends AppCompatActivity {
         
         // Valid ID views
         validIdImage = findViewById(R.id.valid_id_image);
-        uploadValidIdButton = findViewById(R.id.upload_valid_id_button);
+        uploadValidIdText = findViewById(R.id.upload_valid_id_text);
+        validIdTypeSpinner = findViewById(R.id.valid_id_type_spinner);
         
         // Setup spinners
         setupGenderSpinner();
@@ -119,6 +122,7 @@ public class EditProfileActivity extends AppCompatActivity {
         setupReligionSpinner();
         setupBloodTypeSpinner();
         setupPWDStatusSpinner();
+        setupValidIdTypeSpinner();
     }
 
 
@@ -144,7 +148,7 @@ public class EditProfileActivity extends AppCompatActivity {
             }
         });
 
-        uploadValidIdButton.setOnClickListener(new View.OnClickListener() {
+        uploadValidIdText.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 showValidIdImagePickerDialog();
@@ -233,6 +237,18 @@ public class EditProfileActivity extends AppCompatActivity {
         );
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         pwdStatusSpinner.setAdapter(adapter);
+    }
+
+    private void setupValidIdTypeSpinner() {
+        String[] idTypes = {"Select Valid ID Type", "National ID (PhilID)", "Driver's License", 
+                "Passport", "UMID", "SSS", "PhilHealth", "Voter's ID", "Postal ID", "Student ID", "Others"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                idTypes
+        );
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        validIdTypeSpinner.setAdapter(adapter);
     }
 
     private void updateBarangayAdapter() {
@@ -376,6 +392,8 @@ public class EditProfileActivity extends AppCompatActivity {
                         pwdStatus = doc.getString("pwd_status");
                     }
                     
+                    String validIdType = doc.getString("validIdType");
+                    
                     // Only update fields that are empty (don't overwrite existing data)
                     if (birthday != null && birthdayEdit.getText().toString().trim().isEmpty()) {
                         birthdayEdit.setText(birthday);
@@ -394,6 +412,9 @@ public class EditProfileActivity extends AppCompatActivity {
                     }
                     if (pwdStatus != null && pwdStatusSpinner.getSelectedItemPosition() == 0) {
                         setSpinnerSelection(pwdStatusSpinner, pwdStatus);
+                    }
+                    if (validIdType != null && !validIdType.isEmpty() && validIdTypeSpinner.getSelectedItemPosition() == 0) {
+                        setSpinnerSelection(validIdTypeSpinner, validIdType);
                     }
                     
                     // Update barangay adapter after loading data
@@ -446,13 +467,14 @@ public class EditProfileActivity extends AppCompatActivity {
         String religion = religionSpinner.getSelectedItemPosition() > 0 ? religionSpinner.getSelectedItem().toString() : "";
         String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
         String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
+        String validIdType = validIdTypeSpinner.getSelectedItemPosition() > 0 ? validIdTypeSpinner.getSelectedItem().toString() : "";
 
         // Check mobile number uniqueness if it's being changed
         if (!mobileNumber.isEmpty()) {
             checkMobileNumberUniquenessForEdit(mobileNumber, () -> {
                 // Mobile number is unique or same as current, proceed with save
                 proceedWithSaveProfile(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
-                        birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                        birthday, gender, civilStatus, religion, bloodType, pwdStatus, validIdType);
             }, () -> {
                 // Mobile number already in use
                 mobileNumberEdit.setError("This mobile number is already registered");
@@ -461,14 +483,14 @@ public class EditProfileActivity extends AppCompatActivity {
             });
         } else {
             proceedWithSaveProfile(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
-                    birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                    birthday, gender, civilStatus, religion, bloodType, pwdStatus, validIdType);
         }
     }
     
     private void proceedWithSaveProfile(String firstName, String lastName, String mobileNumber,
                                        String province, String city, String barangay, String streetAddress,
                                        String birthday, String gender, String civilStatus, String religion,
-                                       String bloodType, String pwdStatus) {
+                                       String bloodType, String pwdStatus, String validIdType) {
         // Save to SharedPreferences immediately for instant local updates
         ProfileDataManager profileManager = ProfileDataManager.getInstance(this);
         profileManager.saveProfileLocally(firstName, lastName, mobileNumber, null, province, city, barangay, streetAddress);
@@ -493,11 +515,11 @@ public class EditProfileActivity extends AppCompatActivity {
 
         // Proceed with profile sync
         proceedWithProfileSync(firstName, lastName, mobileNumber, province, city, barangay, streetAddress, 
-                birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                birthday, gender, civilStatus, religion, bloodType, pwdStatus, validIdType);
         
         // Upload Valid ID if there's a new one
         if (hasNewValidId && newValidIdBitmap != null) {
-            uploadValidId();
+            uploadValidId(validIdType);
         }
     }
     
@@ -610,14 +632,14 @@ public class EditProfileActivity extends AppCompatActivity {
     private void proceedWithProfileSync(String firstName, String lastName, String mobileNumber,
                                        String province, String city, String barangay, String streetAddress,
                                        String birthday, String gender, String civilStatus, String religion, 
-                                       String bloodType, String pwdStatus) {
+                                       String bloodType, String pwdStatus, String validIdType) {
         // If there's a new profile picture, upload it first, then sync profile data
         if (hasNewProfilePicture) {
-            uploadNewProfilePicture();
+            uploadNewProfilePicture(validIdType);
         } else {
             // Sync profile data to Firestore
             syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
-                    birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                    birthday, gender, civilStatus, religion, bloodType, pwdStatus, validIdType);
         }
     }
 
@@ -625,7 +647,7 @@ public class EditProfileActivity extends AppCompatActivity {
     private void syncProfileToFirestore(String firstName, String lastName, String mobileNumber,
                                        String province, String city, String barangay, String streetAddress,
                                        String birthday, String gender, String civilStatus, String religion,
-                                       String bloodType, String pwdStatus) {
+                                       String bloodType, String pwdStatus, String validIdType) {
         ProfileDataManager profileManager = ProfileDataManager.getInstance(this);
         
         profileManager.syncToFirestore(firstName, lastName, mobileNumber, null, province, city, barangay, streetAddress,
@@ -633,7 +655,7 @@ public class EditProfileActivity extends AppCompatActivity {
                 @Override
                 public void onSuccess() {
                     // After basic profile sync, sync additional fields
-                    syncAdditionalFieldsToFirestore(birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                    syncAdditionalFieldsToFirestore(birthday, gender, civilStatus, religion, bloodType, pwdStatus, validIdType);
                     
                     Log.d(TAG, "Profile synced to Firestore successfully");
                     runOnUiThread(() -> {
@@ -667,7 +689,7 @@ public class EditProfileActivity extends AppCompatActivity {
                 public void onFailure(Exception e) {
                     Log.e(TAG, "Failed to sync profile to Firestore: " + e.getMessage(), e);
                     // Still try to sync additional fields
-                    syncAdditionalFieldsToFirestore(birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                    syncAdditionalFieldsToFirestore(birthday, gender, civilStatus, religion, bloodType, pwdStatus, validIdType);
                     
                     runOnUiThread(() -> {
                         Toast.makeText(EditProfileActivity.this, 
@@ -701,10 +723,10 @@ public class EditProfileActivity extends AppCompatActivity {
     }
 
     /**
-     * Sync additional profile fields (birthday, gender, civil_status, religion, blood_type, pwd_status) to Firestore
+     * Sync additional profile fields (birthday, gender, civil_status, religion, blood_type, pwd_status, validIdType) to Firestore
      */
     private void syncAdditionalFieldsToFirestore(String birthday, String gender, String civilStatus, 
-                                                 String religion, String bloodType, String pwdStatus) {
+                                                 String religion, String bloodType, String pwdStatus, String validIdType) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             Log.w(TAG, "No user signed in, skipping additional fields sync");
@@ -751,6 +773,10 @@ public class EditProfileActivity extends AppCompatActivity {
                             updates.put("pwdStatus", pwdStatus.trim());
                             updates.put("pwd_status", pwdStatus.trim()); // Also save with underscore for compatibility
                             updates.put("isPWD", "PWD".equalsIgnoreCase(pwdStatus.trim()));
+                        }
+                        if (validIdType != null && !validIdType.trim().isEmpty() && !validIdType.equals("Select Valid ID Type")) {
+                            updates.put("validIdType", validIdType.trim());
+                            Log.d(TAG, "Syncing valid ID type to Firestore: " + validIdType.trim());
                         }
                         
                         if (!updates.isEmpty()) {
@@ -1127,7 +1153,7 @@ public class EditProfileActivity extends AppCompatActivity {
         return circularBitmap;
     }
 
-    private void uploadNewProfilePicture() {
+    private void uploadNewProfilePicture(String validIdType) {
         if (!hasNewProfilePicture) {
             // No new picture, just sync profile data
             String firstName = firstNameEdit.getText().toString().trim();
@@ -1144,7 +1170,7 @@ public class EditProfileActivity extends AppCompatActivity {
             String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
             String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
             syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
-                    birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                    birthday, gender, civilStatus, religion, bloodType, pwdStatus, validIdType);
             return;
         }
 
@@ -1186,8 +1212,9 @@ public class EditProfileActivity extends AppCompatActivity {
                                         String religion = religionSpinner.getSelectedItemPosition() > 0 ? religionSpinner.getSelectedItem().toString() : "";
                                         String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
                                         String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
+                                        // Use the validIdType parameter from the outer method
                                         syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
-                                                birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                                                birthday, gender, civilStatus, religion, bloodType, pwdStatus, validIdType);
                                     }
                                     
                                     @Override
@@ -1207,8 +1234,9 @@ public class EditProfileActivity extends AppCompatActivity {
                                         String religion = religionSpinner.getSelectedItemPosition() > 0 ? religionSpinner.getSelectedItem().toString() : "";
                                         String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
                                         String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
+                                        // Use the validIdType parameter from the outer method
                                         syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
-                                                birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                                                birthday, gender, civilStatus, religion, bloodType, pwdStatus, validIdType);
                                     }
                                 });
                         }
@@ -1233,8 +1261,9 @@ public class EditProfileActivity extends AppCompatActivity {
                             String religion = religionSpinner.getSelectedItemPosition() > 0 ? religionSpinner.getSelectedItem().toString() : "";
                             String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
                             String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
+                            // Use the validIdType parameter from the outer method
                             syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
-                                    birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                                    birthday, gender, civilStatus, religion, bloodType, pwdStatus, validIdType);
                         }
                     });
         } else {
@@ -1252,8 +1281,9 @@ public class EditProfileActivity extends AppCompatActivity {
             String religion = religionSpinner.getSelectedItemPosition() > 0 ? religionSpinner.getSelectedItem().toString() : "";
             String bloodType = bloodTypeSpinner.getSelectedItemPosition() > 0 ? bloodTypeSpinner.getSelectedItem().toString() : "";
             String pwdStatus = pwdStatusSpinner.getSelectedItemPosition() > 0 ? pwdStatusSpinner.getSelectedItem().toString() : "";
+            // Use the validIdType parameter from the outer method
             syncProfileToFirestore(firstName, lastName, mobileNumber, province, city, barangay, streetAddress,
-                    birthday, gender, civilStatus, religion, bloodType, pwdStatus);
+                    birthday, gender, civilStatus, religion, bloodType, pwdStatus, validIdType);
         }
     }
 
@@ -1269,7 +1299,15 @@ public class EditProfileActivity extends AppCompatActivity {
                     if (!queryDocumentSnapshots.isEmpty()) {
                         QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
                         String validIdUrl = doc.getString("validIdUrl");
+                        String validIdType = doc.getString("validIdType");
+                        
                         Log.d(TAG, "Found Valid ID URL: " + validIdUrl);
+                        Log.d(TAG, "Found Valid ID Type: " + validIdType);
+                        
+                        // Set valid ID type in spinner if available
+                        if (validIdType != null && !validIdType.isEmpty() && validIdTypeSpinner != null) {
+                            setSpinnerSelection(validIdTypeSpinner, validIdType);
+                        }
                         
                         if (validIdUrl != null && !validIdUrl.isEmpty()) {
                             loadValidIdFromUrl(validIdUrl);
@@ -1350,7 +1388,7 @@ public class EditProfileActivity extends AppCompatActivity {
             });
     }
 
-    private void uploadValidId() {
+    private void uploadValidId(String validIdType) {
         if (!hasNewValidId || newValidIdBitmap == null) {
             return;
         }
@@ -1367,8 +1405,8 @@ public class EditProfileActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(String downloadUrl) {
                         Log.d(TAG, "Valid ID uploaded successfully: " + downloadUrl);
-                        // Update Firestore with Valid ID URL
-                        updateValidIdUrlInFirestore(downloadUrl);
+                        // Update Firestore with Valid ID URL and type
+                        updateValidIdInFirestore(downloadUrl, validIdType);
                         Toast.makeText(EditProfileActivity.this, "Valid ID uploaded successfully", Toast.LENGTH_SHORT).show();
                     }
                 },
@@ -1379,6 +1417,43 @@ public class EditProfileActivity extends AppCompatActivity {
                         Toast.makeText(EditProfileActivity.this, "Failed to upload Valid ID: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 });
+    }
+
+    private void updateValidIdInFirestore(String validIdUrl, String validIdType) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("users")
+            .whereEqualTo("firebaseUid", user.getUid())
+            .limit(1)
+            .get()
+            .addOnSuccessListener(queryDocumentSnapshots -> {
+                if (!queryDocumentSnapshots.isEmpty()) {
+                    QueryDocumentSnapshot doc = (QueryDocumentSnapshot) queryDocumentSnapshots.getDocuments().get(0);
+                    String docId = doc.getId();
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("validIdUrl", validIdUrl);
+                    
+                    // Also update valid ID type if provided
+                    if (validIdType != null && !validIdType.trim().isEmpty() && !validIdType.equals("Select Valid ID Type")) {
+                        updates.put("validIdType", validIdType.trim());
+                        Log.d(TAG, "Updating valid ID type: " + validIdType.trim());
+                    }
+                    
+                    db.collection("users").document(docId)
+                        .update(updates)
+                        .addOnSuccessListener(aVoid -> {
+                            Log.d(TAG, "Valid ID URL and type updated in Firestore");
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e(TAG, "Error updating Valid ID in Firestore", e);
+                        });
+                }
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error querying user document for Valid ID update", e);
+            });
     }
 
     // Old methods removed - now using ProfileDataManager for all sync operations
