@@ -725,7 +725,7 @@ public class ChatActivity extends AppCompatActivity {
                         java.util.Map<String, Object> messageData = new java.util.HashMap<>();
                         messageData.put("userId", userId); // User ID for filtering
                         messageData.put("userPhoneNumber", userPhoneNumber); // User's phone number for reference
-                        messageData.put("content", "Sent an image");
+                        messageData.put("content", "");
                         messageData.put("senderId", userId);
                         messageData.put("senderName", senderName);
                         messageData.put("timestamp", timestamp);
@@ -744,7 +744,7 @@ public class ChatActivity extends AppCompatActivity {
                                 Log.d(TAG, "✅ Image message sent - web app Cloud Functions will handle notifications");
                                 
                                 // Update chat room metadata with last message info
-                                updateChatRoomLastMessage("📷 Sent an image", System.currentTimeMillis());
+                                updateChatRoomLastMessage("📷 Image", System.currentTimeMillis());
                                 Toast.makeText(ChatActivity.this, "Image sent", Toast.LENGTH_SHORT).show();
                             })
                             .addOnFailureListener(e -> {
@@ -787,7 +787,7 @@ public class ChatActivity extends AppCompatActivity {
                         java.util.Map<String, Object> messageData = new java.util.HashMap<>();
                         messageData.put("userId", userId);
                         messageData.put("userPhoneNumber", userPhoneNumber);
-                        messageData.put("content", "Sent a video");
+                        messageData.put("content", "");
                         messageData.put("senderId", userId);
                         messageData.put("senderName", senderName);
                         messageData.put("timestamp", timestamp);
@@ -797,11 +797,13 @@ public class ChatActivity extends AppCompatActivity {
                         messageData.put("profilePictureUrl", userProfilePictureUrl);
                         messageData.put("isRead", true);
                         
+                        Log.d(TAG, "Saving video message to Firestore: videoUrl=" + downloadUrl + ", attachmentType=video, userId=" + userId);
+                        
                         db.collection("chat_messages")
                             .add(messageData)
                             .addOnSuccessListener(documentReference -> {
-                                Log.d(TAG, "Video message saved to Firestore with ID: " + documentReference.getId());
-                                updateChatRoomLastMessage("🎥 Sent a video", System.currentTimeMillis());
+                                Log.d(TAG, "✅ Video message saved to Firestore with ID: " + documentReference.getId() + ", videoUrl=" + downloadUrl);
+                                updateChatRoomLastMessage("🎥 Video", System.currentTimeMillis());
                                 Toast.makeText(ChatActivity.this, "Video sent", Toast.LENGTH_SHORT).show();
                             })
                             .addOnFailureListener(e -> {
@@ -899,23 +901,44 @@ public class ChatActivity extends AppCompatActivity {
             dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
             
             // Setup click listeners for each menu item
-            LinearLayout menuTakePhoto = popupView.findViewById(R.id.menuTakePhoto);
+            LinearLayout menuTakePicture = popupView.findViewById(R.id.menuTakePicture);
+            LinearLayout menuTakeVideo = popupView.findViewById(R.id.menuTakeVideo);
             LinearLayout menuOpenGallery = popupView.findViewById(R.id.menuOpenGallery);
             
-            if (menuTakePhoto != null) {
-                menuTakePhoto.setOnClickListener(v -> {
+            if (menuTakePicture != null) {
+                menuTakePicture.setOnClickListener(v -> {
                     dialog.dismiss();
                     PermissionHelper.requestCameraPermission(ChatActivity.this, new PermissionHelper.PermissionCallback() {
                         @Override
                         public void onPermissionGranted() {
-                            // Open camera that supports both photo and video capture
+                            // Open camera for photo capture
+                            openCamera();
+                        }
+                        
+                        @Override
+                        public void onPermissionDenied() {
+                            Toast.makeText(ChatActivity.this, 
+                                    "Camera permission is required to take photos", 
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
+                });
+            }
+            
+            if (menuTakeVideo != null) {
+                menuTakeVideo.setOnClickListener(v -> {
+                    dialog.dismiss();
+                    PermissionHelper.requestCameraPermission(ChatActivity.this, new PermissionHelper.PermissionCallback() {
+                        @Override
+                        public void onPermissionGranted() {
+                            // Open camera for video capture
                             openCameraForPhotoAndVideo();
                         }
                         
                         @Override
                         public void onPermissionDenied() {
                             Toast.makeText(ChatActivity.this, 
-                                    "Camera permission is required to take photos and videos", 
+                                    "Camera permission is required to record videos", 
                                     Toast.LENGTH_LONG).show();
                         }
                     });
@@ -953,7 +976,7 @@ public class ChatActivity extends AppCompatActivity {
                 // Position the popup above the button
                 layoutParams.gravity = android.view.Gravity.TOP | android.view.Gravity.START;
                 layoutParams.x = location[0] + anchor.getWidth() / 2 - 100; // Center horizontally
-                layoutParams.y = location[1] - (int)(140 * getResources().getDisplayMetrics().density); // Above the button (reduced for 2 menu items)
+                layoutParams.y = location[1] - (int)(200 * getResources().getDisplayMetrics().density); // Above the button (adjusted for 3 menu items)
                 window.setAttributes(layoutParams);
             }
             
@@ -998,9 +1021,22 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void openGallery() {
-        Intent galleryIntent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        if (galleryIntent.resolveActivity(getPackageManager()) != null) {
-            startActivityForResult(galleryIntent, GALLERY_REQUEST_CODE);
+        // Create intent that allows selecting both images and videos
+        Intent galleryIntent = new Intent(Intent.ACTION_GET_CONTENT);
+        galleryIntent.setType("*/*");
+        String[] mimeTypes = {"image/*", "video/*"};
+        galleryIntent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
+        galleryIntent.addCategory(Intent.CATEGORY_OPENABLE);
+        
+        // Try to use ACTION_PICK for better compatibility, fallback to ACTION_GET_CONTENT
+        Intent pickIntent = new Intent(Intent.ACTION_PICK);
+        pickIntent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*");
+        
+        Intent chooserIntent = Intent.createChooser(galleryIntent, "Select Image or Video");
+        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{pickIntent});
+        
+        if (chooserIntent.resolveActivity(getPackageManager()) != null) {
+            startActivityForResult(chooserIntent, GALLERY_REQUEST_CODE);
         } else {
             Toast.makeText(this, "Gallery not available", Toast.LENGTH_SHORT).show();
         }
@@ -1048,20 +1084,35 @@ public class ChatActivity extends AppCompatActivity {
                     }
                 }
             } else if (requestCode == GALLERY_REQUEST_CODE) {
-                // Handle gallery image
-                Uri selectedImageUri = data.getData();
-                if (selectedImageUri != null) {
+                // Handle gallery selection (image or video)
+                Uri selectedUri = data.getData();
+                if (selectedUri != null) {
                     try {
-                        InputStream inputStream = getContentResolver().openInputStream(selectedImageUri);
-                        Bitmap galleryBitmap = BitmapFactory.decodeStream(inputStream);
-                        if (galleryBitmap != null) {
-                            // Only upload to Firebase - realtime listener will add it to UI (prevents duplicates)
-                            uploadImageToFirebase(galleryBitmap, false);
-                            Toast.makeText(this, "Uploading image...", Toast.LENGTH_SHORT).show();
+                        // Check if the selected file is a video
+                        String mimeType = getContentResolver().getType(selectedUri);
+                        boolean isVideo = mimeType != null && mimeType.startsWith("video/");
+                        
+                        if (isVideo) {
+                            // Handle video from gallery
+                            Log.d(TAG, "Video selected from gallery: " + selectedUri);
+                            uploadVideoToFirebase(selectedUri);
+                            Toast.makeText(this, "Uploading video...", Toast.LENGTH_SHORT).show();
+                        } else {
+                            // Handle image from gallery
+                            InputStream inputStream = getContentResolver().openInputStream(selectedUri);
+                            Bitmap galleryBitmap = BitmapFactory.decodeStream(inputStream);
+                            if (galleryBitmap != null) {
+                                // Only upload to Firebase - realtime listener will add it to UI (prevents duplicates)
+                                uploadImageToFirebase(galleryBitmap, false);
+                                Toast.makeText(this, "Uploading image...", Toast.LENGTH_SHORT).show();
+                            } else {
+                                Log.w(TAG, "Could not decode image from gallery");
+                                Toast.makeText(this, "Error loading image", Toast.LENGTH_SHORT).show();
+                            }
                         }
                     } catch (Exception e) {
-                        Log.e(TAG, "Error loading image from gallery", e);
-                        Toast.makeText(this, "Error loading image", Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "Error loading media from gallery", e);
+                        Toast.makeText(this, "Error loading media: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 }
             } else if (requestCode == VIDEO_REQUEST_CODE) {
@@ -1791,13 +1842,16 @@ public class ChatActivity extends AppCompatActivity {
             if (attachmentUrl != null && !attachmentUrl.isEmpty()) {
                 if ("video".equals(attachmentType)) {
                     message.setVideoUrl(attachmentUrl);
-                    message.setImageUrl(attachmentUrl); // Also set for display compatibility
+                    // Don't set imageUrl for videos - let the adapter handle video display
+                    Log.d(TAG, "Video message detected: videoUrl=" + attachmentUrl);
                 } else if ("audio".equals(attachmentType)) {
                     message.setAudioUrl(attachmentUrl);
-                    message.setImageUrl(attachmentUrl); // Also set for display compatibility
+                    // Don't set imageUrl for audio - let the adapter handle audio display
+                    Log.d(TAG, "Audio message detected: audioUrl=" + attachmentUrl);
                 } else {
                     // For images and files, use imageUrl
                     message.setImageUrl(attachmentUrl);
+                    Log.d(TAG, "Image/file message detected: imageUrl=" + attachmentUrl);
                 }
             }
             

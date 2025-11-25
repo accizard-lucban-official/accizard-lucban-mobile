@@ -448,8 +448,10 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         reportLogAdapter.setOnReportClickListener(new ReportLogAdapter.OnReportClickListener() {
             @Override
             public void onViewAttachmentsClick(Report report) {
-                // Show attachments dialog only if images exist
-                if (report.getImageUrls() != null && !report.getImageUrls().isEmpty()) {
+                // Show attachments dialog if images or videos exist
+                boolean hasImages = report.getImageUrls() != null && !report.getImageUrls().isEmpty();
+                boolean hasVideos = report.getVideoUrls() != null && !report.getVideoUrls().isEmpty();
+                if (hasImages || hasVideos) {
                     showReportAttachmentsDialog(report);
                 } else {
                     Toast.makeText(ReportSubmissionActivity.this, 
@@ -1934,7 +1936,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         // Generate a temporary report ID for organizing media
         final String tempReportId = "temp_" + System.currentTimeMillis();
         
-        final List<String> allMediaUrls = new ArrayList<>();
+        // Keep image and video URLs separate
+        final List<String> imageUrlsList = new ArrayList<>();
+        final List<String> videoUrlsList = new ArrayList<>();
         final int[] uploadCount = {0};
         final int totalMedia = imageUris.size() + videoUris.size();
         
@@ -1952,8 +1956,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 new OnSuccessListener<List<String>>() {
                     @Override
                     public void onSuccess(List<String> imageUrls) {
-                        allMediaUrls.addAll(imageUrls);
+                        imageUrlsList.addAll(imageUrls);
                         uploadCount[0] += imageUrls.size();
+                        Log.d(TAG, "✅ Images uploaded: " + imageUrls.size() + " image(s)");
                         
                         // Upload videos after images
                         if (!videoUris.isEmpty()) {
@@ -1963,17 +1968,27 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                                     @Override
                                     public void onSuccess(List<String> videoUrls) {
                                         Log.d(TAG, "✅ Videos uploaded successfully: " + videoUrls.size() + " video(s)");
-                                        allMediaUrls.addAll(videoUrls);
+                                        videoUrlsList.addAll(videoUrls);
                                         uploadCount[0] += videoUrls.size();
                                         
                                         // All media uploaded
                                         if (uploadCount[0] == totalMedia) {
                                             Log.d(TAG, "✅ All media uploaded (" + uploadCount[0] + "/" + totalMedia + "), submitting report...");
-                                            reportData.put("imageUrls", allMediaUrls);
-                                            reportData.put("videoUrls", videoUrls);
+                                            Log.d(TAG, "   - Image URLs: " + imageUrlsList.size());
+                                            Log.d(TAG, "   - Video URLs: " + videoUrlsList.size());
+                                            
+                                            // Put image and video URLs separately
+                                            reportData.put("imageUrls", imageUrlsList);
+                                            reportData.put("videoUrls", videoUrlsList);
+                                            // Update videoCount to match actual uploaded videos
+                                            reportData.put("videoCount", videoUrlsList.size());
                                             submitReportToFirestore(reportData);
                                         } else {
                                             Log.w(TAG, "⚠️ Upload count mismatch: " + uploadCount[0] + "/" + totalMedia);
+                                            // Still submit with what we have
+                                            reportData.put("imageUrls", imageUrlsList);
+                                            reportData.put("videoUrls", videoUrlsList);
+                                            submitReportToFirestore(reportData);
                                         }
                                     }
                                 },
@@ -1997,8 +2012,10 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                                 });
                         } else {
                             // No videos, just submit with images
-                            Log.d(TAG, "✅ Images uploaded successfully, submitting report with " + allMediaUrls.size() + " image(s)...");
-                            reportData.put("imageUrls", allMediaUrls);
+                            Log.d(TAG, "✅ Images uploaded successfully, submitting report with " + imageUrlsList.size() + " image(s)...");
+                            reportData.put("imageUrls", imageUrlsList);
+                            // Ensure videoUrls is empty list
+                            reportData.put("videoUrls", new ArrayList<String>());
                             submitReportToFirestore(reportData);
                         }
                     }
@@ -2040,7 +2057,10 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                             reportData.put("imageUrls", new ArrayList<String>());
                         }
                         reportData.put("videoUrls", videoUrls);
+                        // Update videoCount to match actual uploaded videos
+                        reportData.put("videoCount", videoUrls.size());
                         Log.d(TAG, "✅ All videos uploaded successfully, submitting report with " + videoUrls.size() + " video(s)");
+                        Log.d(TAG, "   - Video URLs: " + videoUrls.toString());
                         submitReportToFirestore(reportData);
                     }
                 },
@@ -2122,17 +2142,115 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         if (!reportData.containsKey("videoUrls")) {
             reportData.put("videoUrls", new ArrayList<String>());
         }
+        // Ensure videoCount is present and matches videoUrls size
+        if (!reportData.containsKey("videoCount")) {
+            Object videoUrlsObj = reportData.get("videoUrls");
+            int videoCount = 0;
+            if (videoUrlsObj instanceof List) {
+                videoCount = ((List<?>) videoUrlsObj).size();
+            }
+            reportData.put("videoCount", videoCount);
+        }
+        
+        // Ensure videoUrls is a proper List<String> (not ArrayList or other type)
+        Object videoUrlsObj = reportData.get("videoUrls");
+        if (videoUrlsObj != null) {
+            if (videoUrlsObj instanceof List) {
+                // Convert to ArrayList<String> to ensure proper serialization
+                List<String> videoUrlsList = new ArrayList<>();
+                for (Object item : (List<?>) videoUrlsObj) {
+                    if (item != null) {
+                        videoUrlsList.add(item.toString());
+                    }
+                }
+                reportData.put("videoUrls", videoUrlsList);
+            }
+        }
+        
+        // Ensure imageUrls is also a proper List<String>
+        Object imageUrlsObj = reportData.get("imageUrls");
+        if (imageUrlsObj != null) {
+            if (imageUrlsObj instanceof List) {
+                List<String> imageUrlsList = new ArrayList<>();
+                for (Object item : (List<?>) imageUrlsObj) {
+                    if (item != null) {
+                        imageUrlsList.add(item.toString());
+                    }
+                }
+                reportData.put("imageUrls", imageUrlsList);
+            }
+        }
         
         // Log report data for debugging
         Log.d(TAG, "📤 Submitting report to Firestore:");
         Log.d(TAG, "   - Has imageUrls: " + (reportData.containsKey("imageUrls") ? "Yes (" + ((List<?>) reportData.get("imageUrls")).size() + " items)" : "No"));
         Log.d(TAG, "   - Has videoUrls: " + (reportData.containsKey("videoUrls") ? "Yes (" + ((List<?>) reportData.get("videoUrls")).size() + " items)" : "No"));
         
+        // Log actual video URLs for debugging
+        if (reportData.containsKey("videoUrls")) {
+            List<?> videoUrls = (List<?>) reportData.get("videoUrls");
+            if (videoUrls != null && !videoUrls.isEmpty()) {
+                Log.d(TAG, "   - Video URLs count: " + videoUrls.size());
+                for (int i = 0; i < videoUrls.size(); i++) {
+                    Log.d(TAG, "   - Video URL[" + i + "]: " + videoUrls.get(i).toString());
+                }
+            } else {
+                Log.d(TAG, "   - Video URLs: Empty list");
+            }
+        }
+        
+        // Log all keys in reportData to verify structure
+        Log.d(TAG, "   - Report data keys: " + reportData.keySet().toString());
+        
+        // Final verification: Ensure videoUrls is definitely a List and not null
+        Object finalVideoUrlsCheck = reportData.get("videoUrls");
+        if (finalVideoUrlsCheck == null) {
+            Log.e(TAG, "❌ CRITICAL: videoUrls is NULL before saving to Firestore!");
+            reportData.put("videoUrls", new ArrayList<String>());
+        } else if (!(finalVideoUrlsCheck instanceof List)) {
+            Log.e(TAG, "❌ CRITICAL: videoUrls is not a List before saving! Type: " + finalVideoUrlsCheck.getClass().getName());
+            // Convert to List
+            List<String> convertedList = new ArrayList<>();
+            convertedList.add(finalVideoUrlsCheck.toString());
+            reportData.put("videoUrls", convertedList);
+        } else {
+            List<?> finalList = (List<?>) finalVideoUrlsCheck;
+            Log.d(TAG, "✅ FINAL CHECK: videoUrls is a List with " + finalList.size() + " item(s)");
+            if (!finalList.isEmpty()) {
+                Log.d(TAG, "✅ FINAL CHECK: First video URL: " + finalList.get(0).toString());
+            }
+        }
+        
         FirestoreHelper.createReportWithAutoId(reportData,
                 new OnSuccessListener<DocumentReference>() {
                     @Override
                     public void onSuccess(DocumentReference documentReference) {
                         Log.d(TAG, "✅ Report submitted successfully with ID: " + documentReference.getId());
+                        
+                        // Verify the saved document contains videoUrls
+                        documentReference.get().addOnSuccessListener(documentSnapshot -> {
+                            if (documentSnapshot.exists()) {
+                                Object savedVideoUrls = documentSnapshot.get("videoUrls");
+                                if (savedVideoUrls != null) {
+                                    if (savedVideoUrls instanceof List) {
+                                        List<?> savedList = (List<?>) savedVideoUrls;
+                                        Log.d(TAG, "✅ VERIFIED: videoUrls saved to Firestore with " + savedList.size() + " video(s)");
+                                        for (int i = 0; i < savedList.size(); i++) {
+                                            Log.d(TAG, "   - Saved Video URL[" + i + "]: " + savedList.get(i).toString());
+                                        }
+                                    } else {
+                                        Log.w(TAG, "⚠️ videoUrls saved but not as List: " + savedVideoUrls.getClass().getSimpleName());
+                                    }
+                                } else {
+                                    Log.e(TAG, "❌ ERROR: videoUrls NOT found in saved document!");
+                                }
+                                
+                                // Log all fields in the saved document
+                                Log.d(TAG, "📋 Saved document fields: " + documentSnapshot.getData().keySet().toString());
+                            }
+                        }).addOnFailureListener(e -> {
+                            Log.e(TAG, "Error verifying saved document: " + e.getMessage(), e);
+                        });
                         
                         // If report has images, reorganize them with the actual report ID
                         if (reportData.containsKey("imageUrls")) {
@@ -2292,8 +2410,17 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         reportData.put("timestamp", System.currentTimeMillis());
         reportData.put("status", "Pending");
         reportData.put("priority", "medium"); // Default priority
-        reportData.put("imageCount", selectedImageUris.size());
+        // Count total media items (images + videos) for imageCount field
+        int videoCount = 0;
+        for (MediaItem item : selectedMediaItems) {
+            if (item.isVideo()) {
+                videoCount++;
+            }
+        }
+        reportData.put("imageCount", selectedImageUris.size() + videoCount);
+        reportData.put("videoCount", videoCount); // Add videoCount field for web app compatibility
         reportData.put("imageUrls", new ArrayList<>()); // Will be updated after upload
+        reportData.put("videoUrls", new ArrayList<>()); // Will be updated after upload
         
         // Get current date and time
         java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("MM/dd/yyyy", java.util.Locale.getDefault());
@@ -2802,6 +2929,13 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 report.setImageUrls((List<String>) imageUrlsObj);
             }
             
+            // Handle video URLs
+            Object videoUrlsObj = doc.get("videoUrls");
+            if (videoUrlsObj instanceof List) {
+                report.setVideoUrls((List<String>) videoUrlsObj);
+                Log.d(TAG, "✅ Video URLs loaded from Firestore: " + ((List<?>) videoUrlsObj).size() + " video(s)");
+            }
+            
             // Handle image count
             Object imageCountObj = doc.get("imageCount");
             if (imageCountObj instanceof Long) {
@@ -2961,8 +3095,10 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 tvDateTime.setText(formattedDateTime);
             }
             
-            // Show attachment count
-            int attachmentCount = report.getImageCount();
+            // Show attachment count (include both images and videos)
+            int imageCount = report.getImageUrls() != null ? report.getImageUrls().size() : 0;
+            int videoCount = report.getVideoUrls() != null ? report.getVideoUrls().size() : 0;
+            int attachmentCount = imageCount + videoCount;
             if (tvAttachmentCount != null) {
                 tvAttachmentCount.setText(attachmentCount + " attachment(s)");
             }
@@ -2996,30 +3132,58 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     
     private void showReportAttachmentsDialog(Report report) {
         try {
-            if (report.getImageUrls() == null || report.getImageUrls().isEmpty()) {
+            // Check for both images and videos
+            boolean hasImages = report.getImageUrls() != null && !report.getImageUrls().isEmpty();
+            boolean hasVideos = report.getVideoUrls() != null && !report.getVideoUrls().isEmpty();
+            
+            if (!hasImages && !hasVideos) {
                 Toast.makeText(this, "No attachments available for this report", Toast.LENGTH_SHORT).show();
                 return;
             }
             
             Log.d(TAG, "Showing attachments dialog for report: " + report.getReportId());
-            Log.d(TAG, "Image URLs: " + report.getImageUrls().toString());
+            if (hasImages) {
+                Log.d(TAG, "Image URLs: " + report.getImageUrls().toString());
+            }
+            if (hasVideos) {
+                Log.d(TAG, "Video URLs: " + report.getVideoUrls().toString());
+            }
             
-            // Convert String URLs to Uri list
-            List<Uri> imageUris = new ArrayList<>();
-            for (String urlString : report.getImageUrls()) {
-                if (urlString != null && !urlString.trim().isEmpty()) {
-                    try {
-                        Uri uri = Uri.parse(urlString);
-                        imageUris.add(uri);
-                        Log.d(TAG, "Added image URI: " + uri.toString());
-                    } catch (Exception e) {
-                        Log.e(TAG, "Invalid image URL: " + urlString, e);
+            // Convert String URLs to MediaItem list (supports both images and videos)
+            List<MediaItem> mediaItems = new ArrayList<>();
+            
+            // Add images
+            if (hasImages) {
+                for (String urlString : report.getImageUrls()) {
+                    if (urlString != null && !urlString.trim().isEmpty()) {
+                        try {
+                            Uri uri = Uri.parse(urlString);
+                            mediaItems.add(new MediaItem(uri, MediaItem.TYPE_IMAGE));
+                            Log.d(TAG, "Added image URI: " + uri.toString());
+                        } catch (Exception e) {
+                            Log.e(TAG, "Invalid image URL: " + urlString, e);
+                        }
                     }
                 }
             }
             
-            if (imageUris.isEmpty()) {
-                Toast.makeText(this, "No valid image attachments found", Toast.LENGTH_SHORT).show();
+            // Add videos
+            if (hasVideos) {
+                for (String urlString : report.getVideoUrls()) {
+                    if (urlString != null && !urlString.trim().isEmpty()) {
+                        try {
+                            Uri uri = Uri.parse(urlString);
+                            mediaItems.add(new MediaItem(uri, MediaItem.TYPE_VIDEO));
+                            Log.d(TAG, "Added video URI: " + uri.toString());
+                        } catch (Exception e) {
+                            Log.e(TAG, "Invalid video URL: " + urlString, e);
+                        }
+                    }
+                }
+            }
+            
+            if (mediaItems.isEmpty()) {
+                Toast.makeText(this, "No valid attachments found", Toast.LENGTH_SHORT).show();
                 return;
             }
             
@@ -3034,7 +3198,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 tvAttachmentsTitle.setText("Report Attachments");
             }
             if (tvAttachmentCount != null) {
-                int count = imageUris.size();
+                int count = mediaItems.size();
                 tvAttachmentCount.setText(count + (count == 1 ? " attachment" : " attachments"));
             }
             
@@ -3044,21 +3208,24 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 LinearLayoutManager dialogLayoutManager = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
                 dialogRecyclerView.setLayoutManager(dialogLayoutManager);
                 
-            // Create adapter for dialog (without remove listener to hide X buttons)
-            ProfessionalImageGalleryAdapter dialogAdapter = new ProfessionalImageGalleryAdapter(this, imageUris);
-            dialogAdapter.setShowCounterBadge(false); // Hide counter badge in dialog
-            dialogAdapter.setOnImageClickListener(new ProfessionalImageGalleryAdapter.OnImageClickListener() {
-                @Override
-                public void onImageClick(int position, Uri clickedImageUri) {
-                    Log.d(TAG, "Image clicked: " + clickedImageUri.toString());
-                    // Show full screen image view
-                    showFullScreenImage(clickedImageUri);
-                }
-            });
-            // Don't set remove listener - this hides the X buttons in the dialog
+                // Use MediaGalleryAdapter to support both images and videos
+                MediaGalleryAdapter dialogAdapter = new MediaGalleryAdapter(this, mediaItems);
+                dialogAdapter.setOnMediaRemoveListener(null); // Disable remove in dialog
+                dialogAdapter.setOnMediaClickListener(new MediaGalleryAdapter.OnMediaClickListener() {
+                    @Override
+                    public void onMediaClick(int position, MediaItem mediaItem) {
+                        if (mediaItem.isImage()) {
+                            // Show full screen image view
+                            showFullScreenImage(mediaItem.getUri());
+                        } else if (mediaItem.isVideo()) {
+                            // Show video player
+                            showVideoInDialog(mediaItem.getUri());
+                        }
+                    }
+                });
                 
                 dialogRecyclerView.setAdapter(dialogAdapter);
-                Log.d(TAG, "Dialog RecyclerView setup complete with " + imageUris.size() + " images");
+                Log.d(TAG, "Dialog RecyclerView setup complete with " + mediaItems.size() + " media items (images + videos)");
             } else {
                 Log.e(TAG, "Dialog RecyclerView not found in layout");
             }

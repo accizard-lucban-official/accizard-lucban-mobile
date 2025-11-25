@@ -20,6 +20,7 @@ public class Report {
     private String status; // pending, ongoing, responded, resolved, not responded, redundant
     private String imageUrl; // Legacy single image URL
     private java.util.List<String> imageUrls; // Multiple image URLs
+    private java.util.List<String> videoUrls; // Multiple video URLs
     private int imageCount;
     private long timestamp;
     private String adminResponse;
@@ -101,6 +102,9 @@ public class Report {
     public int getImageCount() { return imageCount; }
     public void setImageCount(int imageCount) { this.imageCount = imageCount; }
 
+    public java.util.List<String> getVideoUrls() { return videoUrls; }
+    public void setVideoUrls(java.util.List<String> videoUrls) { this.videoUrls = videoUrls; }
+
     // Convert to Map for Firestore
     public Map<String, Object> toMap() {
         Map<String, Object> map = new HashMap<>();
@@ -119,6 +123,7 @@ public class Report {
         map.put("status", status);
         map.put("imageUrl", imageUrl != null ? imageUrl : "");
         map.put("imageUrls", imageUrls != null ? imageUrls : new java.util.ArrayList<>());
+        map.put("videoUrls", videoUrls != null ? videoUrls : new java.util.ArrayList<>());
         map.put("imageCount", imageCount);
         map.put("timestamp", timestamp);
         map.put("adminResponse", adminResponse != null ? adminResponse : "");

@@ -162,9 +162,26 @@ public class ChatMessage {
     
     // ✅ ADDED: Helper method to check if message has any attachment
     public boolean hasAttachment() {
-        return hasImage() || 
-               (attachmentType != null && !attachmentType.isEmpty()) ||
-               (fileName != null && !fileName.isEmpty());
+        // Check for video attachment
+        if (videoUrl != null && !videoUrl.isEmpty()) {
+            return true;
+        }
+        // Check for audio attachment
+        if (audioUrl != null && !audioUrl.isEmpty()) {
+            return true;
+        }
+        // Check for image attachment
+        if (hasImage()) {
+            return true;
+        }
+        // Check for file attachment (by attachmentType or fileName)
+        if (attachmentType != null && !attachmentType.isEmpty() && !"image".equals(attachmentType)) {
+            return true;
+        }
+        if (fileName != null && !fileName.isEmpty()) {
+            return true;
+        }
+        return false;
     }
     
     // ✅ ADDED: Helper method to get formatted file size
