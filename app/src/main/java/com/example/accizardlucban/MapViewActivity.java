@@ -5236,16 +5236,40 @@ public class MapViewActivity extends AppCompatActivity {
         try {
             Log.d(TAG, "Loading pins from Firestore...");
             
-            // Query all pins ordered by creation date (newest first)
-            db.collection("pins")
+            // Clear existing Firestore pin markers
+            clearFirestorePins();
+            
+            final int[] totalPinCount = {0};
+            final int[] completedQueries = {0};
+            final int totalQueries = 2; // reportPins and pins
+            
+            // Helper method to process pins and check if all queries are done
+            Runnable checkCompletion = () -> {
+                completedQueries[0]++;
+                if (completedQueries[0] >= totalQueries) {
+                    // All queries completed, apply filters
+                    final int finalPinCount = totalPinCount[0];
+                    runOnUiThread(() -> {
+                        applyFiltersToFirestorePins(false); // Don't show toast during initial load
+                        updateHeatmapToggleState();
+                        if (heatmapEnabled && hasActiveHazardFilter()) {
+                            showHeatmapView();
+                        } else {
+                            hideHeatmapView();
+                        }
+                        Log.d(TAG, "Map pins loaded and filtered: " + finalPinCount + " total pins");
+                    });
+                }
+            };
+            
+            // Query 1: Load incident type pins from "reportPins" collection
+            Log.d(TAG, "Loading incident pins from 'reportPins' collection...");
+            db.collection("reportPins")
                 .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     try {
-                        // Clear existing Firestore pin markers
-                        clearFirestorePins();
-                        
-                        int pinCount = 0;
+                        int incidentPinCount = 0;
                         for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                             try {
                                 // Parse pin data from Firestore
@@ -5257,40 +5281,71 @@ public class MapViewActivity extends AppCompatActivity {
                                     
                                     // Add pin to map
                                     addFirestorePinToMap(pin, pinPoint);
-                                    pinCount++;
+                                    incidentPinCount++;
+                                    totalPinCount[0]++;
                                     
-                                    Log.d(TAG, "Added pin: " + pin.getDisplayTitle() + " (" + pin.getCategory() + ") at " + 
+                                    Log.d(TAG, "Added incident pin: " + pin.getDisplayTitle() + " (" + pin.getCategory() + ") at " + 
                                         pin.getLatitude() + ", " + pin.getLongitude());
                                 }
                             } catch (Exception e) {
-                                Log.e(TAG, "Error processing pin document: " + document.getId(), e);
+                                Log.e(TAG, "Error processing incident pin document: " + document.getId(), e);
                             }
                         }
                         
-                        Log.d(TAG, "Successfully loaded " + pinCount + " pins from Firestore");
-                        
-                        // Make pinCount final for use in lambda
-                        final int finalPinCount = pinCount;
-                        
-                        // Apply current filters to the newly loaded pins (without toast during initial load)
-                        runOnUiThread(() -> {
-                            applyFiltersToFirestorePins(false); // Don't show toast during initial load
-                            updateHeatmapToggleState();
-                            if (heatmapEnabled && hasActiveHazardFilter()) {
-                                showHeatmapView();
-                            } else {
-                                hideHeatmapView();
-                            }
-                            Log.d(TAG, "Map pins loaded and filtered: " + finalPinCount + " total pins");
-                        });
+                        Log.d(TAG, "Successfully loaded " + incidentPinCount + " incident pins from 'reportPins' collection");
+                        checkCompletion.run();
                         
                     } catch (Exception e) {
-                        Log.e(TAG, "Error processing Firestore pins", e);
+                        Log.e(TAG, "Error processing incident pins from Firestore", e);
+                        checkCompletion.run();
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error loading pins from Firestore", e);
-                    // Failed to load map pins (toast removed)
+                    Log.e(TAG, "Error loading incident pins from 'reportPins' collection", e);
+                    checkCompletion.run();
+                });
+            
+            // Query 2: Load emergency facility pins from "pins" collection
+            Log.d(TAG, "Loading facility pins from 'pins' collection...");
+            db.collection("pins")
+                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    try {
+                        int facilityPinCount = 0;
+                        for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                            try {
+                                // Parse pin data from Firestore
+                                Pin pin = parsePinFromDocument(document);
+                                
+                                if (pin != null && pin.getLatitude() != 0 && pin.getLongitude() != 0) {
+                                    // Create point from pin coordinates
+                                    Point pinPoint = Point.fromLngLat(pin.getLongitude(), pin.getLatitude());
+                                    
+                                    // Add pin to map
+                                    addFirestorePinToMap(pin, pinPoint);
+                                    facilityPinCount++;
+                                    totalPinCount[0]++;
+                                    
+                                    Log.d(TAG, "Added facility pin: " + pin.getDisplayTitle() + " (" + pin.getCategory() + ") at " + 
+                                        pin.getLatitude() + ", " + pin.getLongitude());
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error processing facility pin document: " + document.getId(), e);
+                            }
+                        }
+                        
+                        Log.d(TAG, "Successfully loaded " + facilityPinCount + " facility pins from 'pins' collection");
+                        checkCompletion.run();
+                        
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error processing facility pins from Firestore", e);
+                        checkCompletion.run();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error loading facility pins from 'pins' collection", e);
+                    checkCompletion.run();
                 });
                 
         } catch (Exception e) {
@@ -7048,7 +7103,8 @@ public class MapViewActivity extends AppCompatActivity {
         );
         pinData.put("searchTerms", searchTerms);
 
-        db.collection("pins")
+        // Road accidents are incident types, so save to "reportPins" collection
+        db.collection("reportPins")
                 .add(pinData)
                 .addOnSuccessListener(documentReference -> {
                     Log.d(TAG, "Road accident pin created with ID: " + documentReference.getId());
