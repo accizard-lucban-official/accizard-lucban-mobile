@@ -182,8 +182,8 @@ public class OnBoardingActivity extends AppCompatActivity {
             viewPager.setCurrentItem(currentPage - 1);
         } else {
             // On first page - finish onboarding and navigate to dashboard
-            markOnboardingAsSeen();
-            navigateToMainDashboard();
+                    markOnboardingAsSeen();
+                    navigateToMainDashboard();
         }
     }
 }

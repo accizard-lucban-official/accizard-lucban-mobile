@@ -43,7 +43,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:paddingLeft="24dp"
+            android:paddingRight="24dp"
+            android:paddingBottom="24dp">
 
             <!-- App Logo and Name -->
             <LinearLayout
@@ -66,7 +68,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="About the App"
-                    android:textSize="22sp"
+                    android:textSize="24sp"
                     android:textColor="#1A1A1A"
                     android:textStyle="bold"
                     android:gravity="center"
@@ -79,7 +81,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="AcciZard Lucban is a community safety app that enables residents to report geotagged accidents and hazards. It helps the Lucban LDRRMO respond faster by providing accurate locations and instant communication tools. Through the app, the entire Lucban community is empowered to play an active role in disaster management."
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:textColor="#555555"
                 android:gravity="center"
                 android:layout_marginBottom="24dp" />
@@ -135,7 +137,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Our Partners"
-                android:textSize="20sp"
+                android:textSize="24sp"
                 android:textColor="#1A1A1A"
                 android:textStyle="bold"
                 android:gravity="center"
@@ -151,7 +153,7 @@
                 android:gravity="center"
                 android:text="In partnership with Southern Luzon State University, the Local Disaster Risk Reduction and Management Office (LDRRMO), and the Local Government Unit (LGU) of Lucban, Quezon."
                 android:textColor="#555555"
-                android:textSize="14sp" />
+                android:textSize="12sp" />
 
             <View
                 android:layout_width="match_parent"
@@ -175,7 +177,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Meet the Developers"
-                android:textSize="20sp"
+                android:textSize="24sp"
                 android:textColor="#1A1A1A"
                 android:textStyle="bold"
                 android:gravity="center" />
@@ -184,8 +186,8 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="The app was developed by Sofiah Illyzah Marquez, Ashley Shane Corpuz, and Dane Mar Dela Torre, a group of fourth-year BS Information Technology (BSIT) students from Southern Luzon State University (SLSU)."
-                android:textSize="14sp"
+                android:text="This application was developed by Sofiah Illyzah Marquez, Ashley Shane Corpuz, and Dane Mar Dela Torre, students of the Bachelor of Science in Information Technology program at Southern Luzon State University (SLSU) Main Campus."
+                android:textSize="12sp"
                 android:textColor="#555555"
                 android:gravity="center"
                 android:layout_marginTop="8dp"

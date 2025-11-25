@@ -30,12 +30,12 @@
             android:contentDescription="Add Contact Icon"
             android:layout_marginEnd="8dp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Add Emergency Contact"
-            android:textSize="18sp"
-            android:textStyle="bold"
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add Emergency Contact"
+        android:textSize="18sp"
+        android:textStyle="bold"
             android:textColor="@color/black" />
     </LinearLayout>
 

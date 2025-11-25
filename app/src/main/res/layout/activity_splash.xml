@@ -25,14 +25,14 @@
         android:layout_marginBottom="50dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="20dp"
-        android:paddingVertical="16dp"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp"
         android:background="@drawable/splash_ldrrmo_container_background">
 
         <!-- LDRRMO Logo -->
         <ImageView
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:src="@drawable/logosplashscreenldrrmo"
             android:contentDescription="LDRRMO Logo"
             android:scaleType="fitCenter"
@@ -51,7 +51,7 @@
                 android:layout_height="wrap_content"
                 android:text="in partnership with"
                 android:textColor="@color/white"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:fontFamily="@font/dmsans" />
 
             <TextView
@@ -59,7 +59,7 @@
                 android:layout_height="wrap_content"
                 android:text="Lucban MDRRMO"
                 android:textColor="@color/white"
-                android:textSize="15sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:fontFamily="@font/dmsans" />
 

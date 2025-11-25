@@ -268,6 +268,7 @@ public class MapViewActivity extends AppCompatActivity {
     private ImageView currentLocationIndicator; // Simple blue dot marker for current location
     private Handler currentLocationMarkerHandler; // Handler for tracking current location marker
     private Runnable currentLocationMarkerRunnable; // Runnable for updating marker position
+    private Toast locationToast; // Toast message that stays until location is found
     
     // Custom marker class to hold marker data
     private static class MapMarker {
@@ -2051,12 +2052,22 @@ public class MapViewActivity extends AppCompatActivity {
     }
 
     private void pinCurrentLocation() {
-        // Show loading message immediately when user clicks the button
-        Toast.makeText(this, "Getting current location...", Toast.LENGTH_SHORT).show();
+        // Cancel any existing toast
+        if (locationToast != null) {
+            locationToast.cancel();
+        }
+        
+        // Show loading message that will stay until location is found
+        locationToast = Toast.makeText(this, "Getting current location...", Toast.LENGTH_LONG);
+        locationToast.show();
         
         // First check if user has enabled location access in settings
         if (!LocationPermissionHelper.isLocationAccessEnabledWithLog(this, "MapViewActivity")) {
+            if (locationToast != null) {
+                locationToast.cancel();
+            }
             Toast.makeText(this, "Location access is disabled in settings. Please enable it in Profile settings.", Toast.LENGTH_LONG).show();
+            locationToast = null;
             return;
         }
         
@@ -2076,13 +2087,24 @@ public class MapViewActivity extends AppCompatActivity {
                                 handleCurrentLocationUpdate(location);
                             } else {
                                 // Location is too old, try to get fresh location
+                                // Toast will remain visible during fresh location request
                                 requestFreshLocation();
                             }
                         } else {
                             // No last location, try to get fresh location
+                            // Toast will remain visible during fresh location request
                             requestFreshLocation();
                         }
                     }
+                })
+                .addOnFailureListener(this, e -> {
+                    // Error getting last location - cancel toast and show error
+                    if (locationToast != null) {
+                        locationToast.cancel();
+                        locationToast = null;
+                    }
+                    Toast.makeText(MapViewActivity.this, "Error getting location. Please try again.", Toast.LENGTH_LONG).show();
+                    Log.e(TAG, "Error getting last location", e);
                 });
         } else {
             requestLocationPermission();
@@ -2096,10 +2118,20 @@ public class MapViewActivity extends AppCompatActivity {
         try {
             // Check if user has enabled location access in settings
             if (!LocationPermissionHelper.isLocationAccessEnabledWithLog(this, "MapViewActivity")) {
+                // Cancel toast if location access is disabled
+                if (locationToast != null) {
+                    locationToast.cancel();
+                    locationToast = null;
+                }
                 return;
             }
             
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // Cancel toast if permission not granted
+                if (locationToast != null) {
+                    locationToast.cancel();
+                    locationToast = null;
+                }
                 return;
             }
             
@@ -2112,6 +2144,14 @@ public class MapViewActivity extends AppCompatActivity {
                         handleCurrentLocationUpdate(location);
                         
                         // Stop location updates after getting the location
+                        stopLocationUpdates();
+                    } else {
+                        // No location result - cancel toast and show error
+                        if (locationToast != null) {
+                            locationToast.cancel();
+                            locationToast = null;
+                        }
+                        Toast.makeText(MapViewActivity.this, "Unable to get current location. Please try again.", Toast.LENGTH_LONG).show();
                         stopLocationUpdates();
                     }
                 }
@@ -2130,7 +2170,12 @@ public class MapViewActivity extends AppCompatActivity {
             
         } catch (SecurityException e) {
             Log.e(TAG, "Security exception while getting location", e);
-            // Location permission denied (toast removed)
+            // Location permission denied - cancel toast and show error
+            if (locationToast != null) {
+                locationToast.cancel();
+                locationToast = null;
+            }
+            Toast.makeText(this, "Location permission denied. Please grant location permission.", Toast.LENGTH_LONG).show();
         }
     }
     
@@ -2154,6 +2199,12 @@ public class MapViewActivity extends AppCompatActivity {
      */
     private void handleCurrentLocationUpdate(Location location) {
         if (location != null) {
+            // Cancel the "Getting current location..." toast since we found the location
+            if (locationToast != null) {
+                locationToast.cancel();
+                locationToast = null;
+            }
+            
             // Create point from current location
             Point currentPoint = Point.fromLngLat(location.getLongitude(), location.getLatitude());
             
@@ -2168,6 +2219,13 @@ public class MapViewActivity extends AppCompatActivity {
             animateToLocation(currentPoint, 17.0);
             
             Log.d(TAG, "Current location: " + location.getLatitude() + ", " + location.getLongitude());
+        } else {
+            // Location not found - cancel toast and show error
+            if (locationToast != null) {
+                locationToast.cancel();
+                locationToast = null;
+            }
+            Toast.makeText(this, "Unable to get current location. Please try again.", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -2529,6 +2587,11 @@ public class MapViewActivity extends AppCompatActivity {
     }
 
     private void requestLocationPermission() {
+        // Cancel toast if permission needs to be requested
+        if (locationToast != null) {
+            locationToast.cancel();
+            locationToast = null;
+        }
         ActivityCompat.requestPermissions(this, 
             new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 
             LOCATION_PERMISSION_REQUEST_CODE);
@@ -2885,9 +2948,16 @@ public class MapViewActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Location permission granted
+                // Location permission granted - restart location request
+                // Toast will be shown again in pinCurrentLocation()
+                pinCurrentLocation();
             } else {
-                // Location permission denied
+                // Location permission denied - cancel toast and show error
+                if (locationToast != null) {
+                    locationToast.cancel();
+                    locationToast = null;
+                }
+                Toast.makeText(this, "Location permission is required to get your current location.", Toast.LENGTH_LONG).show();
             }
         }
     }

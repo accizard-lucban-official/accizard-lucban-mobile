@@ -1453,7 +1453,7 @@ public class EditProfileActivity extends AppCompatActivity {
             })
             .addOnFailureListener(e -> {
                 Log.e(TAG, "Error querying user document for Valid ID update", e);
-            });
+                });
     }
 
     // Old methods removed - now using ProfileDataManager for all sync operations
