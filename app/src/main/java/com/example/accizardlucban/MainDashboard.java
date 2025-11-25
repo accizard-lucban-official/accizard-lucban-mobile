@@ -2423,15 +2423,15 @@ public class MainDashboard extends AppCompatActivity {
     private void setDefaultStatistics() {
         try {
             if (totalReportsCount != null) {
-                totalReportsCount.setText("128");
+                totalReportsCount.setText("0");
             }
             if (barangayReportsCount != null) {
-                barangayReportsCount.setText("2");
+                barangayReportsCount.setText("0");
             }
             if (myReportsCount != null) {
-                myReportsCount.setText("5");
+                myReportsCount.setText("0");
             }
-            Log.d(TAG, "Default statistics set");
+            Log.d(TAG, "Default statistics set to 0 (no data available)");
         } catch (Exception e) {
             Log.e(TAG, "Error setting default statistics: " + e.getMessage());
         }
@@ -2807,9 +2807,6 @@ public class MainDashboard extends AppCompatActivity {
      */
     private void setDefaultTopBarangayStatistics() {
         try {
-            String[] defaultNames = {"Kulapi", "Rizal", "Sampaloc"};
-            String[] defaultCounts = {"15", "12", "8"};
-
             TextView[] nameViews = new TextView[]{
                     topBarangay1Name,
                     topBarangay2Name,
@@ -2821,16 +2818,17 @@ public class MainDashboard extends AppCompatActivity {
                     topBarangay3Count
             };
 
+            // Set empty values when no data is available
             for (int i = 0; i < nameViews.length; i++) {
                 if (nameViews[i] != null) {
-                    nameViews[i].setText(defaultNames[i]);
+                    nameViews[i].setText("");
                 }
                 if (countViews[i] != null) {
-                    countViews[i].setText(defaultCounts[i]);
+                    countViews[i].setText("0");
                 }
             }
             
-            Log.d(TAG, "✅ Default top barangay statistics set");
+            Log.d(TAG, "✅ Default top barangay statistics set to empty/0 (no data available)");
         } catch (Exception e) {
             Log.e(TAG, "Error setting default top barangay statistics: " + e.getMessage(), e);
         }

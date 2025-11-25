@@ -80,7 +80,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="AcciZard Lucban is a community safety app that enables residents to report geotagged accidents and hazards. It helps the Lucban LDRRMO respond faster by providing accurate locations and instant communication tools. Through the app, the entire Lucban community is empowered to play an active role in disaster management."
+                android:text="AcciZard Lucban is a community safety app that enables residents to report geotagged accidents and hazards. It helps the Lucban MDRRMO respond faster by providing accurate locations and instant communication tools. Through the app, the entire Lucban community is empowered to play an active role in disaster management."
                 android:textSize="12sp"
                 android:textColor="#555555"
                 android:gravity="center"
@@ -186,7 +186,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="This application was proudly developed by Sofiah Illyzah Marquez, Ashley Shane Corpuz, and Dane Mar Dela Torre, students of the Bachelor of Science in Information Technology program at Southern Luzon State University (SLSU) Main Campus."
+                android:text="This application is a product of the initiative of BS Information Technology students from Southern Luzon State University (SLSU) Main Campus—Sofiah Illyzah Marquez, Ashley Shane Corpuz, and Dane Mar Dela Torre—to empower the community to seek faster emergency assistance, while equipping them with tools that will help them become more proactive about their safety."
                 android:textSize="12sp"
                 android:textColor="#555555"
                 android:gravity="center"

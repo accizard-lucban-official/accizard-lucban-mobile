@@ -73,9 +73,7 @@
         android:textSize="14sp"
         android:textColor="#666666"
         android:lineSpacingExtra="4dp"
-        android:layout_marginBottom="12dp"
-        android:maxLines="3"
-        android:ellipsize="end" />
+        android:layout_marginBottom="12dp" />
 
     <!-- Timestamp Row with View Attachments -->
     <LinearLayout

@@ -453,10 +453,10 @@ public class AlertsActivity extends AppCompatActivity {
                 
                 if (error != null) {
                     Log.e(TAG, "Error in real-time listener: " + error.getMessage());
-                    // Load sample data on error
-                    loadSampleAnnouncements();
+                    // Clear announcements list on error - don't show sample data
+                    fullAnnouncementList.clear();
                     filterAnnouncements(selectedFilter, selectedPriorityFilter);
-                    android.widget.Toast.makeText(this, "Connection error. Showing sample data.", android.widget.Toast.LENGTH_SHORT).show();
+                    android.widget.Toast.makeText(this, "Connection error. Please try again later.", android.widget.Toast.LENGTH_SHORT).show();
                     isInitialLoad = false; // Mark initial load as complete
                     return;
                 }
@@ -559,10 +559,9 @@ public class AlertsActivity extends AppCompatActivity {
                     }
                 }
                 
-                // If no announcements exist, load sample data
+                // If no announcements exist, show empty list
                 if (fullAnnouncementList.isEmpty()) {
-                    Log.d(TAG, "No announcements found, loading sample data");
-                    loadSampleAnnouncements();
+                    Log.d(TAG, "No announcements found");
                     filterAnnouncements(selectedFilter, selectedPriorityFilter);
                 }
                 
@@ -580,8 +579,8 @@ public class AlertsActivity extends AppCompatActivity {
             
         } catch (Exception e) {
             Log.e(TAG, "Error setting up real-time listener: " + e.getMessage(), e);
-            // Fallback to sample data
-            loadSampleAnnouncements();
+            // Clear announcements list on error - don't show sample data
+            fullAnnouncementList.clear();
             filterAnnouncements(selectedFilter, selectedPriorityFilter);
         }
     }
@@ -1751,7 +1750,7 @@ public class AlertsActivity extends AppCompatActivity {
                 return;
             }
             
-            // Create dialog
+            // Create dialog without close button
             android.app.AlertDialog dialog = builder.setView(dialogView)
                     .setCancelable(true)
                     .create();

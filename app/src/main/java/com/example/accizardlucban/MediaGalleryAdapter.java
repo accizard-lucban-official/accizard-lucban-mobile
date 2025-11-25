@@ -165,15 +165,18 @@ public class MediaGalleryAdapter extends RecyclerView.Adapter<MediaGalleryAdapte
             holder.itemView.setClickable(false);
         }
         
-        // Set click listener for remove button
-        holder.removeButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (onMediaRemoveListener != null) {
+        // Set click listener for remove button (hide if no listener is set)
+        if (onMediaRemoveListener != null) {
+            holder.removeButton.setVisibility(View.VISIBLE);
+            holder.removeButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
                     onMediaRemoveListener.onMediaRemove(position, mediaItem);
                 }
-            }
-        });
+            });
+        } else {
+            holder.removeButton.setVisibility(View.GONE);
+        }
         
         // Show media count badge if there are multiple items
         if (mediaItems.size() > 1) {

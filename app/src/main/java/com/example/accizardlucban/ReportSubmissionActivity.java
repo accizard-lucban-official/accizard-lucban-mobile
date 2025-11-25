@@ -2715,9 +2715,18 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 });
             }
             
-            builder.setView(dialogView)
-                    .setPositiveButton("Close", null)
-                    .show();
+            AlertDialog dialog = builder.setView(dialogView)
+                    .setCancelable(true)
+                    .create();
+            
+            // Make image clickable to close dialog
+            if (fullScreenImageView != null) {
+                fullScreenImageView.setOnClickListener(v -> {
+                    dialog.dismiss();
+                });
+            }
+            
+            dialog.show();
                     
             Log.d(TAG, "Full screen image dialog shown");
                     
