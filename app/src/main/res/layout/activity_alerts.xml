@@ -93,13 +93,13 @@
     <!-- Announcements List -->
 
     <!-- Bottom Navigation Container (FrameLayout for floating button) -->
+
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefreshLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/bottomNavigationContainer"
         android:layout_below="@id/alerts_header_row"
-        android:layout_marginTop="@dimen/margin_medium"
         android:layout_marginBottom="0dp">
 
         <androidx.recyclerview.widget.RecyclerView

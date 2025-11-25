@@ -241,14 +241,6 @@
                             android:contentDescription="Expand/Collapse Incident Types" />
                     </LinearLayout>
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Select any type if you want to toggle certain map view or all incident"
-                        android:textSize="12sp"
-                        android:textColor="#666666"
-                        android:layout_marginTop="8dp" />
-
                     <LinearLayout
                         android:id="@+id/incidentTypesContent"
                         android:layout_width="match_parent"

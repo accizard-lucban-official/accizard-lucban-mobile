@@ -58,7 +58,6 @@
                 android:layout_height="wrap_content"
             android:text="High"
             android:textSize="@dimen/text_size_small"
-            android:textStyle="bold"
             android:textColor="#E53935" />
 
         </LinearLayout>

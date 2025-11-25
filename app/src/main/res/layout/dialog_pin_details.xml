@@ -89,7 +89,10 @@
                     android:text="Tayabas Rd, Lucban, 4328 Quezon"
                     android:textSize="14sp"
                     android:textColor="@color/dark_gray"
-                    android:fontFamily="@font/dmsans" />
+                    android:fontFamily="@font/dmsans"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    android:scrollHorizontally="true" />
 
             </LinearLayout>
 

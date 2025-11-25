@@ -58,7 +58,6 @@
                 android:layout_height="wrap_content"
                 android:text="Pending"
                 android:textSize="12sp"
-                android:textStyle="bold"
                 android:textColor="#FFB300" />
 
         </LinearLayout>

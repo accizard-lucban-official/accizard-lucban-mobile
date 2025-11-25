@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -49,16 +50,17 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Sign Out"
-                android:textColor="#f97316"
+                android:textStyle=""
+                android:textColor="@color/red_primary"
                 android:textSize="16sp" />
 
             <ImageView
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/ic_arrow_right"
-                android:tint="#f97316"
                 android:layout_marginStart="4dp"
-                android:contentDescription="Arrow right" />
+                android:contentDescription="Arrow right"
+                app:tint="@color/red_primary" />
 
         </LinearLayout>
 
@@ -235,7 +237,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Invite friends to AcciZard"
+                        android:text="Visit the Official Website"
                         android:textSize="16sp"
                         android:textColor="#333333"
                         android:textStyle="bold" />
@@ -243,7 +245,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Visit the website now to learn more"
+                        android:text="Get the word out! Share AcciZard now!"
                         android:textSize="12sp"
                         android:textColor="#666666"
                         android:layout_marginTop="4dp" />

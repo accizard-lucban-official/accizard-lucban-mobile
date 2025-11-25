@@ -247,8 +247,8 @@ public class MapViewActivity extends AppCompatActivity {
     private String activeFacilityFilter = null;
     
     private boolean isUpdatingHeatmapSwitch = false;
-    private static final float PIN_WIDTH_DP = 56f;
-    private static final float PIN_HEIGHT_DP = 76f;
+    private static final float PIN_WIDTH_DP = 26f;
+    private static final float PIN_HEIGHT_DP = 46f;
     private static final float PIN_OFFSET_DP = 4f;
     private int pinWidthPx;
     private int pinHeightPx;

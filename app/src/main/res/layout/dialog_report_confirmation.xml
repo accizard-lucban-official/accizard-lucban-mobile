@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="24dp"
-        android:background="@android:color/white">
+        android:background="@drawable/dialog_rounded_background">
 
         <!-- Header -->
         <TextView
@@ -150,8 +150,8 @@
                 android:layout_weight="1"
                 android:backgroundTint="@color/white"
                 android:text="Cancel"
-                android:textColor="@color/gray_dark"
-                android:textSize="16sp"/>
+                android:textColor="@color/gray_medium"
+                android:textSize="14sp"/>
 
             <Button
                 android:id="@+id/btnConfirmSubmit"

@@ -301,7 +301,7 @@
                             android:src="@drawable/vector__4_"
                             android:layout_marginBottom="@dimen/margin_medium"
                             android:contentDescription="Upload Icon"
-                            android:alpha="0.5" />
+                            android:alpha="0.8" />
 
                         <!-- Camera Icon and "Take a photo or record a video" text side by side -->
                         <LinearLayout
