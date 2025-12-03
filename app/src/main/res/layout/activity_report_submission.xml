@@ -379,6 +379,30 @@
 
                 </androidx.cardview.widget.CardView>
 
+                <!-- Patient Checkbox -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="@dimen/margin_small"
+                    android:layout_marginBottom="@dimen/margin_medium">
+
+                    <CheckBox
+                        android:id="@+id/patientCheckbox"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="false" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="I am the Patient"
+                        android:textSize="@dimen/text_size_medium"
+                        android:textColor="#333333"
+                        android:layout_marginStart="8dp" />
+
+                </LinearLayout>
 
                 <!-- Submit Button -->
                 <Button
@@ -692,6 +716,62 @@
 
                                 <TextView
                                     android:id="@+id/redundantCountText"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="0"
+                                    android:textStyle="bold"
+                                    android:textSize="16sp"
+                                    android:textColor="#333333"
+                                    android:layout_marginTop="4dp"
+                                    android:gravity="center"
+                                    android:maxLines="1"
+                                    android:ellipsize="end" />
+                            </LinearLayout>
+                        </androidx.cardview.widget.CardView>
+
+                        <!-- False Report -->
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="8dp"
+                            app:cardCornerRadius="12dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="@android:color/transparent"
+                            android:minWidth="90dp"
+                            android:maxWidth="150dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:gravity="center"
+                                android:padding="12dp"
+                                android:minWidth="90dp"
+                                android:background="@drawable/status_card_border">
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/frame__4_"
+                                    android:tint="#f97316"
+                                    android:layout_marginBottom="4dp"
+                                    android:contentDescription="False Report Icon"
+                                    android:scaleType="fitCenter"
+                                    android:adjustViewBounds="true" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="False Report"
+                                    android:textSize="10sp"
+                                    android:textColor="#666666"
+                                    android:gravity="center"
+                                    android:maxLines="1"
+                                    android:ellipsize="end"
+                                    android:minHeight="14dp" />
+
+                                <TextView
+                                    android:id="@+id/falseReportCountText"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:text="0"

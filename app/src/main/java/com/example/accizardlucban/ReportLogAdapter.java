@@ -107,8 +107,12 @@ public class ReportLogAdapter extends RecyclerView.Adapter<ReportLogAdapter.Repo
 
         public void bind(Report report) {
             try {
-                // Set report type (title)
-                reportTypeText.setText(report.getCategory() != null ? report.getCategory() : "Unknown Type");
+                // Set report type (title) - remove emojis before displaying
+                String category = report.getCategory();
+                if (category != null) {
+                    category = removeEmojis(category).trim();
+                }
+                reportTypeText.setText(category != null && !category.isEmpty() ? category : "Unknown Type");
                 
                 // Set description
                 descriptionText.setText(report.getDescription() != null ? report.getDescription() : "No description available");
@@ -189,7 +193,7 @@ public class ReportLogAdapter extends RecyclerView.Adapter<ReportLogAdapter.Repo
         }
 
         /**
-         * Set status badge based on report status (Pending, Ongoing, Responded, Not Responded, Redundant)
+         * Set status badge based on report status (Pending, Ongoing, Responded, Not Responded, Redundant, False Report)
          */
         private void setStatusBadge(String status) {
             if (status == null) {
@@ -232,6 +236,12 @@ public class ReportLogAdapter extends RecyclerView.Adapter<ReportLogAdapter.Repo
                     badgeBackgroundRes = R.drawable.status_redundant_bg;
                     dotBackgroundRes = R.drawable.status_dot_redundant;
                     break;
+                case "false report":
+                    statusDisplayText = "False Report";
+                    statusTextColor = "#FF5722";
+                    badgeBackgroundRes = R.drawable.status_redundant_bg; // Reuse redundant background for now
+                    dotBackgroundRes = R.drawable.status_dot_redundant; // Reuse redundant dot for now
+                    break;
                 default:
                     statusDisplayText = "Pending";
                     statusTextColor = "#FFB300";
@@ -249,6 +259,39 @@ public class ReportLogAdapter extends RecyclerView.Adapter<ReportLogAdapter.Repo
 
             // Update dot background
             statusDot.setBackgroundResource(dotBackgroundRes);
+        }
+        
+        /**
+         * Helper method to remove emoji characters from a string.
+         * This ensures report types like "⚠ Civil Disturbance" or "⛰ Landslide" 
+         * are displayed as "Civil Disturbance" and "Landslide" without emojis.
+         */
+        private String removeEmojis(String s) {
+            if (s == null || s.isEmpty()) {
+                return "";
+            }
+            // Regex to match most common emoji ranges and variation selectors
+            // This pattern is more comprehensive than just specific emojis
+            String emojiRegex = "[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]|[\\u2600-\\u26FF]|[\\u2700-\\u27BF]|[\\u2300-\\u23FF]|[\\u2B50]|[\\u2B06]|[\\u2934]|[\\u2935]|[\\u3030]|[\\u303D]|[\\u3297]|[\\u3299]|[\\uFE0F]";
+            String cleaned = s.replaceAll(emojiRegex, "");
+            // Also remove specific emojis we know are used in report types
+            cleaned = cleaned
+                .replace("⚠", "")
+                .replace("⛰", "")
+                .replace("🚗", "")
+                .replace("🏥", "")
+                .replace("🌋", "")
+                .replace("🏚", "")
+                .replace("🔴", "")
+                .replace("🔥", "")
+                .replace("🌊", "")
+                .replace("🦠", "")
+                .replace("🏗", "")
+                .replace("🚧", "")
+                .replace("⚡", "")
+                .replace("🌿", "")
+                .trim();
+            return cleaned;
         }
     }
 

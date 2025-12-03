@@ -1171,9 +1171,10 @@
 
             <!-- Report Statistics Section -->
             <TextView
+                android:id="@+id/reportTrendsTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="2025 Report Trends"
+                android:text="Report Trends"
                 android:textColor="@color/black"
                 android:textSize="@dimen/dashboard_section_title_size"
                 android:textStyle="bold"

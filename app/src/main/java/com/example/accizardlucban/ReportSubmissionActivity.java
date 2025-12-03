@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.FrameLayout;
@@ -104,6 +105,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private Button takePhotoButton;
     private Button submitReportButton;
     private ImageButton profileButton;
+    private CheckBox patientCheckbox;
     private ImageView locationInfoIcon;
     private ImageView reportTypeInfoIcon;
     private RecyclerView reportLogRecyclerView;
@@ -132,6 +134,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     private TextView respondedCountText;
     private TextView unrespondedCountText;
     private TextView redundantCountText;
+    private TextView falseReportCountText;
     private TextView totalCountText;
     
     private static final int IMAGE_PICK_REQUEST = 2001;
@@ -225,6 +228,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         takePhotoButton = findViewById(R.id.takePhotoButton);
         submitReportButton = findViewById(R.id.submitReportButton);
         profileButton = findViewById(R.id.profile);
+        patientCheckbox = findViewById(R.id.patientCheckbox);
         locationInfoIcon = findViewById(R.id.locationInfoIcon);
         reportTypeInfoIcon = findViewById(R.id.reportTypeInfoIcon);
         reportLogRecyclerView = findViewById(R.id.reportLogRecyclerView);
@@ -247,6 +251,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         respondedCountText = findViewById(R.id.respondedCountText);
         unrespondedCountText = findViewById(R.id.unrespondedCountText);
         redundantCountText = findViewById(R.id.redundantCountText);
+        falseReportCountText = findViewById(R.id.falseReportCountText);
         totalCountText = findViewById(R.id.totalCountText);
 
         // Bottom navigation
@@ -562,7 +567,8 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 "Ongoing",
                 "Responded",
                 "Not Responded",
-                "Redundant"
+                "Redundant",
+                "False Report"
         };
         
         ArrayAdapter<String> statusAdapter = new ArrayAdapter<>(
@@ -620,7 +626,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 boolean matchesType = !filterByType || 
                     (report.getCategory() != null && report.getCategory().equals(selectedType));
                 boolean matchesStatus = !filterByStatus || 
-                    (report.getStatus() != null && report.getStatus().equals(selectedStatus));
+                    (report.getStatus() != null && report.getStatus().equalsIgnoreCase(selectedStatus));
                 
                 if (matchesType && matchesStatus) {
                     filteredReports.add(report);
@@ -2307,13 +2313,15 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                         Toast.makeText(ReportSubmissionActivity.this, 
                             "Report submitted successfully!", Toast.LENGTH_SHORT).show();
                         
+                        // Clear form first (before switching tabs)
+                        clearForm();
+                        
                         // Reload reports from Firestore to show the new report in Report Log
                         loadUserReportsFromFirestore();
                         
                         // Switch to Report Log tab to show the new report
                         switchToReportLogTab();
                         
-                        clearForm();
                         submitReportButton.setEnabled(true);
                         submitReportButton.setText("Submit Report");
                     }
@@ -2361,7 +2369,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 reportData.put("reporterMobile", mobile.trim());
             }
             
-            // ✅ CRITICAL: Get user's barangay from profile for report matching
+            // ✅ CRITICAL: Get user's barangay from profile FIRST (needed for patient info)
             // Priority 1: Direct barangay field
             userBarangay = userPrefs.getString("barangay", "");
             
@@ -2398,6 +2406,94 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 Log.d(TAG, "✅ User barangay retrieved: " + userBarangay);
             } else {
                 Log.w(TAG, "⚠️ No barangay found in user profile");
+            }
+            
+            // ✅ NEW: If "I am the Patient" checkbox is checked, save all patient information
+            // Use field names that match admin side expectations: Name, Contact Number, Address, Religion, Birthday, Blood Type
+            if (patientCheckbox != null && patientCheckbox.isChecked()) {
+                Map<String, Object> patientInformation = new HashMap<>();
+                
+                // Get all user data from SharedPreferences
+                String email = userPrefs.getString("email", "");
+                String birthday = userPrefs.getString("birthday", "");
+                String gender = userPrefs.getString("gender", "");
+                String civilStatus = userPrefs.getString("civil_status", "");
+                String religion = userPrefs.getString("religion", "");
+                String bloodType = userPrefs.getString("blood_type", "");
+                boolean isPWD = userPrefs.getBoolean("pwd", false);
+                String province = userPrefs.getString("province", "");
+                String city = userPrefs.getString("city", "");
+                String cityTown = userPrefs.getString("cityTown", "");
+                String mailingAddress = userPrefs.getString("mailing_address", "");
+                String streetAddress = userPrefs.getString("street_address", "");
+                
+                // Build full address string for admin display
+                StringBuilder fullAddressBuilder = new StringBuilder();
+                if (streetAddress != null && !streetAddress.trim().isEmpty()) {
+                    fullAddressBuilder.append(streetAddress.trim());
+                }
+                if (userBarangay != null && !userBarangay.trim().isEmpty()) {
+                    if (fullAddressBuilder.length() > 0) {
+                        fullAddressBuilder.append(", ");
+                    }
+                    fullAddressBuilder.append(userBarangay.trim());
+                }
+                String finalCityTown = (cityTown != null && !cityTown.trim().isEmpty()) ? cityTown : city;
+                if (finalCityTown != null && !finalCityTown.trim().isEmpty()) {
+                    if (fullAddressBuilder.length() > 0) {
+                        fullAddressBuilder.append(", ");
+                    }
+                    fullAddressBuilder.append(finalCityTown.trim());
+                }
+                if (province != null && !province.trim().isEmpty()) {
+                    if (fullAddressBuilder.length() > 0) {
+                        fullAddressBuilder.append(", ");
+                    }
+                    fullAddressBuilder.append(province.trim());
+                }
+                String fullAddress = fullAddressBuilder.toString().trim();
+                
+                // Save patient information with field names matching admin expectations
+                // Always save all fields (even if empty) so admin can display them properly
+                patientInformation.put("name", fullName.isEmpty() ? "" : fullName);
+                patientInformation.put("firstName", firstName != null ? firstName : "");
+                patientInformation.put("lastName", lastName != null ? lastName : "");
+                patientInformation.put("contactNumber", mobile != null && !mobile.trim().isEmpty() ? mobile.trim() : "");
+                patientInformation.put("email", email != null ? email : "");
+                patientInformation.put("address", fullAddress.isEmpty() ? "" : fullAddress);
+                patientInformation.put("religion", religion != null ? religion : "");
+                patientInformation.put("birthday", birthday != null ? birthday : "");
+                patientInformation.put("bloodType", bloodType != null ? bloodType : "");
+                patientInformation.put("gender", gender != null ? gender : "");
+                patientInformation.put("civilStatus", civilStatus != null ? civilStatus : "");
+                patientInformation.put("isPWD", isPWD);
+                
+                // Also save address components separately for flexibility
+                patientInformation.put("province", province != null ? province : "");
+                patientInformation.put("cityTown", finalCityTown != null ? finalCityTown : "");
+                patientInformation.put("barangay", userBarangay != null ? userBarangay : "");
+                patientInformation.put("streetAddress", streetAddress != null ? streetAddress : "");
+                patientInformation.put("mailingAddress", mailingAddress != null ? mailingAddress : "");
+                
+                // Store patient information in report
+                reportData.put("patientInformation", patientInformation);
+                reportData.put("isPatient", true);
+                
+                // Comprehensive logging
+                Log.d(TAG, "✅ Patient information saved to report (checkbox checked)");
+                Log.d(TAG, "   Patient Name: " + fullName);
+                Log.d(TAG, "   Contact Number: " + mobile);
+                Log.d(TAG, "   Address: " + fullAddress);
+                Log.d(TAG, "   Religion: " + religion);
+                Log.d(TAG, "   Birthday: " + birthday);
+                Log.d(TAG, "   Blood Type: " + bloodType);
+                Log.d(TAG, "   Gender: " + gender);
+                Log.d(TAG, "   Civil Status: " + civilStatus);
+                Log.d(TAG, "   Is PWD: " + isPWD);
+                Log.d(TAG, "   Full patientInformation map: " + patientInformation.toString());
+            } else {
+                reportData.put("isPatient", false);
+                Log.d(TAG, "ℹ️ Patient checkbox not checked - patient information not saved");
             }
         } catch (Exception e) {
             Log.e(TAG, "Error getting user info: " + e.getMessage(), e);
@@ -2566,21 +2662,40 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     }
 
     private void clearForm() {
-        reportTypeSpinner.setSelection(0);
-        descriptionEditText.setText("");
-        coordinatesEditText.setText("");
-        locationEditText.setText(""); // Legacy field
-        descriptionEditText.clearFocus();
-        coordinatesEditText.clearFocus();
-        
-        // Clear images
-        selectedImageUris.clear();
-        updateProfessionalImageGallery();
-        
-        // Reset location selection state
-        resetLocationSelection();
-        
-        Log.d(TAG, "Form cleared successfully");
+        try {
+            // Clear report type
+            reportTypeSpinner.setSelection(0);
+            
+            // Clear description
+            descriptionEditText.setText("");
+            descriptionEditText.clearFocus();
+            
+            // Clear location/coordinates
+            coordinatesEditText.setText("");
+            coordinatesEditText.clearFocus();
+            locationEditText.setText(""); // Legacy field
+            
+            // Clear all media items (images and videos)
+            selectedImageUris.clear();
+            selectedMediaItems.clear();
+            updateProfessionalImageGallery();
+            
+            // Reset location selection state
+            resetLocationSelection();
+            
+            // Reset patient checkbox
+            if (patientCheckbox != null) {
+                patientCheckbox.setChecked(false);
+            }
+            
+            // Note: Do NOT switch tabs here - let the caller decide which tab to show
+            // After submission, we switch to Report Log tab
+            // When user manually switches back to Submit Report tab, form will already be clear
+            
+            Log.d(TAG, "✅ Form cleared successfully - ready for new report submission");
+        } catch (Exception e) {
+            Log.e(TAG, "Error clearing form: " + e.getMessage(), e);
+        }
     }
     
     /**
@@ -2841,6 +2956,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         
         // Update tab indicators
         updateTabIndicators(true, false);
+        
+        // Note: Form is already cleared after submission, so when user switches back
+        // to this tab, the form will be ready for a new submission
     }
     
     private void switchToReportLogTab() {
@@ -2861,6 +2979,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         
         // Update tab indicators
         updateTabIndicators(false, true);
+        
+        // Note: loadUserReportsFromFirestore() already sets up a real-time listener
+        // that will automatically update the UI when reports change, so no manual refresh needed
     }
     
     private void updateTabIndicators(boolean submitReportActive, boolean reportLogActive) {
@@ -2893,6 +3014,8 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             
             // Load ONLY the current user's reports (filtered by userId)
             // This ensures each user only sees their own submitted reports
+            // Order by timestamp descending to show newest reports first
+            // Note: Firestore requires an index for queries with orderBy, but we're sorting in memory instead
             db.collection("reports")
                     .whereEqualTo("userId", currentUser.getUid())
                     .addSnapshotListener((queryDocumentSnapshots, error) -> {
@@ -2903,36 +3026,85 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                         }
                         
                         if (queryDocumentSnapshots != null) {
+                            int previousCount = allReports.size();
                             allReports.clear();
+                            
+                            Log.d(TAG, "📊 Processing " + queryDocumentSnapshots.size() + " report documents from Firestore");
+                            
+                            int successfullyParsed = 0;
+                            int failedParsing = 0;
                             
                             for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                                 try {
                                     Report report = convertDocumentToReport(doc);
                                     if (report != null) {
                                         allReports.add(report);
+                                        successfullyParsed++;
+                                    } else {
+                                        failedParsing++;
+                                        Log.w(TAG, "⚠️ Report conversion returned null for document: " + doc.getId());
                                     }
                                 } catch (Exception e) {
-                                    Log.e(TAG, "Error parsing report document", e);
+                                    failedParsing++;
+                                    Log.e(TAG, "❌ Error parsing report document " + doc.getId() + ": " + e.getMessage(), e);
                                 }
                             }
                             
                             // Sort reports by timestamp in memory (newest first)
-                            allReports.sort((r1, r2) -> Long.compare(r2.getTimestamp(), r1.getTimestamp()));
+                            try {
+                                allReports.sort((r1, r2) -> {
+                                    try {
+                                        return Long.compare(r2.getTimestamp(), r1.getTimestamp());
+                                    } catch (Exception e) {
+                                        Log.e(TAG, "Error comparing timestamps", e);
+                                        return 0;
+                                    }
+                                });
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error sorting reports", e);
+                            }
                             
-                            Log.d(TAG, "Loaded " + allReports.size() + " reports from Firestore for current user");
+                            Log.d(TAG, "📊 Report loading summary:");
+                            Log.d(TAG, "   - Total documents: " + queryDocumentSnapshots.size());
+                            Log.d(TAG, "   - Successfully parsed: " + successfullyParsed);
+                            Log.d(TAG, "   - Failed parsing: " + failedParsing);
+                            Log.d(TAG, "   - Final allReports count: " + allReports.size());
                             
                             // Update filtered reports
                             filteredReports.clear();
                             filteredReports.addAll(allReports);
-                            reportLogAdapter.notifyDataSetChanged();
                             
-                            // Update status summary
-                            updateStatusSummary();
+                            Log.d(TAG, "📋 Filtered reports count: " + filteredReports.size());
+                            
+                            // Notify adapter of data change on UI thread
+                            // Note: Firestore listeners already run on main thread, but using runOnUiThread for safety
+                            runOnUiThread(() -> {
+                                try {
+                                    if (reportLogAdapter != null) {
+                                        reportLogAdapter.notifyDataSetChanged();
+                                        
+                                        // Force RecyclerView to remeasure and redraw
+                                        if (reportLogRecyclerView != null) {
+                                            reportLogRecyclerView.requestLayout();
+                                            reportLogRecyclerView.invalidate();
+                                        }
+                                    }
+                                    
+                                    // Update status summary
+                                    updateStatusSummary();
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Error updating UI after loading reports", e);
+                                }
+                            });
                             
                             // Show message if no reports found
                             if (allReports.isEmpty()) {
-                                Log.d(TAG, "No reports found for current user - Report Log will be empty");
+                                Log.d(TAG, "⚠️ No reports found for current user - Report Log will be empty");
+                            } else {
+                                Log.d(TAG, "✅ Successfully loaded and displayed " + allReports.size() + " reports in Report Log");
                             }
+                        } else {
+                            Log.w(TAG, "⚠️ queryDocumentSnapshots is null");
                         }
                     });
         } catch (Exception e) {
@@ -3031,6 +3203,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             int respondedCount = 0;
             int notRespondedCount = 0;
             int redundantCount = 0;
+            int falseReportCount = 0;
             int totalCount = allReports.size();
             
             for (Report report : allReports) {
@@ -3052,6 +3225,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                         case "redundant":
                             redundantCount++;
                             break;
+                        case "false report":
+                            falseReportCount++;
+                            break;
                     }
                 }
             }
@@ -3061,47 +3237,46 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                       ", Ongoing: " + ongoingCount + 
                       ", Responded: " + respondedCount + 
                       ", Not Responded: " + notRespondedCount + 
-                      ", Redundant: " + redundantCount);
+                      ", Redundant: " + redundantCount +
+                      ", False Report: " + falseReportCount);
             
             // Update the status count TextViews in the Report Log UI
-            updateStatusCountTextViews(pendingCount, ongoingCount, respondedCount, notRespondedCount, redundantCount, totalCount);
+            updateStatusCountTextViews(pendingCount, ongoingCount, respondedCount, notRespondedCount, redundantCount, falseReportCount, totalCount);
             
         } catch (Exception e) {
             Log.e(TAG, "Error updating status summary", e);
         }
     }
     
-    private void updateStatusCountTextViews(int pending, int ongoing, int responded, int notResponded, int redundant, int total) {
+    private void updateStatusCountTextViews(int pending, int ongoing, int responded, int notResponded, int redundant, int falseReport, int total) {
         try {
             // Update each status count TextView with real-time counts
             if (pendingCountText != null) {
                 pendingCountText.setText(String.valueOf(pending));
-                Log.d(TAG, "Updated Pending count: " + pending);
             }
             
             if (ongoingCountText != null) {
                 ongoingCountText.setText(String.valueOf(ongoing));
-                Log.d(TAG, "Updated Ongoing count: " + ongoing);
             }
             
             if (respondedCountText != null) {
                 respondedCountText.setText(String.valueOf(responded));
-                Log.d(TAG, "Updated Responded count: " + responded);
             }
             
             if (unrespondedCountText != null) {
                 unrespondedCountText.setText(String.valueOf(notResponded));
-                Log.d(TAG, "Updated Not Responded count: " + notResponded);
             }
             
             if (redundantCountText != null) {
                 redundantCountText.setText(String.valueOf(redundant));
-                Log.d(TAG, "Updated Redundant count: " + redundant);
+            }
+            
+            if (falseReportCountText != null) {
+                falseReportCountText.setText(String.valueOf(falseReport));
             }
             
             if (totalCountText != null) {
                 totalCountText.setText(String.valueOf(total));
-                Log.d(TAG, "Updated Total count: " + total);
             }
             
             Log.d(TAG, "Successfully updated all status count TextViews");
@@ -3124,6 +3299,20 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         @Override
         public boolean canScrollVertically() {
             return false;
+        }
+        
+        @Override
+        public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
+            try {
+                super.onLayoutChildren(recycler, state);
+            } catch (IndexOutOfBoundsException e) {
+                // Sometimes RecyclerView throws this when data changes rapidly
+                // Log and continue - the layout will be corrected on next pass
+                android.util.Log.e("NonScrollableLinearLayoutManager", "IndexOutOfBoundsException in onLayoutChildren: " + e.getMessage());
+            } catch (Exception e) {
+                // Catch any other exceptions to prevent crashes
+                android.util.Log.e("NonScrollableLinearLayoutManager", "Exception in onLayoutChildren: " + e.getMessage(), e);
+            }
         }
     }
     
@@ -3503,10 +3692,30 @@ public class ReportSubmissionActivity extends AppCompatActivity {
             }
         } else if (requestCode == STORAGE_PERMISSION_REQUEST_CODE) {
             // Storage permission result - handled by PermissionHelper callbacks
-            // If permission was granted, the user can try selecting media again
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted - user can now select media
-                Log.d(TAG, "Storage permission granted");
+            // Check if any permission was granted (supports "allow while in use" on Android 14+)
+            boolean permissionGranted = false;
+            if (grantResults.length > 0) {
+                // On Android 14+, check if full permissions OR "allow while in use" permission was granted
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    // Check if full permissions granted
+                    boolean hasFullPermission = grantResults.length >= 2 && 
+                        grantResults[0] == PackageManager.PERMISSION_GRANTED && 
+                        grantResults[1] == PackageManager.PERMISSION_GRANTED;
+                    
+                    // Check if "allow while in use" permission granted (READ_MEDIA_VISUAL_USER_SELECTED)
+                    boolean hasPartialPermission = grantResults.length >= 3 && 
+                        grantResults[2] == PackageManager.PERMISSION_GRANTED;
+                    
+                    permissionGranted = hasFullPermission || hasPartialPermission;
+                } else {
+                    // Android 13 and below - check first permission
+                    permissionGranted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                }
+            }
+            
+            if (permissionGranted) {
+                // Permission granted (full or "allow while in use") - user can now select media
+                Log.d(TAG, "Storage permission granted (full or allow while in use)");
             } else {
                 Toast.makeText(this, "Storage permission is required to select photos and videos", Toast.LENGTH_LONG).show();
             }

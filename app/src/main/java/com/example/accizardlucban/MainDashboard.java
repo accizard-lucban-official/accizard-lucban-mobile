@@ -86,6 +86,8 @@ import java.util.TimerTask;
 import java.util.Calendar;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.TreeMap;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -144,6 +146,7 @@ public class MainDashboard extends AppCompatActivity {
     private RecyclerView reportLegendRecyclerView;
     private TextView legendTitle;
     private LegendAdapter legendAdapter;
+    private TextView reportTrendsTitle;
     
     // Statistics views
     private TextView totalReportsCount;
@@ -477,6 +480,13 @@ public class MainDashboard extends AppCompatActivity {
             reportFilterText = findViewById(R.id.reportFilterText);
             reportLegendRecyclerView = findViewById(R.id.reportLegendRecyclerView);
             legendTitle = findViewById(R.id.legendTitle);
+            reportTrendsTitle = findViewById(R.id.reportTrendsTitle);
+            
+            // Set Report Trends title with current year
+            if (reportTrendsTitle != null) {
+                int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+                reportTrendsTitle.setText(currentYear + " Report Trends");
+            }
             
             // Initialize responsive legend RecyclerView
             setupLegendRecyclerView();
@@ -573,17 +583,72 @@ public class MainDashboard extends AppCompatActivity {
 
             PopupMenu popupMenu = new PopupMenu(this, anchor);
             List<String> options = new ArrayList<>();
-            options.add("All Types");
+            Set<String> normalizedOptions = new HashSet<>(); // Track normalized strings for case-insensitive duplicate check
+            
+            // Create sets for both exact and normalized base types for comprehensive duplicate checking
+            Set<String> exactBaseTypes = new HashSet<>();
+            Set<String> normalizedBaseTypes = new HashSet<>();
             for (String base : BASE_TYPE_FILTERS) {
-                if (!options.contains(base)) {
+                exactBaseTypes.add(base.trim()); // Exact match
+                String normalized = normalizeString(base);
+                normalizedBaseTypes.add(normalized); // Normalized match
+            }
+            
+            options.add("All Types");
+            normalizedOptions.add(normalizeString("All Types"));
+            
+            // Add base types first (these are the standard types)
+            for (String base : BASE_TYPE_FILTERS) {
+                String normalized = normalizeString(base);
+                if (!normalizedOptions.contains(normalized)) {
                     options.add(base);
+                    normalizedOptions.add(normalized);
                 }
             }
+            
+            // Add dynamic types only if they don't match any base type
+            Log.d(TAG, "Checking " + typeReportCounts.size() + " dynamic types from typeReportCounts");
             for (String dynamic : typeReportCounts.keySet()) {
-                if (!options.contains(dynamic)) {
-                    options.add(dynamic);
+                if (dynamic == null || dynamic.trim().isEmpty()) {
+                    Log.d(TAG, "Skipping null/empty dynamic type");
+                    continue;
                 }
+                
+                String trimmedDynamic = dynamic.trim();
+                // CRITICAL: Remove emojis from dynamic type before comparison
+                // This handles cases like "⚠ Civil Disturbance" or "⛰ Landslide"
+                String withoutEmoji = removeEmojis(trimmedDynamic);
+                String normalized = normalizeString(withoutEmoji);
+                
+                Log.d(TAG, "Checking dynamic type: '" + trimmedDynamic + "' -> without emoji: '" + withoutEmoji + "' (normalized: '" + normalized + "')");
+                
+                // Check 1: Skip if exact match with any base type (after removing emojis)
+                if (exactBaseTypes.contains(withoutEmoji)) {
+                    Log.d(TAG, "  -> Skipping duplicate (exact match after emoji removal): '" + trimmedDynamic + "'");
+                    continue;
+                }
+                
+                // Check 2: Skip if normalized match with any base type
+                if (normalizedBaseTypes.contains(normalized)) {
+                    Log.d(TAG, "  -> Skipping duplicate (normalized match): '" + trimmedDynamic + "' -> '" + normalized + "'");
+                    continue;
+                }
+                
+                // Check 3: Skip if already in options (additional safety check)
+                if (normalizedOptions.contains(normalized)) {
+                    Log.d(TAG, "  -> Skipping duplicate (already in options): '" + trimmedDynamic + "'");
+                    continue;
+                }
+                
+                // Add unique dynamic type (use the original with emoji for display)
+                options.add(trimmedDynamic);
+                normalizedOptions.add(normalized);
+                Log.d(TAG, "  -> ✅ Added unique dynamic type: '" + trimmedDynamic + "'");
             }
+            
+            Log.d(TAG, "Final menu options count: " + options.size());
+            Log.d(TAG, "Final menu options: " + options.toString());
+            
             for (String label : options) {
                 popupMenu.getMenu().add(label);
             }
@@ -597,6 +662,44 @@ public class MainDashboard extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Error showing report filter menu: " + e.getMessage(), e);
         }
+    }
+    
+    /**
+     * Normalize string for comparison (trim, lowercase, remove extra spaces)
+     */
+    private String normalizeString(String str) {
+        if (str == null) return "";
+        return str.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+    }
+    
+    /**
+     * Remove emojis from string for comparison
+     * Handles emojis like ⚠, ⛰, 🚗, etc.
+     */
+    private String removeEmojis(String str) {
+        if (str == null) return "";
+        // Remove emoji characters using regex pattern that matches most emojis
+        String withoutEmoji = str.replaceAll("[\uD83C-\uDBFF\uDC00-\uDFFF]+", "").trim();
+        // Also remove common emoji patterns we know we're using
+        withoutEmoji = withoutEmoji
+            .replace("⚠", "")
+            .replace("⛰", "")
+            .replace("🚗", "")
+            .replace("🏥", "")
+            .replace("🌋", "")
+            .replace("🏚", "")
+            .replace("🔴", "")
+            .replace("🔥", "")
+            .replace("🌊", "")
+            .replace("🦠", "")
+            .replace("🏗", "")
+            .replace("🚧", "")
+            .replace("⚡", "")
+            .replace("🌿", "")
+            .replace("🐾", "")
+            .replace("➕", "")
+            .trim();
+        return withoutEmoji;
     }
 
     private void applyTypeFilter(String selection) {
@@ -662,7 +765,10 @@ public class MainDashboard extends AppCompatActivity {
         if (rawType == null || rawType.trim().isEmpty()) {
             return "Others";
         }
-        String normalized = normalizeTypeKey(rawType);
+        // CRITICAL: Remove emojis first before processing
+        // This ensures types like "⚠ Civil Disturbance" or "⛰ Landslide" are properly matched
+        String cleanedType = removeEmojis(rawType);
+        String normalized = normalizeTypeKey(cleanedType);
         switch (normalized) {
             case "road accident":
             case "road crash":
@@ -700,7 +806,8 @@ public class MainDashboard extends AppCompatActivity {
             case "uncategorized":
                 return "Others";
             default:
-                return formatTypeDisplay(rawType);
+                // Use cleaned type (without emojis) for formatting
+                return formatTypeDisplay(cleanedType);
         }
     }
 

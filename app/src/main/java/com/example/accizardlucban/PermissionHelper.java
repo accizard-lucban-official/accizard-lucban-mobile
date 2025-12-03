@@ -56,10 +56,23 @@ public class PermissionHelper {
     
     /**
      * Check if storage permission is granted (handles Android version differences)
+     * Supports "Allow while in use" permission on Android 14+ (API 34+)
      */
     public static boolean hasStoragePermission(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Android 13+ (API 33+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            // Android 14+ (API 34+) - Check for full permissions OR "allow while in use" permission
+            boolean hasFullPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) 
+                    == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VIDEO) 
+                    == PackageManager.PERMISSION_GRANTED;
+            
+            // Also check for "allow while in use" permission (READ_MEDIA_VISUAL_USER_SELECTED)
+            boolean hasPartialPermission = ContextCompat.checkSelfPermission(context, 
+                    Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == PackageManager.PERMISSION_GRANTED;
+            
+            return hasFullPermission || hasPartialPermission;
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13 (API 33)
             return ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) 
                     == PackageManager.PERMISSION_GRANTED
                 && ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VIDEO) 
@@ -164,6 +177,7 @@ public class PermissionHelper {
     
     /**
      * Request storage permission if not granted (handles Android version differences).
+     * On Android 14+, also requests READ_MEDIA_VISUAL_USER_SELECTED to support "Allow while in use" option.
      */
     public static void requestStoragePermission(Activity activity, PermissionCallback callback) {
         if (hasStoragePermission(activity)) {
@@ -175,8 +189,15 @@ public class PermissionHelper {
         boolean alreadyRequested = prefs.getBoolean(KEY_STORAGE_PERMISSION_REQUESTED, false);
         
         String[] permissions;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Android 13+ (API 33+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            // Android 14+ (API 34+) - Request full permissions and "allow while in use" option
+            permissions = new String[]{
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+            };
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13 (API 33)
             permissions = new String[]{
                 Manifest.permission.READ_MEDIA_IMAGES,
                 Manifest.permission.READ_MEDIA_VIDEO
@@ -312,10 +333,36 @@ public class PermissionHelper {
     
     /**
      * Handle permission result and call appropriate callback.
+     * For storage permissions on Android 14+, also accepts "allow while in use" permission.
      */
     public static void handlePermissionResult(Activity activity, int requestCode, 
             @NonNull String[] permissions, @NonNull int[] grantResults, PermissionCallback callback) {
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        boolean permissionGranted = false;
+        
+        if (requestCode == STORAGE_PERMISSION_REQUEST_CODE && grantResults.length > 0) {
+            // Special handling for storage permissions to support "allow while in use" on Android 14+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                // Check if full permissions granted
+                boolean hasFullPermission = grantResults.length >= 2 && 
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED && 
+                    grantResults[1] == PackageManager.PERMISSION_GRANTED;
+                
+                // Check if "allow while in use" permission granted (READ_MEDIA_VISUAL_USER_SELECTED)
+                boolean hasPartialPermission = grantResults.length >= 3 && 
+                    grantResults[2] == PackageManager.PERMISSION_GRANTED;
+                
+                permissionGranted = hasFullPermission || hasPartialPermission;
+                Log.d(TAG, "Storage permission result - Full: " + hasFullPermission + ", Partial: " + hasPartialPermission);
+            } else {
+                // Android 13 and below - check first permission
+                permissionGranted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            }
+        } else if (grantResults.length > 0) {
+            // For other permissions, check first result
+            permissionGranted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+        }
+        
+        if (permissionGranted) {
             Log.d(TAG, "Permission granted for request code: " + requestCode);
             if (callback != null) callback.onPermissionGranted();
         } else {
