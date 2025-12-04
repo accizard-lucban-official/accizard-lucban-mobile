@@ -17,6 +17,8 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import android.content.Context;
+import android.view.ViewGroup;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -318,6 +320,55 @@ public class AlertsActivity extends AppCompatActivity {
         // Update adapter with filtered list
         announcementAdapter.updateAnnouncements(announcementList);
         android.util.Log.d("AlertsActivity", "✅ Updated adapter with " + announcementList.size() + " announcements");
+        
+        // Force RecyclerView to remeasure and redraw to ensure all items are visible
+        if (announcementsRecyclerView != null) {
+            // Post to ensure layout happens after adapter update
+            announcementsRecyclerView.post(() -> {
+                try {
+                    // Force a complete layout pass
+                    announcementsRecyclerView.getLayoutManager().requestLayout();
+                    announcementsRecyclerView.requestLayout();
+                    
+                    // Post again to verify after layout
+                    announcementsRecyclerView.post(() -> {
+                        try {
+                            int childCount = announcementsRecyclerView.getChildCount();
+                            int itemCount = announcementList.size();
+                            int measuredHeight = announcementsRecyclerView.getMeasuredHeight();
+                            int height = announcementsRecyclerView.getHeight();
+                            
+                            Log.d(TAG, "✅ RecyclerView layout verification:");
+                            Log.d(TAG, "   - Item count: " + itemCount);
+                            Log.d(TAG, "   - Child count: " + childCount);
+                            Log.d(TAG, "   - Measured height: " + measuredHeight + "px");
+                            Log.d(TAG, "   - Actual height: " + height + "px");
+                            
+                            // Verify all items are visible
+                            if (childCount < itemCount) {
+                                Log.w(TAG, "⚠️ WARNING: RecyclerView child count (" + childCount + 
+                                          ") is less than filtered announcements (" + itemCount + ")");
+                                Log.w(TAG, "   Forcing layout of all items...");
+                                
+                                // Force layout manager to layout all items
+                                NonScrollableLinearLayoutManager layoutManager = 
+                                    (NonScrollableLinearLayoutManager) announcementsRecyclerView.getLayoutManager();
+                                if (layoutManager != null) {
+                                    announcementsRecyclerView.getLayoutManager().requestLayout();
+                                }
+                            } else {
+                                Log.d(TAG, "✅ All " + itemCount + " announcements are being displayed!");
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "❌ Error in verification: " + e.getMessage(), e);
+                        }
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ Error in layout request: " + e.getMessage(), e);
+                }
+            });
+        }
+        
         android.util.Log.d("AlertsActivity", "=== END FILTERING ===");
     }
 
@@ -384,13 +435,34 @@ public class AlertsActivity extends AppCompatActivity {
     }
 
     private void setupAnnouncementsRecyclerView() {
-        announcementAdapter = new AnnouncementAdapter(announcementList);
-        announcementsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        // Setup RecyclerView with NonScrollableLinearLayoutManager for nested scrolling
+        // This allows all announcements to be visible and scrollable
+        NonScrollableLinearLayoutManager layoutManager = new NonScrollableLinearLayoutManager(this);
+        announcementsRecyclerView.setLayoutManager(layoutManager);
+        announcementsRecyclerView.setNestedScrollingEnabled(false);
+        
+        // CRITICAL: Ensure RecyclerView expands to show all items
+        announcementsRecyclerView.setHasFixedSize(false);
+        
+        // CRITICAL: Disable view recycling to force all items to be created
+        // This ensures all announcements are visible
+        announcementsRecyclerView.getRecycledViewPool().setMaxRecycledViews(0, 0); // Disable recycling for view type 0
+        announcementsRecyclerView.setItemViewCacheSize(0); // Disable view cache
+        
+        // Enable drawing cache for better performance
+        announcementsRecyclerView.setDrawingCacheEnabled(true);
+        announcementsRecyclerView.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
         
         // Add divider decoration between cards (like the image design)
         announcementsRecyclerView.addItemDecoration(new AnnouncementItemDivider());
         
+        announcementAdapter = new AnnouncementAdapter(announcementList);
         announcementsRecyclerView.setAdapter(announcementAdapter);
+        
+        Log.d(TAG, "✅ Announcements RecyclerView setup complete");
+        Log.d(TAG, "   - HasFixedSize: " + announcementsRecyclerView.hasFixedSize());
+        Log.d(TAG, "   - NestedScrollingEnabled: " + announcementsRecyclerView.isNestedScrollingEnabled());
+        Log.d(TAG, "   - View recycling disabled to show all items");
         
         // Remove click listener - announcements are no longer clickable
         // Only attachments will be clickable via text link
@@ -3037,6 +3109,141 @@ public class AlertsActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "Error formatting lists: " + e.getMessage(), e);
             return text;
+        }
+    }
+    
+    /**
+     * Custom LinearLayoutManager that disables internal vertical scrolling so the RecyclerView
+     * expands to show all items.
+     * This allows all announcements to be visible and scrollable.
+     * 
+     * CRITICAL: This manager forces ALL items to be laid out, not just visible ones.
+     */
+    private static class NonScrollableLinearLayoutManager extends LinearLayoutManager {
+        private static final String TAG = "NonScrollableLinearLayoutManager";
+        
+        NonScrollableLinearLayoutManager(Context context) {
+            super(context);
+            setOrientation(VERTICAL);
+            // Disable auto-measure to allow manual control
+            setAutoMeasureEnabled(false);
+        }
+
+        @Override
+        public boolean canScrollVertically() {
+            // Return false to disable RecyclerView's internal scrolling
+            // Parent SwipeRefreshLayout will handle scrolling
+            return false;
+        }
+        
+        @Override
+        public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
+            try {
+                int itemCount = state.getItemCount();
+                android.util.Log.d(TAG, "📐 onLayoutChildren - Item count: " + itemCount);
+                
+                if (itemCount == 0) {
+                    removeAndRecycleAllViews(recycler);
+                    return;
+                }
+                
+                // CRITICAL: Detach all existing views first
+                detachAndScrapAttachedViews(recycler);
+                
+                // Force layout of ALL items from top to bottom
+                int top = getPaddingTop();
+                int left = getPaddingLeft();
+                int right = getWidth() - getPaddingRight();
+                
+                android.util.Log.d(TAG, "   Laying out all " + itemCount + " items...");
+                
+                for (int i = 0; i < itemCount; i++) {
+                    try {
+                        // Get view for this position (this will create it if needed)
+                        View child = recycler.getViewForPosition(i);
+                        
+                        // Add to RecyclerView
+                        addView(child);
+                        
+                        // Measure the child
+                        measureChildWithMargins(child, 0, 0);
+                        
+                        // Layout the child
+                        int bottom = top + child.getMeasuredHeight();
+                        layoutDecorated(child, left, top, right, bottom);
+                        
+                        android.util.Log.d(TAG, "   ✅ Item " + (i + 1) + "/" + itemCount + " laid out at y=" + top + "-" + bottom);
+                        
+                        // Move top for next item
+                        top = bottom;
+                    } catch (Exception e) {
+                        android.util.Log.e(TAG, "❌ Error laying out item " + i + ": " + e.getMessage(), e);
+                    }
+                }
+                
+                // Recycle any views that weren't used (shouldn't be any, but just in case)
+                recycler.clear();
+                
+                // After layout, verify all items are laid out
+                int childCount = getChildCount();
+                android.util.Log.d(TAG, "✅ Layout complete - Child count: " + childCount + ", Item count: " + itemCount);
+                
+                if (childCount < itemCount) {
+                    android.util.Log.w(TAG, "⚠️ WARNING: Only " + childCount + " children laid out out of " + itemCount + " items");
+                } else {
+                    android.util.Log.d(TAG, "✅ All " + itemCount + " items are laid out correctly!");
+                }
+            } catch (IndexOutOfBoundsException e) {
+                android.util.Log.e(TAG, "IndexOutOfBoundsException in onLayoutChildren: " + e.getMessage());
+            } catch (Exception e) {
+                android.util.Log.e(TAG, "Exception in onLayoutChildren: " + e.getMessage(), e);
+            }
+        }
+        
+        @Override
+        public void onMeasure(RecyclerView.Recycler recycler, RecyclerView.State state, int widthSpec, int heightSpec) {
+            int itemCount = state.getItemCount();
+            android.util.Log.d(TAG, "📏 onMeasure - Item count: " + itemCount);
+            
+            if (itemCount == 0) {
+                super.onMeasure(recycler, state, widthSpec, heightSpec);
+                return;
+            }
+            
+            int width = View.MeasureSpec.getSize(widthSpec);
+            int totalHeight = getPaddingTop() + getPaddingBottom();
+            
+            // Measure all items to calculate total height
+            for (int i = 0; i < itemCount; i++) {
+                try {
+                    View child = recycler.getViewForPosition(i);
+                    if (child != null) {
+                        RecyclerView.LayoutParams lp = (RecyclerView.LayoutParams) child.getLayoutParams();
+                        
+                        int childWidthSpec = ViewGroup.getChildMeasureSpec(
+                            widthSpec,
+                            getPaddingLeft() + getPaddingRight() + lp.leftMargin + lp.rightMargin,
+                            lp.width
+                        );
+                        
+                        int childHeightSpec = ViewGroup.getChildMeasureSpec(
+                            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                            getPaddingTop() + getPaddingBottom() + lp.topMargin + lp.bottomMargin,
+                            lp.height
+                        );
+                        
+                        child.measure(childWidthSpec, childHeightSpec);
+                        totalHeight += child.getMeasuredHeight() + lp.topMargin + lp.bottomMargin;
+                        
+                        recycler.recycleView(child);
+                    }
+                } catch (Exception e) {
+                    android.util.Log.e(TAG, "Error measuring item " + i, e);
+                }
+            }
+            
+            setMeasuredDimension(width, totalHeight);
+            android.util.Log.d(TAG, "✅ Measured: width=" + width + "px, height=" + totalHeight + "px");
         }
     }
 }

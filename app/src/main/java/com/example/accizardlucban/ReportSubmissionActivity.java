@@ -399,47 +399,79 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     
     /**
      * Helper method to remove emoji from report type string
-     * This ensures the stored value doesn't include emojis
+     * This ensures the stored value doesn't include emojis when saving to Firestore
+     * CRITICAL: This must remove ALL emojis including variation selectors to prevent
+     * emojis from appearing on the admin side
      */
     private String getReportTypeWithoutEmoji(String reportTypeWithEmoji) {
         if (reportTypeWithEmoji == null || reportTypeWithEmoji.isEmpty()) {
             return reportTypeWithEmoji;
         }
         
-        // Remove emoji characters using regex pattern that matches emojis
-        // This pattern matches most emoji characters including variations
-        String withoutEmoji = reportTypeWithEmoji.replaceAll("[\uD83C-\uDBFF\uDC00-\uDFFF]+", "").trim();
+        // First, remove variation selectors (️) that come after emojis like ⛰️ and ⚠️
+        String cleaned = reportTypeWithEmoji.replace("️", "");
         
-        // Fallback: if regex didn't work, try removing common emoji patterns
-        if (withoutEmoji.equals(reportTypeWithEmoji)) {
-            // Remove specific emojis we know we're using
-            withoutEmoji = reportTypeWithEmoji
-                .replace("🚗", "")
-                .replace("🏥", "")
-                .replace("🌋", "")
-                .replace("🏚️", "")
-                .replace("🔴", "")
-                .replace("🔥", "")
-                .replace("🌊", "")
-                .replace("⛰️", "")
-                .replace("⚠️", "")
-                .replace("🦠", "")
-                .replace("🏗️", "")
-                .replace("🚧", "")
-                .replace("⚡", "")
-                .replace("🌿", "")
-                .replace("🐾", "")
-                .replace("➕", "")
-                .trim();
+        // Remove emoji characters using comprehensive regex pattern
+        // This pattern matches most emoji characters including variations
+        cleaned = cleaned.replaceAll("[\uD83C-\uDBFF\uDC00-\uDFFF]+", "");
+        
+        // Also remove other emoji ranges
+        cleaned = cleaned.replaceAll("[\\u2600-\\u26FF]", ""); // Miscellaneous Symbols
+        cleaned = cleaned.replaceAll("[\\u2700-\\u27BF]", ""); // Dingbats
+        cleaned = cleaned.replaceAll("[\\uFE0F]", ""); // Variation Selector-16
+        
+        // Explicitly remove all specific emojis we know are used in report types
+        // This ensures we catch any that the regex might miss
+        cleaned = cleaned
+            .replace("⚠", "")
+            .replace("⛰", "")
+            .replace("🚗", "")
+            .replace("🏥", "")
+            .replace("🌋", "")
+            .replace("🏚", "")
+            .replace("🔴", "")
+            .replace("🔥", "")
+            .replace("🌊", "")
+            .replace("🦠", "")
+            .replace("🏗", "")
+            .replace("🚧", "")
+            .replace("⚡", "")
+            .replace("🌿", "")
+            .replace("🐾", "")
+            .replace("➕", "")
+            .trim();
+        
+        // Final cleanup: remove any remaining whitespace and ensure clean text
+        cleaned = cleaned.trim();
+        
+        // Log for debugging
+        if (!cleaned.equals(reportTypeWithEmoji)) {
+            Log.d(TAG, "✅ Removed emoji from report type: \"" + reportTypeWithEmoji + "\" → \"" + cleaned + "\"");
+        } else {
+            Log.w(TAG, "⚠️ No emoji removed from: \"" + reportTypeWithEmoji + "\"");
         }
         
-        return withoutEmoji;
+        return cleaned;
     }
 
     private void setupReportLogRecyclerView() {
-        // Setup RecyclerView with LinearLayoutManager
-        reportLogRecyclerView.setLayoutManager(new NonScrollableLinearLayoutManager(this));
+        // Setup RecyclerView with NonScrollableLinearLayoutManager for nested scrolling
+        // This allows the parent ScrollView to handle scrolling while RecyclerView expands to show all items
+        NonScrollableLinearLayoutManager layoutManager = new NonScrollableLinearLayoutManager(this);
+        reportLogRecyclerView.setLayoutManager(layoutManager);
         reportLogRecyclerView.setNestedScrollingEnabled(false);
+        
+        // CRITICAL: Ensure RecyclerView expands to show all items
+        reportLogRecyclerView.setHasFixedSize(false);
+        
+        // CRITICAL: Disable view recycling to force all items to be created
+        // This ensures all reports are visible when nested in ScrollView
+        reportLogRecyclerView.getRecycledViewPool().setMaxRecycledViews(0, 0); // Disable recycling for view type 0
+        reportLogRecyclerView.setItemViewCacheSize(0); // Disable view cache
+        
+        // Enable drawing cache for better performance
+        reportLogRecyclerView.setDrawingCacheEnabled(true);
+        reportLogRecyclerView.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
 
         // Add divider decoration between cards (like the image design)
         reportLogRecyclerView.addItemDecoration(new ReportLogAdapter.ReportItemDivider());
@@ -466,6 +498,11 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         });
         
         reportLogRecyclerView.setAdapter(reportLogAdapter);
+        
+        Log.d(TAG, "✅ Report Log RecyclerView setup complete");
+        Log.d(TAG, "   - HasFixedSize: " + reportLogRecyclerView.hasFixedSize());
+        Log.d(TAG, "   - NestedScrollingEnabled: " + reportLogRecyclerView.isNestedScrollingEnabled());
+        Log.d(TAG, "   - View recycling disabled to show all items");
     }
     
     
@@ -613,6 +650,9 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         String selectedType = reportLogTypeFilterSpinner.getSelectedItem().toString();
         String selectedStatus = reportLogStatusFilterSpinner.getSelectedItem().toString();
         
+        Log.d(TAG, "🔍 Applying filters - Type: " + selectedType + ", Status: " + selectedStatus);
+        Log.d(TAG, "   Total reports before filter: " + allReports.size());
+        
         filteredReports.clear();
         
         boolean filterByType = !selectedType.equals("All Types");
@@ -621,6 +661,7 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         if (!filterByType && !filterByStatus) {
             // No filters - show all
             filteredReports.addAll(allReports);
+            Log.d(TAG, "   No filters applied - showing all " + allReports.size() + " reports");
         } else {
             for (Report report : allReports) {
                 boolean matchesType = !filterByType || 
@@ -632,10 +673,25 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                     filteredReports.add(report);
                 }
             }
+            Log.d(TAG, "   Filters applied - showing " + filteredReports.size() + " filtered reports");
         }
         
-        reportLogAdapter.notifyDataSetChanged();
-        Log.d(TAG, "Filtered reports: " + filteredReports.size() + " reports (Type: " + selectedType + ", Status: " + selectedStatus + ")");
+        // Update adapter
+        if (reportLogAdapter != null) {
+            reportLogAdapter.notifyDataSetChanged();
+            Log.d(TAG, "✅ Adapter notified - Item count: " + reportLogAdapter.getItemCount());
+            
+            // Force RecyclerView to remeasure after filter change
+            if (reportLogRecyclerView != null) {
+                reportLogRecyclerView.post(() -> {
+                    reportLogRecyclerView.requestLayout();
+                    reportLogRecyclerView.invalidate();
+                    Log.d(TAG, "✅ RecyclerView layout requested after filter change");
+                });
+            }
+        }
+        
+        Log.d(TAG, "📊 Filter complete - Filtered reports: " + filteredReports.size() + " (Type: " + selectedType + ", Status: " + selectedStatus + ")");
     }
 
     private void setupClickListeners() {
@@ -1886,8 +1942,26 @@ public class ReportSubmissionActivity extends AppCompatActivity {
 
         // Get form data
         String reportTypeWithEmoji = reportTypeSpinner.getSelectedItem().toString();
-        // Strip emoji for storage in Firestore
+        // Strip emoji for storage in Firestore - CRITICAL: This ensures no emojis are saved
         String reportType = getReportTypeWithoutEmoji(reportTypeWithEmoji);
+        
+        // Double-check: ensure no emojis remain (safety check)
+        if (reportType.contains("⚠") || reportType.contains("⛰") || 
+            reportType.contains("🚗") || reportType.contains("🏥") ||
+            reportType.contains("🌋") || reportType.contains("🏚") ||
+            reportType.contains("🔴") || reportType.contains("🔥") ||
+            reportType.contains("🌊") || reportType.contains("🦠") ||
+            reportType.contains("🏗") || reportType.contains("🚧") ||
+            reportType.contains("⚡") || reportType.contains("🌿") ||
+            reportType.contains("🐾") || reportType.contains("➕") ||
+            reportType.contains("️")) {
+            // If emojis still exist, remove them again (shouldn't happen, but safety check)
+            Log.w(TAG, "⚠️ WARNING: Emojis still present in reportType after cleaning, removing again");
+            reportType = getReportTypeWithoutEmoji(reportType);
+        }
+        
+        Log.d(TAG, "📝 Report type for Firestore: \"" + reportType + "\" (original: \"" + reportTypeWithEmoji + "\")");
+        
         String description = descriptionEditText.getText().toString().trim();
         
         // Use selected location name from map picker, or default
@@ -2346,12 +2420,18 @@ public class ReportSubmissionActivity extends AppCompatActivity {
 
     private Map<String, Object> createReportDataWithReporterInfo(String userId, String reportType, 
                                                               String description, String location) {
+        // CRITICAL: Ensure reportType has no emojis before saving to Firestore
+        // This prevents emojis from appearing on the admin side
+        String cleanReportType = getReportTypeWithoutEmoji(reportType);
+        
         Map<String, Object> reportData = new HashMap<>();
         reportData.put("userId", userId);
-        reportData.put("reportType", reportType);
-        reportData.put("title", reportType); // Add title field
-        reportData.put("category", reportType); // Add category field
+        reportData.put("reportType", cleanReportType); // Store without emojis
+        reportData.put("title", cleanReportType); // Store without emojis
+        reportData.put("category", cleanReportType); // Store without emojis - CRITICAL for admin filters
         reportData.put("description", description);
+        
+        Log.d(TAG, "💾 Saving report to Firestore with category: \"" + cleanReportType + "\"");
         
         // Auto-fill reporter info from registration (SharedPreferences)
         String userBarangay = "";
@@ -3075,25 +3155,83 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                             filteredReports.addAll(allReports);
                             
                             Log.d(TAG, "📋 Filtered reports count: " + filteredReports.size());
+                            Log.d(TAG, "   All reports count: " + allReports.size());
+                            
+                            // Log each report for debugging
+                            for (int i = 0; i < filteredReports.size(); i++) {
+                                Report r = filteredReports.get(i);
+                                Log.d(TAG, "   📄 Report " + (i + 1) + "/" + filteredReports.size() + 
+                                          ": ID=" + (r.getReportId() != null ? r.getReportId().substring(0, Math.min(8, r.getReportId().length())) : "null") +
+                                          ", Type=" + (r.getCategory() != null ? r.getCategory() : "Unknown") + 
+                                          ", Status=" + (r.getStatus() != null ? r.getStatus() : "Unknown"));
+                            }
                             
                             // Notify adapter of data change on UI thread
                             // Note: Firestore listeners already run on main thread, but using runOnUiThread for safety
                             runOnUiThread(() -> {
                                 try {
                                     if (reportLogAdapter != null) {
+                                        // Update the adapter with filtered reports
                                         reportLogAdapter.notifyDataSetChanged();
                                         
-                                        // Force RecyclerView to remeasure and redraw
+                                        Log.d(TAG, "📊 Adapter notified - " + filteredReports.size() + " reports in adapter");
+                                        Log.d(TAG, "   Adapter item count: " + reportLogAdapter.getItemCount());
+                                        
+                                        // Force RecyclerView to remeasure and redraw to ensure all items are visible
                                         if (reportLogRecyclerView != null) {
-                                            reportLogRecyclerView.requestLayout();
-                                            reportLogRecyclerView.invalidate();
+                                            // Post to ensure layout happens after adapter update
+                                            reportLogRecyclerView.post(() -> {
+                                                try {
+                                                    // Force a complete layout pass
+                                                    reportLogRecyclerView.getLayoutManager().requestLayout();
+                                                    reportLogRecyclerView.requestLayout();
+                                                    
+                                                    // Post again to verify after layout
+                                                    reportLogRecyclerView.post(() -> {
+                                                        try {
+                                                            int childCount = reportLogRecyclerView.getChildCount();
+                                                            int itemCount = filteredReports.size();
+                                                            int measuredHeight = reportLogRecyclerView.getMeasuredHeight();
+                                                            int height = reportLogRecyclerView.getHeight();
+                                                            
+                                                            Log.d(TAG, "✅ RecyclerView layout verification:");
+                                                            Log.d(TAG, "   - Item count: " + itemCount);
+                                                            Log.d(TAG, "   - Child count: " + childCount);
+                                                            Log.d(TAG, "   - Measured height: " + measuredHeight + "px");
+                                                            Log.d(TAG, "   - Actual height: " + height + "px");
+                                                            
+                                                            // Verify all items are visible
+                                                            if (childCount < itemCount) {
+                                                                Log.w(TAG, "⚠️ WARNING: RecyclerView child count (" + childCount + 
+                                                                          ") is less than filtered reports (" + itemCount + ")");
+                                                                Log.w(TAG, "   Forcing layout of all items...");
+                                                                
+                                                                // Force layout manager to layout all items
+                                                                NonScrollableLinearLayoutManager layoutManager = 
+                                                                    (NonScrollableLinearLayoutManager) reportLogRecyclerView.getLayoutManager();
+                                                                if (layoutManager != null) {
+                                                                    reportLogRecyclerView.getLayoutManager().requestLayout();
+                                                                }
+                                                            } else {
+                                                                Log.d(TAG, "✅ All " + itemCount + " items are being displayed!");
+                                                            }
+                                                        } catch (Exception e) {
+                                                            Log.e(TAG, "❌ Error in verification: " + e.getMessage(), e);
+                                                        }
+                                                    });
+                                                } catch (Exception e) {
+                                                    Log.e(TAG, "❌ Error in layout request: " + e.getMessage(), e);
+                                                }
+                                            });
                                         }
                                     }
                                     
                                     // Update status summary
                                     updateStatusSummary();
+                                    
+                                    Log.d(TAG, "✅ UI update complete - Total reports: " + allReports.size() + ", Filtered: " + filteredReports.size());
                                 } catch (Exception e) {
-                                    Log.e(TAG, "Error updating UI after loading reports", e);
+                                    Log.e(TAG, "❌ Error updating UI after loading reports", e);
                                 }
                             });
                             
@@ -3289,30 +3427,136 @@ public class ReportSubmissionActivity extends AppCompatActivity {
     /**
      * Custom LinearLayoutManager that disables internal vertical scrolling so the RecyclerView
      * expands to show all items inside the parent ScrollView.
+     * This allows the parent ScrollView to handle all scrolling while the RecyclerView
+     * expands to its full height to display all report items.
+     * 
+     * CRITICAL: This manager forces ALL items to be laid out, not just visible ones.
      */
     private static class NonScrollableLinearLayoutManager extends LinearLayoutManager {
+        private static final String TAG = "NonScrollableLinearLayoutManager";
+        
         NonScrollableLinearLayoutManager(Context context) {
             super(context);
             setOrientation(VERTICAL);
+            // Disable auto-measure to allow manual control
+            setAutoMeasureEnabled(false);
         }
 
         @Override
         public boolean canScrollVertically() {
+            // Return false to disable RecyclerView's internal scrolling
+            // Parent ScrollView will handle all scrolling
             return false;
         }
         
         @Override
         public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
             try {
-                super.onLayoutChildren(recycler, state);
+                int itemCount = state.getItemCount();
+                android.util.Log.d(TAG, "📐 onLayoutChildren - Item count: " + itemCount);
+                
+                if (itemCount == 0) {
+                    removeAndRecycleAllViews(recycler);
+                    return;
+                }
+                
+                // CRITICAL: Detach all existing views first
+                detachAndScrapAttachedViews(recycler);
+                
+                // Force layout of ALL items from top to bottom
+                int top = getPaddingTop();
+                int left = getPaddingLeft();
+                int right = getWidth() - getPaddingRight();
+                
+                android.util.Log.d(TAG, "   Laying out all " + itemCount + " items...");
+                
+                for (int i = 0; i < itemCount; i++) {
+                    try {
+                        // Get view for this position (this will create it if needed)
+                        View child = recycler.getViewForPosition(i);
+                        
+                        // Add to RecyclerView
+                        addView(child);
+                        
+                        // Measure the child
+                        measureChildWithMargins(child, 0, 0);
+                        
+                        // Layout the child
+                        int bottom = top + child.getMeasuredHeight();
+                        layoutDecorated(child, left, top, right, bottom);
+                        
+                        android.util.Log.d(TAG, "   ✅ Item " + (i + 1) + "/" + itemCount + " laid out at y=" + top + "-" + bottom);
+                        
+                        // Move top for next item
+                        top = bottom;
+                    } catch (Exception e) {
+                        android.util.Log.e(TAG, "❌ Error laying out item " + i + ": " + e.getMessage(), e);
+                    }
+                }
+                
+                // Recycle any views that weren't used (shouldn't be any, but just in case)
+                recycler.clear();
+                
+                // After layout, verify all items are laid out
+                int childCount = getChildCount();
+                android.util.Log.d(TAG, "✅ Layout complete - Child count: " + childCount + ", Item count: " + itemCount);
+                
+                if (childCount < itemCount) {
+                    android.util.Log.w(TAG, "⚠️ WARNING: Only " + childCount + " children laid out out of " + itemCount + " items");
+                } else {
+                    android.util.Log.d(TAG, "✅ All " + itemCount + " items are laid out correctly!");
+                }
             } catch (IndexOutOfBoundsException e) {
-                // Sometimes RecyclerView throws this when data changes rapidly
-                // Log and continue - the layout will be corrected on next pass
-                android.util.Log.e("NonScrollableLinearLayoutManager", "IndexOutOfBoundsException in onLayoutChildren: " + e.getMessage());
+                android.util.Log.e(TAG, "IndexOutOfBoundsException in onLayoutChildren: " + e.getMessage());
             } catch (Exception e) {
-                // Catch any other exceptions to prevent crashes
-                android.util.Log.e("NonScrollableLinearLayoutManager", "Exception in onLayoutChildren: " + e.getMessage(), e);
+                android.util.Log.e(TAG, "Exception in onLayoutChildren: " + e.getMessage(), e);
             }
+        }
+        
+        @Override
+        public void onMeasure(RecyclerView.Recycler recycler, RecyclerView.State state, int widthSpec, int heightSpec) {
+            int itemCount = state.getItemCount();
+            android.util.Log.d(TAG, "📏 onMeasure - Item count: " + itemCount);
+            
+            if (itemCount == 0) {
+                super.onMeasure(recycler, state, widthSpec, heightSpec);
+                return;
+            }
+            
+            int width = View.MeasureSpec.getSize(widthSpec);
+            int totalHeight = getPaddingTop() + getPaddingBottom();
+            
+            // Measure all items to calculate total height
+            for (int i = 0; i < itemCount; i++) {
+                try {
+                    View child = recycler.getViewForPosition(i);
+                    if (child != null) {
+                        RecyclerView.LayoutParams lp = (RecyclerView.LayoutParams) child.getLayoutParams();
+                        
+                        int childWidthSpec = ViewGroup.getChildMeasureSpec(
+                            widthSpec,
+                            getPaddingLeft() + getPaddingRight() + lp.leftMargin + lp.rightMargin,
+                            lp.width
+                        );
+                        
+                        int childHeightSpec = ViewGroup.getChildMeasureSpec(
+                            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                            getPaddingTop() + getPaddingBottom() + lp.topMargin + lp.bottomMargin,
+                            lp.height
+                        );
+                        
+                        child.measure(childWidthSpec, childHeightSpec);
+                        totalHeight += child.getMeasuredHeight() + lp.topMargin + lp.bottomMargin;
+                        
+                        recycler.recycleView(child);
+                    }
+                } catch (Exception e) {
+                    android.util.Log.e(TAG, "Error measuring item " + i, e);
+                }
+            }
+            
+            setMeasuredDimension(width, totalHeight);
+            android.util.Log.d(TAG, "✅ Measured: width=" + width + "px, height=" + totalHeight + "px");
         }
     }
     

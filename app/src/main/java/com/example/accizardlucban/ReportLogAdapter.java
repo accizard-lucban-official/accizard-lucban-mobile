@@ -263,18 +263,29 @@ public class ReportLogAdapter extends RecyclerView.Adapter<ReportLogAdapter.Repo
         
         /**
          * Helper method to remove emoji characters from a string.
-         * This ensures report types like "⚠ Civil Disturbance" or "⛰ Landslide" 
+         * This ensures report types like "⚠️ Civil Disturbance" or "⛰️ Landslide" 
          * are displayed as "Civil Disturbance" and "Landslide" without emojis.
          */
         private String removeEmojis(String s) {
             if (s == null || s.isEmpty()) {
                 return "";
             }
-            // Regex to match most common emoji ranges and variation selectors
-            // This pattern is more comprehensive than just specific emojis
-            String emojiRegex = "[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]|[\\u2600-\\u26FF]|[\\u2700-\\u27BF]|[\\u2300-\\u23FF]|[\\u2B50]|[\\u2B06]|[\\u2934]|[\\u2935]|[\\u3030]|[\\u303D]|[\\u3297]|[\\u3299]|[\\uFE0F]";
-            String cleaned = s.replaceAll(emojiRegex, "");
-            // Also remove specific emojis we know are used in report types
+            
+            // First, remove variation selectors (️) that come after emojis
+            String cleaned = s.replace("️", "");
+            
+            // Comprehensive regex to match all emoji ranges including:
+            // - Emoticons (😀-🙏)
+            // - Miscellaneous Symbols and Pictographs (🌀-🏿)
+            // - Transport and Map Symbols (🚀-🛿)
+            // - Supplemental Symbols and Pictographs (🦀-🦿)
+            // - Symbols and Pictographs Extended-A (🪀-🫿)
+            // - Variation selectors
+            String emojiRegex = "[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]+|[\\u2600-\\u26FF]|[\\u2700-\\u27BF]|[\\u2300-\\u23FF]|[\\u2B50]|[\\u2B06]|[\\u2934]|[\\u2935]|[\\u3030]|[\\u303D]|[\\u3297]|[\\u3299]|[\\uFE0F]|[\\u200D]";
+            cleaned = cleaned.replaceAll(emojiRegex, "");
+            
+            // Also explicitly remove specific emojis we know are used in report types
+            // This ensures we catch any that the regex might miss
             cleaned = cleaned
                 .replace("⚠", "")
                 .replace("⛰", "")
@@ -290,7 +301,10 @@ public class ReportLogAdapter extends RecyclerView.Adapter<ReportLogAdapter.Repo
                 .replace("🚧", "")
                 .replace("⚡", "")
                 .replace("🌿", "")
+                .replace("🐾", "")
+                .replace("➕", "")
                 .trim();
+            
             return cleaned;
         }
     }
