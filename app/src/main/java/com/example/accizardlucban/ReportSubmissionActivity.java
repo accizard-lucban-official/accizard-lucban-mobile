@@ -2072,6 +2072,31 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                                             
                                             // Update videoCount to match actual uploaded videos
                                             reportData.put("videoCount", videoUrlsList.size());
+                                            
+                                            // CRITICAL: Create structured media array for admin side
+                                            // This ensures videos are visible in admin panel
+                                            List<Map<String, Object>> mediaArray = new ArrayList<>();
+                                            
+                                            // Add images to media array
+                                            for (String imageUrl : imageUrlsList) {
+                                                Map<String, Object> mediaItem = new HashMap<>();
+                                                mediaItem.put("type", "image");
+                                                mediaItem.put("url", imageUrl);
+                                                mediaArray.add(mediaItem);
+                                            }
+                                            
+                                            // Add videos to media array
+                                            for (String videoUrl : videoUrlsList) {
+                                                Map<String, Object> mediaItem = new HashMap<>();
+                                                mediaItem.put("type", "video");
+                                                mediaItem.put("url", videoUrl);
+                                                mediaArray.add(mediaItem);
+                                            }
+                                            
+                                            reportData.put("media", mediaArray);
+                                            Log.d(TAG, "✅ Created media array with " + mediaArray.size() + " items (" + 
+                                                  imageUrlsList.size() + " images, " + videoUrlsList.size() + " videos)");
+                                            
                                             submitReportToFirestore(reportData);
                                         } else {
                                             Log.w(TAG, "⚠️ Upload count mismatch: " + uploadCount[0] + "/" + totalMedia);
@@ -2082,6 +2107,23 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                                             reportData.put("imageUrls", combinedMediaUrls);
                                             reportData.put("videoUrls", new ArrayList<>(videoUrlsList));
                                             reportData.put("videoCount", videoUrlsList.size());
+                                            
+                                            // CRITICAL: Create structured media array for admin side
+                                            List<Map<String, Object>> mediaArray = new ArrayList<>();
+                                            for (String imageUrl : imageUrlsList) {
+                                                Map<String, Object> mediaItem = new HashMap<>();
+                                                mediaItem.put("type", "image");
+                                                mediaItem.put("url", imageUrl);
+                                                mediaArray.add(mediaItem);
+                                            }
+                                            for (String videoUrl : videoUrlsList) {
+                                                Map<String, Object> mediaItem = new HashMap<>();
+                                                mediaItem.put("type", "video");
+                                                mediaItem.put("url", videoUrl);
+                                                mediaArray.add(mediaItem);
+                                            }
+                                            reportData.put("media", mediaArray);
+                                            
                                             submitReportToFirestore(reportData);
                                         }
                                     }
@@ -2113,6 +2155,17 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                             // Ensure videoUrls is empty list
                             reportData.put("videoUrls", new ArrayList<String>());
                             reportData.put("videoCount", 0);
+                            
+                            // Create media array with only images
+                            List<Map<String, Object>> mediaArray = new ArrayList<>();
+                            for (String imageUrl : imageUrlsList) {
+                                Map<String, Object> mediaItem = new HashMap<>();
+                                mediaItem.put("type", "image");
+                                mediaItem.put("url", imageUrl);
+                                mediaArray.add(mediaItem);
+                            }
+                            reportData.put("media", mediaArray);
+                            
                             submitReportToFirestore(reportData);
                         }
                     }
@@ -2164,6 +2217,20 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                         reportData.put("videoUrls", new ArrayList<>(videoUrls));
                         // Update videoCount to match actual uploaded videos
                         reportData.put("videoCount", videoUrls.size());
+                        
+                        // CRITICAL: Create structured media array for admin side (videos only)
+                        // This ensures videos are visible in admin panel's "Mobile User Media" section
+                        List<Map<String, Object>> mediaArray = new ArrayList<>();
+                        for (String videoUrl : videoUrls) {
+                            Map<String, Object> mediaItem = new HashMap<>();
+                            mediaItem.put("type", "video");
+                            mediaItem.put("url", videoUrl);
+                            mediaArray.add(mediaItem);
+                            Log.d(TAG, "   - Added video to media array: " + videoUrl);
+                        }
+                        reportData.put("media", mediaArray);
+                        Log.d(TAG, "✅ Created media array with " + mediaArray.size() + " video(s) for admin side");
+                        
                         Log.d(TAG, "✅ All videos uploaded successfully, submitting report with " + videoUrls.size() + " video(s)");
                         Log.d(TAG, "   - Video URLs: " + videoUrls.toString());
                         submitReportToFirestore(reportData);
@@ -2247,6 +2314,44 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         if (!reportData.containsKey("videoUrls")) {
             reportData.put("videoUrls", new ArrayList<String>());
         }
+        
+        // CRITICAL: Ensure media array exists for admin side compatibility
+        // If media array doesn't exist, create it from imageUrls and videoUrls
+        if (!reportData.containsKey("media")) {
+            List<Map<String, Object>> mediaArray = new ArrayList<>();
+            
+            // Add images to media array
+            Object imageUrlsObj = reportData.get("imageUrls");
+            if (imageUrlsObj instanceof List) {
+                List<?> imageUrls = (List<?>) imageUrlsObj;
+                for (Object url : imageUrls) {
+                    if (url != null) {
+                        Map<String, Object> mediaItem = new HashMap<>();
+                        mediaItem.put("type", "image");
+                        mediaItem.put("url", url.toString());
+                        mediaArray.add(mediaItem);
+                    }
+                }
+            }
+            
+            // Add videos to media array
+            Object videoUrlsObj = reportData.get("videoUrls");
+            if (videoUrlsObj instanceof List) {
+                List<?> videoUrls = (List<?>) videoUrlsObj;
+                for (Object url : videoUrls) {
+                    if (url != null) {
+                        Map<String, Object> mediaItem = new HashMap<>();
+                        mediaItem.put("type", "video");
+                        mediaItem.put("url", url.toString());
+                        mediaArray.add(mediaItem);
+                    }
+                }
+            }
+            
+            reportData.put("media", mediaArray);
+            Log.d(TAG, "✅ Created media array from existing URLs: " + mediaArray.size() + " items");
+        }
+        
         // Ensure videoCount is present and matches videoUrls size
         if (!reportData.containsKey("videoCount")) {
             Object videoUrlsObj = reportData.get("videoUrls");
@@ -2306,6 +2411,29 @@ public class ReportSubmissionActivity extends AppCompatActivity {
         Log.d(TAG, "📤 Submitting report to Firestore:");
         Log.d(TAG, "   - Has imageUrls: " + (reportData.containsKey("imageUrls") ? "Yes (" + ((List<?>) reportData.get("imageUrls")).size() + " items)" : "No"));
         Log.d(TAG, "   - Has videoUrls: " + (reportData.containsKey("videoUrls") ? "Yes (" + ((List<?>) reportData.get("videoUrls")).size() + " items)" : "No"));
+        Log.d(TAG, "   - Has media array: " + (reportData.containsKey("media") ? "Yes (" + ((List<?>) reportData.get("media")).size() + " items)" : "No"));
+        
+        // Log media array contents for debugging
+        if (reportData.containsKey("media")) {
+            Object mediaObj = reportData.get("media");
+            if (mediaObj instanceof List) {
+                List<?> mediaList = (List<?>) mediaObj;
+                int imageCount = 0;
+                int videoCount = 0;
+                for (Object item : mediaList) {
+                    if (item instanceof Map) {
+                        Map<?, ?> mediaItem = (Map<?, ?>) item;
+                        Object type = mediaItem.get("type");
+                        if ("video".equals(type)) {
+                            videoCount++;
+                        } else if ("image".equals(type)) {
+                            imageCount++;
+                        }
+                    }
+                }
+                Log.d(TAG, "   - Media array: " + imageCount + " image(s), " + videoCount + " video(s)");
+            }
+        }
         
         // Log actual video URLs for debugging
         if (reportData.containsKey("videoUrls")) {

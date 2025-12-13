@@ -126,11 +126,14 @@ public class ReportLogAdapter extends RecyclerView.Adapter<ReportLogAdapter.Repo
                 String status = report.getStatus();
                 setStatusBadge(status);
 
-                // Show/hide "View Attachments" button only when images exist
-                int imageCount = report.getImageCount();
-                if (imageCount > 0 && report.getImageUrls() != null && !report.getImageUrls().isEmpty()) {
+                // Show/hide "View Attachments" button when images OR videos exist
+                int imageCount = report.getImageUrls() != null ? report.getImageUrls().size() : 0;
+                int videoCount = report.getVideoUrls() != null ? report.getVideoUrls().size() : 0;
+                int totalAttachmentCount = imageCount + videoCount;
+                
+                if (totalAttachmentCount > 0) {
                     viewAttachmentsText.setVisibility(View.VISIBLE);
-                    viewAttachmentsText.setText("View Attachments (" + imageCount + ")");
+                    viewAttachmentsText.setText("View Attachments (" + totalAttachmentCount + ")");
                 } else {
                     viewAttachmentsText.setVisibility(View.GONE);
                 }

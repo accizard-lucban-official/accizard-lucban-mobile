@@ -221,3 +221,4 @@ Report 8/8: ID=xyz99999, Type=Flooding, Status=Responded
 If you see all 8 reports in the log but only 5 in the UI, it's a display/measurement issue.
 If you only see 5 reports in the log, it's a data loading issue.
 
+

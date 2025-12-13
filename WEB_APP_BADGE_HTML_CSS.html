@@ -1,0 +1,263 @@
+<!-- ========================================== -->
+<!-- WEB APP: Badge HTML & CSS Examples -->
+<!-- Copy this to your web application -->
+<!-- ========================================== -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Chat - Badge Example</title>
+    <style>
+        /* ========================================== */
+        /* BADGE STYLES */
+        /* ========================================== */
+        
+        /* Badge Container */
+        .badge-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        /* Badge Element */
+        .unread-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #ff4444;
+            color: white;
+            border-radius: 50%;
+            min-width: 20px;
+            height: 20px;
+            display: none; /* Hidden by default */
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 0 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+        
+        .unread-badge.has-unread {
+            display: flex;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+        
+        /* Badge on Navigation/Header */
+        .nav-badge {
+            position: relative;
+        }
+        
+        .nav-badge .unread-badge {
+            top: 0;
+            right: 0;
+        }
+        
+        /* Badge on Chat List Item */
+        .chat-item {
+            position: relative;
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        
+        .chat-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .chat-item.has-unread {
+            font-weight: bold;
+        }
+        
+        .chat-item .unread-badge {
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            transform: translateY(-50%);
+        }
+        
+        /* Badge on Icon/Button */
+        .icon-badge {
+            position: relative;
+            display: inline-block;
+        }
+        
+        /* ========================================== */
+        /* EXAMPLE LAYOUTS */
+        /* ========================================== */
+        
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .header {
+            background-color: #333;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+        }
+        
+        .chat-list {
+            max-width: 400px;
+            margin: 20px 0;
+        }
+        
+        .chat-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .chat-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ddd;
+        }
+        
+        .chat-info {
+            flex: 1;
+        }
+        
+        .chat-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        
+        .chat-preview {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .chat-time {
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <!-- ========================================== -->
+    <!-- EXAMPLE 1: Badge on Navigation/Header -->
+    <!-- ========================================== -->
+    <div class="header">
+        <h1>Admin Chat</h1>
+        <div class="nav-badge badge-container">
+            <button id="chat-icon">💬 Chat</button>
+            <span id="unread-badge" class="unread-badge"></span>
+        </div>
+    </div>
+    
+    <!-- ========================================== -->
+    <!-- EXAMPLE 2: Badge on Chat List Item -->
+    <!-- ========================================== -->
+    <div class="chat-list">
+        <div class="chat-item" data-user-id="user1">
+            <div class="chat-avatar"></div>
+            <div class="chat-info">
+                <div class="chat-name">John Doe</div>
+                <div class="chat-preview">Hello, I need help...</div>
+            </div>
+            <div class="chat-time">2m ago</div>
+            <span class="unread-badge" data-user-id="user1"></span>
+        </div>
+        
+        <div class="chat-item" data-user-id="user2">
+            <div class="chat-avatar"></div>
+            <div class="chat-info">
+                <div class="chat-name">Jane Smith</div>
+                <div class="chat-preview">Can you help me with...</div>
+            </div>
+            <div class="chat-time">5m ago</div>
+            <span class="unread-badge" data-user-id="user2"></span>
+        </div>
+    </div>
+    
+    <!-- ========================================== -->
+    <!-- EXAMPLE 3: Badge on Icon/Button -->
+    <!-- ========================================== -->
+    <div class="icon-badge badge-container">
+        <button>📧 Messages</button>
+        <span id="messages-badge" class="unread-badge"></span>
+    </div>
+    
+    <script>
+        // ==========================================
+        // UPDATE BADGE FOR SPECIFIC USER
+        // ==========================================
+        function updateUserBadge(userId, count) {
+            const badge = document.querySelector(`.unread-badge[data-user-id="${userId}"]`);
+            const chatItem = document.querySelector(`.chat-item[data-user-id="${userId}"]`);
+            
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count.toString();
+                    badge.classList.add('has-unread');
+                    if (chatItem) {
+                        chatItem.classList.add('has-unread');
+                    }
+                } else {
+                    badge.textContent = '';
+                    badge.classList.remove('has-unread');
+                    if (chatItem) {
+                        chatItem.classList.remove('has-unread');
+                    }
+                }
+            }
+        }
+        
+        // ==========================================
+        // SETUP REAL-TIME LISTENERS FOR EACH USER
+        // ==========================================
+        function setupUserBadgeListeners() {
+            // Get all user IDs from chat list
+            const chatItems = document.querySelectorAll('.chat-item[data-user-id]');
+            
+            chatItems.forEach((item) => {
+                const userId = item.getAttribute('data-user-id');
+                
+                // Set up listener for this user's unread count
+                const db = firebase.firestore();
+                db.collection('chat_messages')
+                    .where('userId', '==', userId)
+                    .where('isUser', '==', true)
+                    .where('isRead', '==', false)
+                    .onSnapshot((snapshot) => {
+                        const count = snapshot.size;
+                        updateUserBadge(userId, count);
+                    });
+            });
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize main badge
+            if (typeof initializeBadgeSystem === 'function') {
+                initializeBadgeSystem();
+            }
+            
+            // Setup user-specific badges
+            setupUserBadgeListeners();
+        });
+    </script>
+</body>
+</html>
+
