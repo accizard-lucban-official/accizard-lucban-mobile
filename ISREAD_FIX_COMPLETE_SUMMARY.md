@@ -135,3 +135,4 @@ The Android app (`ChatActivity.java`) correctly:
 ✅ **Mobile app badge count is accurate**
 
 
+

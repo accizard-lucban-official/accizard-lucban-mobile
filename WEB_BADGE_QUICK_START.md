@@ -94,3 +94,4 @@ The badge will automatically:
 - Verify cloud function logs show "Set isRead = false"
 
 
+

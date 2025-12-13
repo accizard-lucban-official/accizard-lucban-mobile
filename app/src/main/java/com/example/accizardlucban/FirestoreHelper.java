@@ -13,6 +13,7 @@ import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.WriteBatch;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -112,60 +113,110 @@ public class FirestoreHelper {
                 .addOnFailureListener(failureListener);
     }
     
-    // Create report with auto-incremented reportId (RID-X) using atomic counter
+    // Create report with auto-incremented reportId (RID-X) based on max ID in Firestore
     public static void createReportWithAutoId(final Map<String, Object> reportData,
                                               final OnSuccessListener<DocumentReference> successListener,
                                               final OnFailureListener failureListener) {
-        // Use a counter document to ensure atomic increment
-        final DocumentReference counterRef = getInstance().collection("counters").document("reportCounter");
-        
-        getInstance().runTransaction(transaction -> {
-            DocumentSnapshot counterSnapshot = transaction.get(counterRef);
-            
-            // Calculate nextId in a single assignment
-            final long nextId = counterSnapshot.exists() ? 
-                (counterSnapshot.getLong("count") + 1) : 1;
-            
-            // Update the counter
-            Map<String, Object> counterData = new HashMap<>();
-            counterData.put("count", nextId);
-            counterData.put("lastUpdated", System.currentTimeMillis());
-            transaction.set(counterRef, counterData);
-            
-            // Set the reportId in the report data
-            String newReportId = "RID-" + nextId;
-            reportData.put("reportId", newReportId);
-            
-            return null; // Transaction doesn't need to return anything
-        }).addOnSuccessListener(aVoid -> {
-            // Transaction successful, now create the report
-            createReport(reportData, successListener, failureListener);
-        }).addOnFailureListener(e -> {
-            // If transaction fails, try fallback method
-            android.util.Log.w(TAG, "Transaction failed, trying fallback method", e);
-            createReportWithAutoIdFallback(reportData, successListener, failureListener);
-        });
+        // Query all reports to find the maximum reportId
+        getInstance().collection(COLLECTION_REPORTS)
+            .get()
+            .addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    QuerySnapshot snapshot = task.getResult();
+                    int maxId = 0;
+                    
+                    // Extract all reportId values and find the maximum
+                    if (snapshot != null && !snapshot.isEmpty()) {
+                        List<DocumentSnapshot> documents = snapshot.getDocuments();
+                        for (DocumentSnapshot doc : documents) {
+                            Object reportIdObj = doc.get("reportId");
+                            if (reportIdObj != null) {
+                                String reportId = reportIdObj.toString();
+                                // Parse numeric part from RID-XXX format
+                                if (reportId.startsWith("RID-")) {
+                                    try {
+                                        // Handle formats like RID-123 or RID-123-4567
+                                        String numericPart = reportId.substring(4); // Remove "RID-"
+                                        // If there's a dash after the number, take only the first part
+                                        if (numericPart.contains("-")) {
+                                            numericPart = numericPart.substring(0, numericPart.indexOf("-"));
+                                        }
+                                        int reportIdNum = Integer.parseInt(numericPart);
+                                        if (reportIdNum > maxId) {
+                                            maxId = reportIdNum;
+                                        }
+                                    } catch (NumberFormatException e) {
+                                        android.util.Log.w(TAG, "Failed to parse reportId: " + reportId, e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Generate next sequential ID
+                    int nextId = maxId + 1;
+                    String newReportId = "RID-" + nextId;
+                    reportData.put("reportId", newReportId);
+                    
+                    android.util.Log.d(TAG, "Generated new reportId: " + newReportId + " (max found: " + maxId + ")");
+                    
+                    // Create the report with the new ID
+                    createReport(reportData, successListener, failureListener);
+                } else {
+                    // If query fails, use fallback method
+                    android.util.Log.w(TAG, "Failed to query reports, using fallback method", task.getException());
+                    createReportWithAutoIdFallback(reportData, successListener, failureListener);
+                }
+            })
+            .addOnFailureListener(e -> {
+                android.util.Log.e(TAG, "Error querying reports for ID generation", e);
+                // Try fallback method
+                createReportWithAutoIdFallback(reportData, successListener, failureListener);
+            });
     }
     
-    // Fallback method for report ID generation (less reliable but works as backup)
+    // Fallback method for report ID generation (queries all reports if main method fails)
     private static void createReportWithAutoIdFallback(final Map<String, Object> reportData,
                                                        final OnSuccessListener<DocumentReference> successListener,
                                                        final OnFailureListener failureListener) {
-        // Query for the highest reportId as fallback
+        // Query all reports to find maximum reportId (same logic as main method)
         getInstance().collection(COLLECTION_REPORTS)
-            .orderBy("reportId", Query.Direction.DESCENDING)
-            .limit(1)
             .get()
             .addOnCompleteListener(task -> {
-                // Calculate nextId in a single assignment using helper method
-                final int nextId = calculateNextIdFromTask(task);
+                int maxId = 0;
                 
-                // Add timestamp to make it more unique in case of race condition
-                String timestamp = String.valueOf(System.currentTimeMillis());
-                String newReportId = "RID-" + nextId + "-" + timestamp.substring(timestamp.length() - 4);
+                if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+                    List<DocumentSnapshot> documents = task.getResult().getDocuments();
+                    for (DocumentSnapshot doc : documents) {
+                        Object reportIdObj = doc.get("reportId");
+                        if (reportIdObj != null) {
+                            String reportId = reportIdObj.toString();
+                            if (reportId.startsWith("RID-")) {
+                                try {
+                                    String numericPart = reportId.substring(4);
+                                    if (numericPart.contains("-")) {
+                                        numericPart = numericPart.substring(0, numericPart.indexOf("-"));
+                                    }
+                                    int reportIdNum = Integer.parseInt(numericPart);
+                                    if (reportIdNum > maxId) {
+                                        maxId = reportIdNum;
+                                    }
+                                } catch (NumberFormatException e) {
+                                    android.util.Log.w(TAG, "Failed to parse reportId in fallback: " + reportId, e);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Generate next sequential ID
+                int nextId = maxId + 1;
+                String newReportId = "RID-" + nextId;
                 reportData.put("reportId", newReportId);
                 
-                // Now create the report
+                android.util.Log.d(TAG, "Fallback: Generated new reportId: " + newReportId + " (max found: " + maxId + ")");
+                
+                // Create the report
                 createReport(reportData, successListener, failureListener);
             })
             .addOnFailureListener(failureListener);
@@ -386,28 +437,5 @@ public class FirestoreHelper {
     public static void getReportCounterValue(OnCompleteListener<DocumentSnapshot> completeListener) {
         DocumentReference counterRef = getInstance().collection("counters").document("reportCounter");
         counterRef.get().addOnCompleteListener(completeListener);
-    }
-    
-    // Helper method to calculate next ID from task result
-    private static int calculateNextIdFromTask(com.google.android.gms.tasks.Task<QuerySnapshot> task) {
-        if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-            String lastReportId = null;
-            try {
-                Object ridObj = task.getResult().getDocuments().get(0).get("reportId");
-                if (ridObj != null) {
-                    lastReportId = ridObj.toString();
-                }
-            } catch (Exception ignored) {}
-            
-            if (lastReportId != null && lastReportId.startsWith("RID-")) {
-                try {
-                    int lastNum = Integer.parseInt(lastReportId.replace("RID-", ""));
-                    return lastNum + 1;
-                } catch (NumberFormatException ignored) {
-                    return 1;
-                }
-            }
-        }
-        return 1;
     }
 } 
