@@ -134,3 +134,4 @@ The Android app (`ChatActivity.java`) correctly:
 ✅ **Cloud function protects against incorrect `isRead` values**
 ✅ **Mobile app badge count is accurate**
 
+

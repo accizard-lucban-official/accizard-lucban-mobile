@@ -139,10 +139,11 @@ exports.sendChatNotification = functions.firestore
   });
 
 // ==========================================
-// 2. Set isRead = false for Admin Messages
+// 2. Set isRead = false for ALL Messages (Default)
 // ==========================================
-// ✅ FIXED: This function ensures admin messages are ALWAYS unread by default
-// Even if the web app sets isRead: true, this will override it to false
+// ✅ FIXED: This function ensures ALL messages are ALWAYS unread by default
+// Even if the web app or mobile app sets isRead: true, this will override it to false
+// Messages should only be marked as read (true) when web/admin actually opens/views them
 exports.setAdminMessageAsUnread = functions.firestore
   .document('chat_messages/{messageId}')
   .onCreate(async (snap, context) => {
@@ -153,56 +154,23 @@ exports.setAdminMessageAsUnread = functions.firestore
       console.log('📨 Checking message read status:', messageId);
       console.log('📄 Message data - senderId:', messageData.senderId, 'userId:', messageData.userId, 'isRead:', messageData.isRead);
       
-      // Check if message is from admin (senderId !== userId)
-      const isAdminMessage = messageData.senderId && messageData.userId && messageData.senderId !== messageData.userId;
-      
-      if (isAdminMessage) {
-        // ✅ CRITICAL FIX: ALWAYS set isRead = false for admin messages
-        // This ensures admin messages are never marked as read by default
-        // They should only be marked as read when the admin actually clicks/views them on the web side
-        if (messageData.isRead !== false) {
-          console.log('📝 FORCING isRead = false for admin message (was:', messageData.isRead, '):', messageId);
-          
-          try {
-            await snap.ref.update({ isRead: false });
-            console.log('✅ Set isRead = false for admin message:', messageId);
-            return true;
-          } catch (error) {
-            console.error('❌ Error setting isRead:', error);
-            return null;
-          }
-        } else {
-          console.log('✅ Admin message already has isRead = false:', messageId);
-          return null;
-        }
-      } else if (messageData.senderId === messageData.userId) {
-        // Message is from user
-        // ✅ FIXED: User messages from WEB should be unread (isRead: false) so admin can see badge
-        // User messages from Android will have isRead: true explicitly set, so they stay true
-        // User messages from Web won't have isRead set (or will have false), so we keep them false
+      // ✅ FIXED: ALL messages should default to isRead: false
+      // Only web/admin can mark them as read when they view/open the message
+      // This applies to both admin messages and user messages
+      if (messageData.isRead !== false) {
+        console.log('📝 FORCING isRead = false for message (was:', messageData.isRead, '):', messageId);
+        console.log('   Message type - isAdmin:', messageData.senderId !== messageData.userId, ', isUser:', messageData.senderId === messageData.userId);
         
-        // Check if message is from Android (Android explicitly sets isRead: true)
-        // If isRead is explicitly true, it's from Android - keep it true
-        // If isRead is false or undefined, it's from Web - set it to false
-        if (messageData.isRead === true) {
-          // Message from Android - user has read their own message
-          console.log('✅ User message from Android, keeping isRead = true:', messageId);
+        try {
+          await snap.ref.update({ isRead: false });
+          console.log('✅ Set isRead = false for message (default unread):', messageId);
+          return true;
+        } catch (error) {
+          console.error('❌ Error setting isRead:', error);
           return null;
-        } else {
-          // Message from Web - admin hasn't read it yet
-          console.log('📝 User message from Web, setting isRead = false for admin badge:', messageId);
-          
-          try {
-            await snap.ref.update({ isRead: false });
-            console.log('✅ Set isRead = false for user message from Web:', messageId);
-            return true;
-          } catch (error) {
-            console.error('❌ Error setting isRead for user message:', error);
-            return null;
-          }
         }
       } else {
-        console.log('ℹ️ Unknown message type, skipping:', messageId);
+        console.log('✅ Message already has isRead = false (default unread):', messageId);
         return null;
       }
     } catch (error) {

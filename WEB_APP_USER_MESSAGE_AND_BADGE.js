@@ -177,16 +177,17 @@ function markUserMessageAsRead(messageId) {
 // 6. MARK ALL MESSAGES AS READ (When Admin Opens Chat)
 // ==========================================
 /**
- * Mark all unread user messages as read when admin opens a user's chat
- * This is useful when admin opens the chat view
+ * ✅ FIXED: Mark ALL unread messages (both user and admin) as read when admin opens a user's chat
+ * This should be called when admin opens/views the chat
+ * All messages default to isRead: false, and only become true when admin views them
  */
 function markAllUserMessagesAsRead(userId) {
   const db = firebase.firestore();
   
-  // Get all unread messages for this user
+  // ✅ FIXED: Get ALL unread messages for this user (both user and admin messages)
+  // Since all messages now default to isRead: false, we mark all unread messages as read
   return db.collection('chat_messages')
     .where('userId', '==', userId)
-    .where('isUser', '==', true)
     .where('isRead', '==', false)
     .get()
     .then((snapshot) => {
@@ -200,7 +201,7 @@ function markAllUserMessagesAsRead(userId) {
       
       if (count > 0) {
         return batch.commit().then(() => {
-          console.log(`✅ Marked ${count} messages as read for user:`, userId);
+          console.log(`✅ Marked ${count} messages (all types) as read for user:`, userId);
           return count;
         });
       } else {
@@ -354,4 +355,5 @@ window.addEventListener('beforeunload', () => {
   cleanupBadgeSystem();
 });
 */
+
 

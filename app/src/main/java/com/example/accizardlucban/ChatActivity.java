@@ -592,7 +592,7 @@ public class ChatActivity extends AppCompatActivity {
                 messageData.put("isUser", true);
                 messageData.put("imageUrl", null);
                 messageData.put("profilePictureUrl", userProfilePictureUrl); // Save user's profile picture URL
-                messageData.put("isRead", true); // ✅ NEW: User messages are always read by default
+                messageData.put("isRead", false); // ✅ FIXED: Default to false (unread) - only becomes true when web/admin views it
                 
                 // Clear input immediately for better UX
                 messageInput.setText("");
@@ -732,7 +732,7 @@ public class ChatActivity extends AppCompatActivity {
                         messageData.put("isUser", true);
                         messageData.put("imageUrl", downloadUrl);
                         messageData.put("profilePictureUrl", userProfilePictureUrl); // Save user's profile picture URL
-                        messageData.put("isRead", true); // ✅ NEW: User messages are always read by default
+                        messageData.put("isRead", false); // ✅ FIXED: Default to false (unread) - only becomes true when web/admin views it
                         
                         // Flat structure - all messages in one collection
                         db.collection("chat_messages")
@@ -795,7 +795,7 @@ public class ChatActivity extends AppCompatActivity {
                         messageData.put("videoUrl", downloadUrl);
                         messageData.put("attachmentType", "video");
                         messageData.put("profilePictureUrl", userProfilePictureUrl);
-                        messageData.put("isRead", true);
+                        messageData.put("isRead", false); // ✅ FIXED: Default to false (unread) - only becomes true when web/admin views it
                         
                         Log.d(TAG, "Saving video message to Firestore: videoUrl=" + downloadUrl + ", attachmentType=video, userId=" + userId);
                         
@@ -854,7 +854,7 @@ public class ChatActivity extends AppCompatActivity {
                         messageData.put("audioUrl", downloadUrl);
                         messageData.put("attachmentType", "audio");
                         messageData.put("profilePictureUrl", userProfilePictureUrl);
-                        messageData.put("isRead", true);
+                        messageData.put("isRead", false); // ✅ FIXED: Default to false (unread) - only becomes true when web/admin views it
                         
                         db.collection("chat_messages")
                             .add(messageData)

@@ -2616,9 +2616,18 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 Log.w(TAG, "⚠️ No barangay found in user profile");
             }
             
-            // ✅ NEW: If "I am the Patient" checkbox is checked, save all patient information
+            // ✅ FIXED: Capture checkbox state early and explicitly to ensure correct value is saved
+            // If "I am the Patient" checkbox is checked, save all patient information
             // Use field names that match admin side expectations: Name, Contact Number, Address, Religion, Birthday, Blood Type
-            if (patientCheckbox != null && patientCheckbox.isChecked()) {
+            boolean isPatientChecked = false;
+            if (patientCheckbox != null) {
+                isPatientChecked = patientCheckbox.isChecked();
+                Log.d(TAG, "📋 Patient checkbox state captured: " + isPatientChecked);
+            } else {
+                Log.w(TAG, "⚠️ Patient checkbox is null - defaulting to false");
+            }
+            
+            if (isPatientChecked) {
                 Map<String, Object> patientInformation = new HashMap<>();
                 
                 // Get all user data from SharedPreferences
@@ -2685,10 +2694,12 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 
                 // Store patient information in report
                 reportData.put("patientInformation", patientInformation);
+                // ✅ FIXED: Explicitly set isPatient to true when checkbox is checked
                 reportData.put("isPatient", true);
                 
                 // Comprehensive logging
                 Log.d(TAG, "✅ Patient information saved to report (checkbox checked)");
+                Log.d(TAG, "   isPatient field set to: TRUE");
                 Log.d(TAG, "   Patient Name: " + fullName);
                 Log.d(TAG, "   Contact Number: " + mobile);
                 Log.d(TAG, "   Address: " + fullAddress);
@@ -2700,11 +2711,29 @@ public class ReportSubmissionActivity extends AppCompatActivity {
                 Log.d(TAG, "   Is PWD: " + isPWD);
                 Log.d(TAG, "   Full patientInformation map: " + patientInformation.toString());
             } else {
+                // ✅ FIXED: Explicitly set isPatient to false when checkbox is NOT checked
                 reportData.put("isPatient", false);
-                Log.d(TAG, "ℹ️ Patient checkbox not checked - patient information not saved");
+                Log.d(TAG, "ℹ️ Patient checkbox not checked - isPatient field set to: FALSE");
+                Log.d(TAG, "   Patient information not saved");
             }
+            
+            // ✅ FIXED: Double-check that isPatient is correctly set in reportData
+            Object isPatientValue = reportData.get("isPatient");
+            Log.d(TAG, "🔍 Final verification - isPatient value in reportData: " + isPatientValue + " (type: " + (isPatientValue != null ? isPatientValue.getClass().getSimpleName() : "null") + ")");
         } catch (Exception e) {
             Log.e(TAG, "Error getting user info: " + e.getMessage(), e);
+            // ✅ FIXED: Ensure isPatient is set even if an exception occurs
+            // Try to capture checkbox state outside the try block to ensure it's always set
+            boolean isPatientChecked = false;
+            try {
+                if (patientCheckbox != null) {
+                    isPatientChecked = patientCheckbox.isChecked();
+                }
+            } catch (Exception ex) {
+                Log.e(TAG, "Error reading checkbox state in catch block: " + ex.getMessage(), ex);
+            }
+            reportData.put("isPatient", isPatientChecked);
+            Log.d(TAG, "⚠️ Exception occurred - isPatient set to: " + isPatientChecked + " based on checkbox state");
         }
         
         // Store location information from map picker

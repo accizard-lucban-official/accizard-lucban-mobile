@@ -230,3 +230,4 @@ function setupMessageListener(userId) {
 - [ ] Mobile app badge updates correctly when message is marked as read
 - [ ] Cloud function logs show correct behavior
 
+
